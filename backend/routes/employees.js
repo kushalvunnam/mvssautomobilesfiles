@@ -27,12 +27,43 @@ const upload = multer({ storage: storage });
 // Admin restriction applies to all endpoints here
 router.use(auth, restrictTo('Admin', 'Accounts'));
 
-// 1. Get all employees
+// 1. Get all employees (with self-healing unique employeeId backfill)
 router.get('/', async (req, res) => {
   try {
     const employees = await Employee.find().sort({ createdAt: -1 });
-    res.send(employees);
+    let updated = false;
+    for (let emp of employees) {
+      if (!emp.employeeId) {
+        const lastEmp = await Employee.findOne(
+          { _id: { $ne: emp._id }, employeeId: { $regex: '^EMP-\\d+$' } },
+          { employeeId: 1 },
+          { sort: { createdAt: -1 } }
+        );
+        let nextNum = 1001;
+        if (lastEmp && lastEmp.employeeId) {
+          const match = lastEmp.employeeId.match(/EMP-(\d+)/);
+          if (match) {
+            nextNum = parseInt(match[1], 10) + 1;
+          }
+        }
+        let isUnique = false;
+        while (!isUnique) {
+          const existing = await Employee.findOne({ employeeId: `EMP-${nextNum}` });
+          if (!existing) {
+            isUnique = true;
+          } else {
+            nextNum++;
+          }
+        }
+        emp.employeeId = `EMP-${nextNum}`;
+        await emp.save();
+        updated = true;
+      }
+    }
+    const finalEmployees = updated ? await Employee.find().sort({ createdAt: -1 }) : employees;
+    res.send(finalEmployees);
   } catch (error) {
+    console.error('Fetch employees error:', error);
     res.status(500).send({ error: 'Failed to fetch employees.' });
   }
 });
@@ -87,6 +118,32 @@ router.put('/:id', upload.fields([
     
     const employee = await Employee.findById(req.params.id);
     if (!employee) return res.status(404).send({ error: 'Employee not found.' });
+
+    // Self-healing check for legacy record updates
+    if (!employee.employeeId) {
+      const lastEmp = await Employee.findOne(
+        { _id: { $ne: employee._id }, employeeId: { $regex: '^EMP-\\d+$' } },
+        { employeeId: 1 },
+        { sort: { createdAt: -1 } }
+      );
+      let nextNum = 1001;
+      if (lastEmp && lastEmp.employeeId) {
+        const match = lastEmp.employeeId.match(/EMP-(\d+)/);
+        if (match) {
+          nextNum = parseInt(match[1], 10) + 1;
+        }
+      }
+      let isUnique = false;
+      while (!isUnique) {
+        const existing = await Employee.findOne({ employeeId: `EMP-${nextNum}` });
+        if (!existing) {
+          isUnique = true;
+        } else {
+          nextNum++;
+        }
+      }
+      employee.employeeId = `EMP-${nextNum}`;
+    }
 
     if (name) employee.name = name;
     if (email) employee.email = email;
