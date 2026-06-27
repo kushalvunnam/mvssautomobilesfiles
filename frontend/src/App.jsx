@@ -1134,7 +1134,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex bg-slate-50 dark:bg-slate-950 min-h-screen font-sans">
+    <div className="flex bg-[#F8FAFC] dark:bg-slate-950 min-h-screen font-sans">
       {/* Navigation sidebar */}
       <Sidebar 
         currentTab={activeTab} 
@@ -1150,9 +1150,9 @@ export default function App() {
 
       {/* Main content body */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <Header user={user} token={token} onMenuClick={() => setSidebarOpen(true)} onLogout={handleLogout} />
+        <Header user={user} token={token} currentTab={activeTab} onMenuClick={() => setSidebarOpen(true)} onLogout={handleLogout} />
         
-        <main className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6 bg-slate-50 dark:bg-slate-950 transition-colors">
+        <main className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6 bg-[#F8FAFC] dark:bg-slate-950 transition-colors">
           {!hasAccess ? (
             <div className="min-h-[70vh] flex items-center justify-center p-6 animate-fade-in">
               <div className="glassmorphism max-w-md w-full p-8 rounded-3xl border border-red-500/20 text-center relative overflow-hidden space-y-6 shadow-[0_0_50px_rgba(239,68,68,0.05)]">

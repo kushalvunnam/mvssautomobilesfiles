@@ -92,3 +92,27 @@
   animation: gradient-shift 4s ease infinite;
 }
 
+/* Premium Sticky Header Table Styles */
+.overflow-x-auto {
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #ffffff;
+}
+
+.dark table thead {
+  background-color: #0f172a;
+}
+
+/* Primary Blue SaaS style borders */
+input:focus, select:focus, textarea:focus {
+  border-color: #0F4CFF !important;
+  box-shadow: 0 0 0 3px rgba(15, 76, 255, 0.15) !important;
+}
+
+
