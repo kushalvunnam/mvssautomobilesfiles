@@ -8,7 +8,6 @@ import {
   Receipt, 
   Package, 
   ShieldCheck, 
-  History, 
   LogOut,
   Wrench,
   X,
@@ -23,7 +22,7 @@ import {
 export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isOpen, setIsOpen }) {
   const role = user?.role || 'Guest';
 
-  // Navigation Items matching the mockup exactly
+  // Navigation Items matching standard enterprise permissions
   const navigationItems = [
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Accounts'] },
     { id: 'customers', name: 'Customers', icon: Users, roles: ['Admin', 'Service', 'Accounts', 'Body Shop'], hasSubmenu: true },
@@ -31,7 +30,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
     { id: 'jobcards', name: 'Job Cards', icon: FileText, roles: ['Admin', 'Service', 'Spares', 'Body Shop'], hasSubmenu: true },
     { id: 'estimates', name: 'Estimation', icon: FileCheck, roles: ['Admin', 'Service', 'Spares'], hasSubmenu: true },
     { id: 'bodyshop', name: 'Body Shop', icon: Wrench, roles: ['Admin', 'Body Shop'], hasSubmenu: true },
-    { id: 'inventory', name: 'Inventory / Spares', icon: Package, roles: ['Admin', 'Spares'], hasSubmenu: true },
+    { id: 'inventory', name: 'Inventory & Spares', icon: Package, roles: ['Admin', 'Spares'], hasSubmenu: true },
     { id: 'invoices', name: 'Billing & Invoices', icon: Receipt, roles: ['Admin', 'Accounts'], hasSubmenu: true },
     { id: 'payments', name: 'Payments', icon: CreditCard, roles: ['Admin', 'Accounts'], hasSubmenu: true },
     { id: 'claims', name: 'Insurance Claims', icon: ShieldCheck, roles: ['Admin', 'Accounts', 'Service', 'Body Shop'], hasSubmenu: true },
@@ -73,43 +72,40 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
       {isOpen && (
         <div 
           onClick={() => setIsOpen(false)}
-          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 md:hidden"
+          className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 md:hidden"
         />
       )}
 
       {/* Sidebar container */}
       <aside 
-        style={{ background: 'linear-gradient(180deg, #0F4CFF 0%, #0036C7 100%)' }}
-        className={`fixed md:static inset-y-0 left-0 w-64 text-white flex flex-col h-screen shrink-0 select-none transition-transform duration-300 z-50 md:translate-x-0 ${
+        className={`fixed md:static inset-y-0 left-0 w-60 bg-[#0F172A] text-slate-350 flex flex-col h-screen shrink-0 select-none transition-transform duration-200 z-50 md:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } border-r border-slate-800`}
       >
-        {/* Brand Logo Section with Car Outline silhouette */}
-        <div className="p-6 border-b border-white/10 flex flex-col items-center justify-center relative">
-          <div className="flex flex-col items-center justify-center w-full space-y-1 mt-2">
-            <svg className="w-24 h-10 text-white drop-shadow-md" viewBox="0 0 100 40" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M10,24 Q15,8 40,8 L65,8 Q90,8 92,24" />
-              <path d="M5,24 L95,24" strokeWidth="1.5" />
-              <path d="M8,26 L92,26" strokeWidth="1" />
-              <circle cx="25" cy="24" r="5" fill="#0036C7" stroke="currentColor" strokeWidth="1.5" />
-              <circle cx="75" cy="24" r="5" fill="#0036C7" stroke="currentColor" strokeWidth="1.5" />
+        {/* Brand Logo Section */}
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between relative">
+          <div className="flex items-center gap-2.5 px-1 py-1">
+            <svg className="w-6 h-6 text-indigo-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12.5V16c0 .6.4 1 1 1h2" />
+              <circle cx="7" cy="17" r="2" />
+              <circle cx="17" cy="17" r="2" />
             </svg>
-            <div className="text-center mt-1">
-              <h2 className="text-white font-black text-lg tracking-widest leading-none">MVSS</h2>
-              <span className="text-[9px] text-indigo-100 font-extrabold tracking-widest block mt-0.5">AUTOMOBILES</span>
+            <div>
+              <h2 className="text-white font-black text-sm tracking-wide leading-none">MVSS Automobiles</h2>
+              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">Workshop ERP</span>
             </div>
           </div>
           {/* Close button on mobile */}
           <button 
             onClick={() => setIsOpen(false)}
-            className="absolute top-4 right-4 p-1.5 hover:bg-white/10 rounded-lg text-white/70 hover:text-white md:hidden transition-colors"
+            className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white md:hidden transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Menu Options List */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-2.5 py-4 space-y-0.5 overflow-y-auto">
           {filteredItems.map(item => {
             const Icon = item.icon;
             const isActive = isItemActive(item);
@@ -117,66 +113,48 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
               <button
                 key={item.id}
                 onClick={() => handleItemClick(item)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 relative ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors relative ${
                   isActive 
-                    ? 'bg-white text-[#0F4CFF] shadow-md shadow-black/10 font-extrabold' 
-                    : 'hover:bg-white/10 text-white/80 hover:text-white'
+                    ? 'bg-slate-800 text-white font-semibold before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-indigo-500 before:rounded-r' 
+                    : 'hover:bg-slate-800/40 hover:text-slate-100 text-slate-400'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#0F4CFF]' : 'text-white/80'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
                   <span>{item.name}</span>
                 </div>
                 {item.hasSubmenu && (
-                  <ChevronDown className={`w-3 h-3 opacity-60 ${isActive ? 'text-[#0F4CFF]' : 'text-white/80'}`} />
+                  <ChevronDown className="w-3.5 h-3.5 opacity-50 shrink-0" />
                 )}
               </button>
             );
           })}
         </nav>
 
-        {/* Help Support Panel Widget */}
-        <div className="px-4 py-2 border-t border-white/10">
-          <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 text-center relative overflow-hidden">
-            <div className="flex justify-center mb-1 text-white">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M18 10a6 6 0 10-12 0c0 7 3 9 3 9h6s3-2 3-9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 19v3m-3-3v1a2 2 0 002 2h2a2 2 0 002-2v-1" />
-              </svg>
-            </div>
-            <p className="font-black text-white text-[10px]">Need Help?</p>
-            <p className="text-[8px] text-white/70 font-semibold">Contact Support</p>
-            <p className="text-[10px] text-white font-black mt-1 font-mono">+91 96400 12345</p>
+        {/* Help Support Widget */}
+        <div className="p-3 border-t border-slate-800">
+          <div className="p-3 bg-slate-800/30 border border-slate-800/60 rounded-lg text-center">
+            <p className="font-semibold text-slate-400 text-[10px]">Need Help?</p>
+            <p className="text-[11px] text-slate-200 font-bold mt-0.5">+91 96400 12345</p>
           </div>
         </div>
 
         {/* Bottom profile / logout */}
-        <div className="p-4 flex flex-col gap-2.5">
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center font-bold text-white text-[10px] border border-white/10 shrink-0">
-              {user?.name?.charAt(0) || 'U'}
-            </div>
-            <div className="overflow-hidden">
-              <h4 className="text-white font-bold text-xs truncate leading-none">{user?.name || 'User'}</h4>
-              <span className="text-[9px] text-white/50 font-semibold mt-0.5 block">{user?.role}</span>
-            </div>
-            <button
-              onClick={onLogout}
-              className="ml-auto p-1.5 hover:bg-white/10 rounded-lg text-white/70 hover:text-white transition-colors"
-              title="Log Out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+        <div className="p-3 border-t border-slate-800 flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-200 text-xs shrink-0">
+            {user?.name?.charAt(0) || 'U'}
           </div>
-
-          {/* Glowing sports car footer banner outline */}
-          <div className="w-full px-4 pt-1 pb-2 opacity-30 select-none pointer-events-none">
-            <svg className="w-full h-8 text-white" viewBox="0 0 100 30" fill="none" stroke="currentColor" strokeWidth="1.2">
-              <path d="M5,20 C15,16 25,6 45,6 L68,6 C82,6 88,16 95,20 L95,22 L5,22 Z" />
-              <circle cx="24" cy="21" r="3.5" stroke="currentColor" strokeWidth="1.2" />
-              <circle cx="76" cy="21" r="3.5" stroke="currentColor" strokeWidth="1.2" />
-            </svg>
+          <div className="overflow-hidden min-w-0 flex-1">
+            <h4 className="text-slate-200 font-bold text-xs truncate leading-none">{user?.name || 'User'}</h4>
+            <span className="text-[9px] text-slate-500 font-medium mt-0.5 block truncate">{user?.role}</span>
           </div>
+          <button
+            onClick={onLogout}
+            className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+            title="Log Out"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
         </div>
       </aside>
     </>
