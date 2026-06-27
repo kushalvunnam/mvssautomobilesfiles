@@ -1347,8 +1347,8 @@ export default function Employees({ token, user }) {
       {/* Add Employee Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in select-none">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
               <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Register New Employee</h3>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -1358,7 +1358,7 @@ export default function Employees({ token, user }) {
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleAddSubmit} className="p-6 space-y-4 overflow-y-auto">
               {errorMsg && (
                 <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl p-3 flex gap-2 text-xs text-red-650 dark:text-red-400">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -1605,8 +1605,8 @@ export default function Employees({ token, user }) {
       {/* Edit Employee Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in select-none">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
               <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Edit Employee Details</h3>
               <button
                 onClick={() => setShowEditModal(false)}
@@ -1616,7 +1616,7 @@ export default function Employees({ token, user }) {
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 overflow-y-auto">
               {errorMsg && (
                 <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl p-3 flex gap-2 text-xs text-red-650 dark:text-red-400">
                   <AlertCircle className="w-4 h-4 shrink-0" />
