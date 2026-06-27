@@ -12,58 +12,34 @@ import {
   Wrench,
   X,
   TrendingUp,
-  CreditCard,
-  Settings,
-  UserCheck,
-  HelpCircle,
-  ChevronDown
+  History
 } from 'lucide-react';
 
 export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isOpen, setIsOpen }) {
   const role = user?.role || 'Guest';
 
-  // Navigation Items matching standard enterprise permissions
+  // Navigation Items matching the original codebase's 12 actual tabs
   const navigationItems = [
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Accounts'] },
-    { id: 'customers', name: 'Customers', icon: Users, roles: ['Admin', 'Service', 'Accounts', 'Body Shop'], hasSubmenu: true },
-    { id: 'vehicles', name: 'Vehicles', icon: Car, roles: ['Admin', 'Service', 'Accounts', 'Body Shop'], hasSubmenu: true },
-    { id: 'jobcards', name: 'Job Cards', icon: FileText, roles: ['Admin', 'Service', 'Spares', 'Body Shop'], hasSubmenu: true },
-    { id: 'estimates', name: 'Estimation', icon: FileCheck, roles: ['Admin', 'Service', 'Spares'], hasSubmenu: true },
-    { id: 'bodyshop', name: 'Body Shop', icon: Wrench, roles: ['Admin', 'Body Shop'], hasSubmenu: true },
-    { id: 'inventory', name: 'Inventory & Spares', icon: Package, roles: ['Admin', 'Spares'], hasSubmenu: true },
-    { id: 'invoices', name: 'Billing & Invoices', icon: Receipt, roles: ['Admin', 'Accounts'], hasSubmenu: true },
-    { id: 'payments', name: 'Payments', icon: CreditCard, roles: ['Admin', 'Accounts'], hasSubmenu: true },
-    { id: 'claims', name: 'Insurance Claims', icon: ShieldCheck, roles: ['Admin', 'Accounts', 'Service', 'Body Shop'], hasSubmenu: true },
-    { id: 'employees', name: 'Employees', icon: Users, roles: ['Admin', 'Accounts'], hasSubmenu: true },
-    { id: 'reports', name: 'Reports', icon: TrendingUp, roles: ['Admin', 'Accounts', 'Service', 'Spares'], hasSubmenu: true },
-    { id: 'gatepass', name: 'Gate Pass', icon: FileText, roles: ['Admin', 'Accounts', 'Service', 'Spares'], hasSubmenu: true },
-    { id: 'settings', name: 'Settings', icon: Settings, roles: ['Admin'] },
-    { id: 'usermanagement', name: 'User Management', icon: UserCheck, roles: ['Admin'] },
-    { id: 'help', name: 'Help & Support', icon: HelpCircle, roles: ['Admin', 'Accounts', 'Service', 'Spares', 'Body Shop'] },
+    { id: 'bodyshop', name: 'Body Shop', icon: Wrench, roles: ['Admin', 'Body Shop'] },
+    { id: 'customers', name: 'Customers', icon: Users, roles: ['Admin', 'Service', 'Accounts', 'Body Shop'] },
+    { id: 'vehicles', name: 'Vehicles', icon: Car, roles: ['Admin', 'Service', 'Accounts', 'Body Shop'] },
+    { id: 'jobcards', name: 'Job Cards', icon: FileText, roles: ['Admin', 'Service', 'Spares', 'Body Shop'] },
+    { id: 'estimates', name: 'Estimates', icon: FileCheck, roles: ['Admin', 'Service', 'Spares'] },
+    { id: 'invoices', name: 'Invoices', icon: Receipt, roles: ['Admin', 'Accounts'] },
+    { id: 'inventory', name: 'Inventory Parts', icon: Package, roles: ['Admin', 'Spares'] },
+    { id: 'employees', name: 'Employees', icon: Users, roles: ['Admin', 'Accounts'] },
+    { id: 'claims', name: 'Insurance Claims', icon: ShieldCheck, roles: ['Admin', 'Accounts', 'Service', 'Body Shop'] },
+    { id: 'reports', name: 'Reports', icon: TrendingUp, roles: ['Admin', 'Accounts', 'Service', 'Spares'] },
+    { id: 'auditlogs', name: 'Audit Logs', icon: History, roles: ['Admin'] },
   ];
 
   // Filter items based on user role to keep same business permissions
   const filteredItems = navigationItems.filter(item => item.roles.includes(role));
 
   const handleItemClick = (item) => {
-    // Map custom layout items to existing activeTab state
-    if (item.id === 'gatepass' || item.id === 'payments') {
-      setCurrentTab('invoices'); // Map gate pass / payments to Invoices page
-    } else if (item.id === 'usermanagement') {
-      setCurrentTab('employees');
-    } else if (item.id === 'settings' || item.id === 'help') {
-      setCurrentTab('dashboard'); // Placeholder mapping
-    } else {
-      setCurrentTab(item.id);
-    }
+    setCurrentTab(item.id);
     setIsOpen(false);
-  };
-
-  // Determine if item is visually active
-  const isItemActive = (item) => {
-    if (currentTab === 'invoices' && (item.id === 'gatepass' || item.id === 'payments')) return true;
-    if (currentTab === 'employees' && item.id === 'usermanagement') return true;
-    return currentTab === item.id;
   };
 
   return (
@@ -78,7 +54,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
 
       {/* Sidebar container */}
       <aside 
-        className={`fixed md:static inset-y-0 left-0 w-60 bg-[#0F172A] text-slate-350 flex flex-col h-screen shrink-0 select-none transition-transform duration-200 z-50 md:translate-x-0 ${
+        className={`fixed md:static inset-y-0 left-0 w-60 bg-[#0F172A] text-slate-350 flex flex-col h-screen shrink-0 select-none transition-transform duration-205 z-50 md:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } border-r border-slate-800`}
       >
@@ -108,24 +84,19 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
         <nav className="flex-1 px-2.5 py-4 space-y-0.5 overflow-y-auto">
           {filteredItems.map(item => {
             const Icon = item.icon;
-            const isActive = isItemActive(item);
+            const isActive = currentTab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => handleItemClick(item)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors relative ${
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors relative ${
                   isActive 
                     ? 'bg-slate-800 text-white font-semibold before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-indigo-500 before:rounded-r' 
                     : 'hover:bg-slate-800/40 hover:text-slate-100 text-slate-400'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
-                  <span>{item.name}</span>
-                </div>
-                {item.hasSubmenu && (
-                  <ChevronDown className="w-3.5 h-3.5 opacity-50 shrink-0" />
-                )}
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
+                <span>{item.name}</span>
               </button>
             );
           })}
