@@ -1,0 +1,1040 @@
+import React, { useState, useEffect } from 'react';
+import { Save, ShoppingBag, ShieldCheck, Scale, Receipt, Plus, Trash2, Activity, ShoppingCart } from 'lucide-react';
+
+const STANDARD_SERVICES = [
+  { description: 'General Servicing', rate: 1500, gstPercent: 18 },
+  { description: 'Engine Tuning', rate: 1200, gstPercent: 18 },
+  { description: 'Clutch Overhaul', rate: 2800, gstPercent: 18 },
+  { description: 'Brake System Overhaul', rate: 900, gstPercent: 18 },
+  { description: 'Front Bumper Repair & Painting', rate: 3500, gstPercent: 18 },
+  { description: 'Rear Bumper Repair & Painting', rate: 3500, gstPercent: 18 },
+  { description: 'Wheel Alignment & Balancing', rate: 800, gstPercent: 18 },
+  { description: 'A/C Evaporator Cleaning', rate: 1800, gstPercent: 18 },
+  { description: 'Water Wash & Full Vacuum', rate: 600, gstPercent: 18 },
+  { description: 'Suspension Check & Repair', rate: 2200, gstPercent: 18 }
+];
+
+export default function InvoiceForm({ token, onSaved, onCancel, editId = null }) {
+  const [jobCards, setJobCards] = useState([]);
+  const [estimates, setEstimates] = useState([]);
+  const [selectedJcId, setSelectedJcId] = useState('');
+  const [selectedEstimateId, setSelectedEstimateId] = useState('');
+
+  // Tables
+  const [partsList, setPartsList] = useState([]);
+  const [labourList, setLabourList] = useState([{ description: '', rate: '', gstPercent: '' }]);
+  const [inventory, setInventory] = useState([]);
+  const [gstDetails, setGstDetails] = useState({ customerGSTIN: '', isInterstate: false });
+  const [invoiceType, setInvoiceType] = useState('Tax Invoice');
+  const [poNumber, setPoNumber] = useState('');
+  const [roNumber, setRoNumber] = useState('');
+  const [preparedBy, setPreparedBy] = useState('');
+  const [insuranceDetails, setInsuranceDetails] = useState({
+    claimNo: '',
+    insuranceCompany: '',
+    surveyorName: '',
+    surveyDate: '',
+    approvedAmount: '',
+    customerPayableAmount: 0,
+  });
+
+  const [totals, setTotals] = useState({
+    partsTotal: 0,
+    labourTotal: 0,
+    cgstTotal: 0,
+    sgstTotal: 0,
+    igstTotal: 0,
+    gstTotal: 0,
+    grandTotal: 0
+  });
+
+  const cleanNumberInput = (val, allowDecimal = true, maxVal = null) => {
+    if (val === undefined || val === null) return '';
+    let cleaned = val.toString().replace(/[^0-9.]/g, '');
+    if (!allowDecimal) {
+      cleaned = cleaned.replace(/\./g, '');
+    }
+    if (cleaned === '.') return '0.';
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      cleaned = parts[0] + '.' + parts.slice(1).join('');
+    }
+    if (cleaned.startsWith('0') && cleaned.length > 1 && cleaned[1] !== '.') {
+      cleaned = cleaned.replace(/^0+/, '');
+      if (cleaned === '') cleaned = '';
+    }
+    if (maxVal !== null && cleaned !== '') {
+      const num = parseFloat(cleaned);
+      if (!isNaN(num) && num > maxVal) {
+        cleaned = maxVal.toString();
+      }
+    }
+    return cleaned;
+  };
+
+  const handleRowNumericChange = (e, list, setter, idx, field, allowDecimal = true, maxVal = null) => {
+    const input = e.target;
+    const originalValue = input.value;
+    const processedValue = cleanNumberInput(originalValue, allowDecimal, maxVal);
+    
+    const selectionStart = input.selectionStart;
+    
+    const updatedList = [...list];
+    updatedList[idx] = { ...updatedList[idx], [field]: processedValue };
+    setter(updatedList);
+
+    requestAnimationFrame(() => {
+      if (input && input.setSelectionRange) {
+        const beforeCursor = originalValue.slice(0, selectionStart);
+        const cleanBeforeCursor = cleanNumberInput(beforeCursor, allowDecimal, maxVal);
+        const newCursorPos = cleanBeforeCursor.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    });
+  };
+
+  const handleInsuranceNumericChange = (e, field, allowDecimal = true, maxVal = null) => {
+    const input = e.target;
+    const originalValue = input.value;
+    const processedValue = cleanNumberInput(originalValue, allowDecimal, maxVal);
+    
+    const selectionStart = input.selectionStart;
+    setInsuranceDetails(prev => ({ ...prev, [field]: processedValue }));
+
+    requestAnimationFrame(() => {
+      if (input && input.setSelectionRange) {
+        const beforeCursor = originalValue.slice(0, selectionStart);
+        const cleanBeforeCursor = cleanNumberInput(beforeCursor, allowDecimal, maxVal);
+        const newCursorPos = cleanBeforeCursor.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    });
+  };
+
+  // Local helper to convert number to words on the client
+  const convertNumberToWords = (num) => {
+    const roundedNum = Math.round(num * 100) / 100;
+    if (roundedNum === 0) return 'Rupees Zero Only';
+    
+    const a = [
+      '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+      'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+    ];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    
+    function convert(n) {
+      if (n < 20) return a[n];
+      if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
+      if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convert(n % 100) : '');
+      if (n < 100000) return convert(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 !== 0 ? ' ' + convert(n % 1000) : '');
+      if (n < 10000000) return convert(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 !== 0 ? ' ' + convert(n % 100000) : '');
+      return convert(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 !== 0 ? ' ' + convert(n % 10000000) : '');
+    }
+    
+    const parts = roundedNum.toString().split('.');
+    const rupees = parseInt(parts[0], 10);
+    const paise = parts[1] ? parseInt(parts[1].padEnd(2, '0').slice(0, 2), 10) : 0;
+    
+    let result = 'Rupees ';
+    if (rupees > 0) {
+      result += convert(rupees);
+    } else {
+      result += 'Zero';
+    }
+    
+    if (paise > 0) {
+      result += ' and ' + convert(paise) + ' Paise';
+    }
+    result += ' Only';
+    return result.replace(/\s+/g, ' ').trim();
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const headers = { Authorization: `Bearer ${token}` };
+        const jcRes = await fetch('http://localhost:5000/api/jobcards', { headers });
+        const estRes = await fetch('http://localhost:5000/api/estimates', { headers });
+        const invRes = await fetch('http://localhost:5000/api/inventory', { headers });
+
+        if (jcRes.ok && estRes.ok && invRes.ok) {
+          const jcData = await jcRes.json();
+          const estData = await estRes.json();
+          const invData = await invRes.json();
+          // Filter jobcards that are ready or work in progress
+          setJobCards(jcData.filter(jc => jc.status !== 'Delivered'));
+          setEstimates(estData.filter(e => e.status === 'Approved'));
+          setInventory(invData);
+        }
+
+        // Check if loading pre-filled estimate conversion
+        const convertEstId = localStorage.getItem('convert_estimate_id');
+        const defaultJcId = localStorage.getItem('create_invoice_jc_id');
+        
+        if (convertEstId) {
+          setSelectedEstimateId(convertEstId);
+          setSelectedJcId(defaultJcId || '');
+          localStorage.removeItem('convert_estimate_id');
+          localStorage.removeItem('create_invoice_jc_id');
+
+          const estDetailsRes = await fetch(`http://localhost:5000/api/estimates/${convertEstId}`, { headers });
+          if (estDetailsRes.ok) {
+            const est = await estDetailsRes.json();
+            
+            // Auto fill parts, labour and customer details
+            setPartsList(est.parts.map(p => ({
+              partId: p.partId?._id || p.partId || '',
+              name: p.name,
+              partNo: p.partNo,
+              hsnCode: p.hsnCode,
+              qty: p.qty !== undefined && p.qty !== null ? p.qty.toString() : '',
+              rate: p.rate !== undefined && p.rate !== null ? p.rate.toString() : '',
+              gstPercent: p.gstPercent !== undefined && p.gstPercent !== null ? p.gstPercent.toString() : ''
+            })));
+            setLabourList(est.labour.map(l => ({
+              description: l.description,
+              rate: l.rate !== undefined && l.rate !== null ? l.rate.toString() : '',
+              gstPercent: l.gstPercent !== undefined && l.gstPercent !== null ? l.gstPercent.toString() : ''
+            })));
+
+            const jc = est.jobCardId || {};
+            const cust = jc.customerId || {};
+            const veh = jc.vehicleId || {};
+
+            setGstDetails({
+              customerGSTIN: cust.gstNumber || '',
+              isInterstate: cust.gstNumber ? !cust.gstNumber.startsWith('36') : false
+            });
+
+            setInsuranceDetails({
+              claimNo: jc.claimNo || '',
+              insuranceCompany: jc.insuranceName || veh.insuranceCompany || '',
+              surveyorName: '',
+              surveyDate: '',
+              approvedAmount: '',
+              customerPayableAmount: est.totals.grandTotal
+            });
+          }
+        }
+
+        if (editId) {
+          const invDetailsRes = await fetch(`http://localhost:5000/api/invoices/${editId}`, { headers });
+          if (invDetailsRes.ok) {
+            const inv = await invDetailsRes.json();
+            setSelectedJcId(inv.jobCardId?._id || inv.jobCardId || '');
+            setSelectedEstimateId(inv.estimateId?._id || inv.estimateId || '');
+            setInvoiceType(inv.invoiceType || 'Tax Invoice');
+            setPoNumber(inv.poNumber || '');
+            setRoNumber(inv.roNumber || '');
+            setPreparedBy(inv.preparedBy || '');
+            setGstDetails({
+              customerGSTIN: inv.gstDetails?.customerGSTIN || '',
+              isInterstate: inv.gstDetails?.isInterstate || false
+            });
+            setPartsList(inv.parts.map(p => ({
+              partId: p.partId?._id || p.partId || '',
+              name: p.name,
+              partNo: p.partNo,
+              hsnCode: p.hsnCode,
+              qty: p.qty !== undefined && p.qty !== null ? p.qty.toString() : '',
+              rate: p.rate !== undefined && p.rate !== null ? p.rate.toString() : '',
+              gstPercent: p.gstPercent !== undefined && p.gstPercent !== null ? p.gstPercent.toString() : ''
+            })));
+            setLabourList(inv.labour.map(l => ({
+              description: l.description,
+              rate: l.rate !== undefined && l.rate !== null ? l.rate.toString() : '',
+              gstPercent: l.gstPercent !== undefined && l.gstPercent !== null ? l.gstPercent.toString() : ''
+            })));
+            setInsuranceDetails({
+              claimNo: inv.insuranceClaimDetails?.claimNo || '',
+              insuranceCompany: inv.insuranceClaimDetails?.insuranceCompany || '',
+              surveyorName: inv.insuranceClaimDetails?.surveyorName || '',
+              surveyDate: inv.insuranceClaimDetails?.surveyDate ? new Date(inv.insuranceClaimDetails.surveyDate).toISOString().split('T')[0] : '',
+              approvedAmount: inv.insuranceClaimDetails?.approvedAmount !== undefined && inv.insuranceClaimDetails?.approvedAmount !== null ? inv.insuranceClaimDetails.approvedAmount.toString() : '',
+              customerPayableAmount: inv.insuranceClaimDetails?.customerPayableAmount || 0
+            });
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchData();
+  }, [token, editId]);
+
+  // Recalculate invoice totals with tax splits
+  useEffect(() => {
+    let partsTotal = 0;
+    let labourTotal = 0;
+    let cgstTotal = 0;
+    let sgstTotal = 0;
+    let igstTotal = 0;
+    let gstTotal = 0;
+
+    partsList.forEach(part => {
+      const qty = Number(part.qty) || 0;
+      const rate = Number(part.rate) || 0;
+      const amt = qty * rate;
+      const gstPercent = Number(part.gstPercent) || 0;
+      const gst = amt * (gstPercent / 100);
+      partsTotal += amt;
+      gstTotal += gst;
+
+      if (gstDetails.isInterstate) {
+        igstTotal += gst;
+      } else {
+        cgstTotal += gst / 2;
+        sgstTotal += gst / 2;
+      }
+    });
+
+    labourList.forEach(lab => {
+      const amt = Number(lab.rate) || 0;
+      const gstPercent = Number(lab.gstPercent) || 0;
+      const gst = amt * (gstPercent / 100);
+      labourTotal += amt;
+      gstTotal += gst;
+
+      if (gstDetails.isInterstate) {
+        igstTotal += gst;
+      } else {
+        cgstTotal += gst / 2;
+        sgstTotal += gst / 2;
+      }
+    });
+
+    const grandTotal = Math.round((partsTotal + labourTotal + gstTotal) * 100) / 100;
+    setTotals({
+      partsTotal: Math.round(partsTotal * 100) / 100,
+      labourTotal: Math.round(labourTotal * 100) / 100,
+      cgstTotal: Math.round(cgstTotal * 100) / 100,
+      sgstTotal: Math.round(sgstTotal * 100) / 100,
+      igstTotal: Math.round(igstTotal * 100) / 100,
+      gstTotal: Math.round(gstTotal * 100) / 100,
+      grandTotal
+    });
+
+    // Update insurance split payable
+    const approvedAmt = Number(insuranceDetails.approvedAmount) || 0;
+    setInsuranceDetails(prev => ({
+      ...prev,
+      customerPayableAmount: Math.max(0, grandTotal - approvedAmt)
+    }));
+
+  }, [partsList, labourList, gstDetails.isInterstate, insuranceDetails.approvedAmount]);
+
+  const handleGstinChange = (e) => {
+    const input = e.target;
+    const originalValue = input.value;
+    const processedValue = originalValue.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15);
+    
+    const selectionStart = input.selectionStart;
+    const isInterstate = processedValue ? !processedValue.startsWith('36') : false;
+    setGstDetails({ customerGSTIN: processedValue, isInterstate });
+
+    requestAnimationFrame(() => {
+      if (input && input.setSelectionRange) {
+        const beforeCursor = originalValue.slice(0, selectionStart);
+        const cleanBeforeCursor = beforeCursor.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const newCursorPos = cleanBeforeCursor.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    });
+  };
+
+  const handleJcChange = async (jcId) => {
+    setSelectedJcId(jcId);
+    if (!jcId) {
+      setPartsList([]);
+      setLabourList([{ description: '', rate: '', gstPercent: '' }]);
+      setGstDetails({ customerGSTIN: '', isInterstate: false });
+      setInsuranceDetails({
+        claimNo: '',
+        insuranceCompany: '',
+        surveyorName: '',
+        surveyDate: '',
+        approvedAmount: '',
+        customerPayableAmount: 0
+      });
+      return;
+    }
+
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const jcRes = await fetch(`http://localhost:5000/api/jobcards/${jcId}`, { headers });
+      if (jcRes.ok) {
+        const jc = await jcRes.json();
+        const cust = jc.customerId || {};
+        const veh = jc.vehicleId || {};
+
+        setGstDetails({
+          customerGSTIN: cust.gstNumber || '',
+          isInterstate: cust.gstNumber ? !cust.gstNumber.startsWith('36') : false
+        });
+
+        setInsuranceDetails(prev => ({
+          ...prev,
+          claimNo: jc.claimNo || '',
+          insuranceCompany: jc.insuranceName || veh.insuranceCompany || '',
+          customerPayableAmount: totals.grandTotal
+        }));
+
+        // Fetch approved estimate for this jobcard
+        const estRes = await fetch(`http://localhost:5000/api/estimates?jobCardId=${jcId}`, { headers });
+        if (estRes.ok) {
+          const estimatesList = await estRes.json();
+          const approvedEst = estimatesList.find(e => e.status === 'Approved') || estimatesList[0];
+          if (approvedEst) {
+            setSelectedEstimateId(approvedEst._id);
+            setPartsList(approvedEst.parts.map(p => ({
+              partId: p.partId?._id || p.partId || '',
+              name: p.name,
+              partNo: p.partNo,
+              hsnCode: p.hsnCode,
+              qty: p.qty !== undefined && p.qty !== null ? p.qty.toString() : '',
+              rate: p.rate !== undefined && p.rate !== null ? p.rate.toString() : '',
+              gstPercent: p.gstPercent !== undefined && p.gstPercent !== null ? p.gstPercent.toString() : ''
+            })));
+            setLabourList(approvedEst.labour.map(l => ({
+              description: l.description,
+              rate: l.rate !== undefined && l.rate !== null ? l.rate.toString() : '',
+              gstPercent: l.gstPercent !== undefined && l.gstPercent !== null ? l.gstPercent.toString() : ''
+            })));
+          } else {
+            setSelectedEstimateId('');
+            setPartsList([]);
+            setLabourList([{ description: '', rate: '', gstPercent: '' }]);
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Parts rows operations
+  const handleAddPartRow = () => {
+    setPartsList([...partsList, { partId: '', name: '', partNo: '', hsnCode: '', qty: '1', rate: '', gstPercent: '' }]);
+  };
+
+  const handleRemovePartRow = (idx) => {
+    const list = [...partsList];
+    list.splice(idx, 1);
+    setPartsList(list);
+  };
+
+  const handlePartSelect = (idx, partId) => {
+    const part = inventory.find(item => item._id === partId);
+    if (!part) return;
+
+    const list = [...partsList];
+    list[idx] = {
+      ...list[idx],
+      partId: part._id,
+      name: part.partName,
+      partNo: part.partNumber,
+      hsnCode: part.hsnCode,
+      rate: part.sellingPrice !== undefined && part.sellingPrice !== null ? part.sellingPrice.toString() : '',
+      gstPercent: part.gstPercent !== undefined && part.gstPercent !== null ? part.gstPercent.toString() : ''
+    };
+    setPartsList(list);
+  };
+
+  const handlePartRowValue = (idx, field, value) => {
+    const list = [...partsList];
+    list[idx] = { ...list[idx], [field]: value };
+    setPartsList(list);
+  };
+
+  // Labour rows operations
+  const handleAddLabourRow = () => {
+    setLabourList([...labourList, { description: '', rate: '', gstPercent: '' }]);
+  };
+
+  const handleRemoveLabourRow = (idx) => {
+    const list = [...labourList];
+    list.splice(idx, 1);
+    setLabourList(list);
+  };
+
+  const handleLabourRowValue = (idx, field, value) => {
+    const list = [...labourList];
+    list[idx] = { ...list[idx], [field]: value };
+    setLabourList(list);
+  };
+
+  const handleSave = async (isFinalize = false) => {
+    if (!selectedJcId) {
+      alert('Please select a Job Card first.');
+      return;
+    }
+
+    if (gstDetails.customerGSTIN) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(gstDetails.customerGSTIN)) {
+        alert('Please enter a valid 15-character Indian GSTIN number (e.g. 29ABCDE1234F1Z5).');
+        return;
+      }
+    }
+
+    const payload = {
+      jobCardId: selectedJcId,
+      estimateId: selectedEstimateId || null,
+      parts: partsList.map(p => ({
+        ...p,
+        qty: Number(p.qty) || 0,
+        rate: Number(p.rate) || 0,
+        gstPercent: Number(p.gstPercent) || 0
+      })),
+      labour: labourList.map(l => ({
+        ...l,
+        rate: Number(l.rate) || 0,
+        gstPercent: Number(l.gstPercent) || 0
+      })),
+      gstDetails,
+      insuranceClaimDetails: {
+        ...insuranceDetails,
+        approvedAmount: Number(insuranceDetails.approvedAmount) || 0
+      },
+      invoiceType,
+      poNumber,
+      roNumber,
+      preparedBy,
+      status: isFinalize ? 'Finalized' : 'Draft'
+    };
+
+    try {
+      const url = editId
+        ? `http://localhost:5000/api/invoices/${editId}`
+        : 'http://localhost:5000/api/invoices';
+      const method = editId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const createdInv = await res.json();
+        
+        // 2. If finalize is requested, trigger finalization route
+        if (isFinalize) {
+          const finalRes = await fetch(`http://localhost:5000/api/invoices/${createdInv._id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ status: 'Finalized', paymentStatus: 'Paid' })
+          });
+          
+          if (!finalRes.ok) {
+            const err = await finalRes.json();
+            alert('Stock deduction or invoice finalize failed: ' + err.error);
+          }
+        }
+        onSaved();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to create invoice.');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl max-w-5xl mx-auto select-none animate-fade-in">
+      <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
+        <div>
+          <h2 className="text-base font-extrabold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-indigo-500" /> Create GST Tax Invoice
+          </h2>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+            Compute CGST/SGST/IGST tax splits and surveyor claims
+          </p>
+        </div>
+        <button
+          onClick={onCancel}
+          className="text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-250/20"
+        >
+          Cancel
+        </button>
+      </div>
+
+      <div className="space-y-6">
+        
+        {/* Job Card selection & GSTIN */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-950/20 p-5 rounded-2xl border border-slate-205/30">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+              Select Job Card
+            </label>
+            <select
+              value={selectedJcId}
+              onChange={(e) => handleJcChange(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none"
+            >
+              <option value="">-- Choose Job Card --</option>
+              {jobCards.map(jc => (
+                <option key={jc._id} value={jc._id}>
+                  {jc.jobCardNo} - {jc.vehicleId?.vehicleNumber} ({jc.customerId?.name})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+              Customer GSTIN
+            </label>
+            <input
+              type="text"
+              value={gstDetails.customerGSTIN}
+              onChange={handleGstinChange}
+              placeholder="Enter GST Number"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none uppercase font-mono tracking-wider"
+            />
+            <span className="text-[10px] font-bold text-slate-400 mt-1 block">
+              Billing Category: <strong className="text-indigo-600">{gstDetails.isInterstate ? 'IGST (Inter-State)' : 'CGST + SGST (Intra-State)'}</strong>
+            </span>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+              Invoice Type
+            </label>
+            <select
+              value={invoiceType}
+              onChange={(e) => setInvoiceType(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500"
+            >
+              <option value="Tax Invoice">Tax Invoice</option>
+              <option value="Proforma invoice">Proforma invoice</option>
+              <option value="Retail invoice">Retail invoice</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Additional Invoice Metadata */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-950/20 p-5 rounded-2xl border border-slate-205/30">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+              PO Number
+            </label>
+            <input
+              type="text"
+              value={poNumber}
+              onChange={(e) => setPoNumber(e.target.value)}
+              placeholder="e.g. PO-98765"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+              RO Number (Repair Order)
+            </label>
+            <input
+              type="text"
+              value={roNumber}
+              onChange={(e) => setRoNumber(e.target.value)}
+              placeholder="e.g. RO-12345 (Defaults to JC No)"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+              Prepared By
+            </label>
+            <input
+              type="text"
+              value={preparedBy}
+              onChange={(e) => setPreparedBy(e.target.value)}
+              placeholder="e.g. Kumar (Accounts)"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Spare parts section */}
+        <div className="space-y-3">
+          <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
+              <ShoppingCart className="w-4 h-4 text-indigo-500" /> Spare Parts List
+            </h4>
+            <button
+              type="button"
+              onClick={handleAddPartRow}
+              className="text-xs font-bold text-indigo-650 hover:text-indigo-700"
+            >
+              + Add Spare Part
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {partsList.map((part, idx) => (
+              <div key={idx} className="flex flex-wrap sm:flex-nowrap gap-2.5 items-end bg-slate-50 dark:bg-slate-800/10 p-3 rounded-xl border border-slate-100 dark:border-slate-850">
+                <div className="w-full sm:w-44">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Select Part Catalog</label>
+                  <select
+                    value={part.partId}
+                    onChange={(e) => handlePartSelect(idx, e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-bold focus:outline-none"
+                  >
+                    <option value="">-- Custom Part --</option>
+                    {inventory.map(item => (
+                      <option key={item._id} value={item._id}>
+                        {item.partName} {item.brand ? `[${item.brand}]` : ''} {item.model ? `(${item.model}${item.variant ? ` - ${item.variant}` : ''})` : ''} ({item.partNumber})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex-1 min-w-[150px]">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Part Name (Editable)</label>
+                  <input
+                    type="text"
+                    required
+                    value={part.name}
+                    onChange={(e) => handlePartRowValue(idx, 'name', e.target.value)}
+                    placeholder="e.g. Engine Oil 10W-40"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div className="w-28">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Part Number</label>
+                  <input
+                    type="text"
+                    value={part.partNo || ''}
+                    onChange={(e) => handlePartRowValue(idx, 'partNo', e.target.value)}
+                    placeholder="e.g. SP-ENG-10W40"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div className="w-24">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">HSN Code</label>
+                  <input
+                    type="text"
+                    value={part.hsnCode || ''}
+                    onChange={(e) => handlePartRowValue(idx, 'hsnCode', e.target.value)}
+                    placeholder="e.g. 27101980"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div className="w-20">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Rate (₹)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={part.rate}
+                    onChange={(e) => handleRowNumericChange(e, partsList, setPartsList, idx, 'rate', true)}
+                    placeholder="Rate"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div className="w-16">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Qty</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={part.qty}
+                    onChange={(e) => handleRowNumericChange(e, partsList, setPartsList, idx, 'qty', false)}
+                    placeholder="Qty"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div className="w-16">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">GST %</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={part.gstPercent}
+                    onChange={(e) => handleRowNumericChange(e, partsList, setPartsList, idx, 'gstPercent', true, 100)}
+                    placeholder="Enter GST %"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div className="w-24 text-right pr-2">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Total (₹)</span>
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-200 h-[28px] flex items-center justify-end font-mono">
+                    {Math.round((Number(part.qty) * Number(part.rate) * (1 + (Number(part.gstPercent) || 0) / 100)) * 100) / 100}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleRemovePartRow(idx)}
+                  className="text-red-500 hover:text-red-700 p-2 rounded-lg border border-slate-200/40 hover:bg-red-50 dark:hover:bg-red-950/20"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+
+            {partsList.length === 0 && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">No spare parts added to estimate.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Labour section */}
+        <div className="space-y-3">
+          <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-indigo-500" /> Labour & Service charges
+            </h4>
+            <button
+              type="button"
+              onClick={handleAddLabourRow}
+              className="text-xs font-bold text-indigo-650 hover:text-indigo-700"
+            >
+              + Add Labour Description
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {labourList.map((lab, idx) => (
+              <div key={idx} className="flex flex-wrap sm:flex-nowrap gap-2.5 items-end bg-slate-50 dark:bg-slate-800/10 p-3 rounded-xl border border-slate-100 dark:border-slate-850">
+                <div className="w-full sm:w-44">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Select Service</label>
+                  <select
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) return;
+                      const preset = STANDARD_SERVICES.find(s => s.description === val);
+                      if (preset) {
+                        handleLabourRowValue(idx, 'description', preset.description);
+                        handleLabourRowValue(idx, 'rate', preset.rate);
+                        handleLabourRowValue(idx, 'gstPercent', preset.gstPercent);
+                      }
+                    }}
+                    className="w-full px-2 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-bold focus:outline-none"
+                  >
+                    <option value="">-- Custom Preset --</option>
+                    {STANDARD_SERVICES.map(s => (
+                      <option key={s.description} value={s.description}>{s.description}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Service Description (Editable)</label>
+                  <input
+                    type="text"
+                    required
+                    value={lab.description}
+                    onChange={(e) => handleLabourRowValue(idx, 'description', e.target.value)}
+                    placeholder="e.g. Engine tuning or Front bumper painting"
+                    className="w-full px-3.5 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div className="w-24">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Labour Cost (₹)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={lab.rate}
+                    onChange={(e) => handleRowNumericChange(e, labourList, setLabourList, idx, 'rate', true)}
+                    placeholder="Cost"
+                    className="w-full px-3.5 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div className="w-16">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">GST %</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={lab.gstPercent}
+                    onChange={(e) => handleRowNumericChange(e, labourList, setLabourList, idx, 'gstPercent', true, 100)}
+                    placeholder="Enter GST %"
+                    className="w-full px-3.5 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div className="w-28 text-right pr-2">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Total (₹)</span>
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-200 h-[28px] flex items-center justify-end font-mono">
+                    {Math.round((Number(lab.rate) * (1 + (Number(lab.gstPercent) || 0) / 100)) * 100) / 100}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleRemoveLabourRow(idx)}
+                  className="text-red-500 hover:text-red-700 p-2 rounded-lg border border-slate-200/40 hover:bg-red-50 dark:hover:bg-red-950/20"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Insurance Claim parameters */}
+        <div className="bg-slate-50 dark:bg-slate-950/20 p-5 rounded-2xl border border-slate-100 dark:border-slate-850 space-y-4">
+          <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-500" /> Insurance Surveyor claims
+          </h4>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+            <div>
+              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Insurance Provider</label>
+              <input
+                type="text"
+                value={insuranceDetails.insuranceCompany}
+                onChange={(e) => setInsuranceDetails({ ...insuranceDetails, insuranceCompany: e.target.value })}
+                placeholder="e.g. HDFC Ergo"
+                className="w-full px-3.5 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Claim Number</label>
+              <input
+                type="text"
+                value={insuranceDetails.claimNo}
+                onChange={(e) => setInsuranceDetails({ ...insuranceDetails, claimNo: e.target.value })}
+                placeholder="e.g. CLM192837"
+                className="w-full px-3.5 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Surveyor Name</label>
+              <input
+                type="text"
+                value={insuranceDetails.surveyorName}
+                onChange={(e) => setInsuranceDetails({ ...insuranceDetails, surveyorName: e.target.value })}
+                placeholder="e.g. Mr. Amit Mehta"
+                className="w-full px-3.5 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Survey Date</label>
+              <input
+                type="date"
+                value={insuranceDetails.surveyDate}
+                onChange={(e) => setInsuranceDetails({ ...insuranceDetails, surveyorDate: e.target.value })}
+                className="w-full px-3.5 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-bold focus:outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* GST Tax Invoice Summary Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 dark:border-slate-800 pt-6">
+          <div className="space-y-4">
+            <div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Amount In Words (Auto Generated)</span>
+              <p className="text-xs font-bold text-slate-650 dark:text-slate-300 bg-slate-50 dark:bg-slate-950/20 p-3 rounded-xl border border-slate-200/50 mt-1 italic">
+                {convertNumberToWords(totals.grandTotal)}
+              </p>
+                        {/* Insurance Splits */}
+            <div className="bg-indigo-50/30 dark:bg-indigo-950/15 border border-indigo-150/30 p-4 rounded-2xl space-y-3">
+              <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider block">Insurance Coverage split</span>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Approved Amount (₹)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={insuranceDetails.approvedAmount}
+                    onChange={(e) => handleInsuranceNumericChange(e, 'approvedAmount', true)}
+                    placeholder="Enter approved amount"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                  />
+                </div>
+                <div className="flex-1">
+                  <span className="block text-[9px] font-bold text-slate-450 uppercase tracking-wider mb-1">Customer Payable (₹)</span>
+                  <span className="text-sm font-extrabold text-indigo-900 dark:text-indigo-400 h-[30px] flex items-center font-mono">
+                    ₹{insuranceDetails.customerPayableAmount.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>        </div>
+          </div>
+
+          {/* Totals Table */}
+          <div className="bg-slate-50 dark:bg-slate-950/20 border border-slate-205/30 p-5 rounded-2xl space-y-3">
+            <div className="flex justify-between text-xs font-semibold text-slate-550">
+              <span>Spare Parts:</span>
+              <span>₹{totals.partsTotal.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-xs font-semibold text-slate-550">
+              <span>Labour Charges:</span>
+              <span>₹{totals.labourTotal.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300 border-t border-slate-200/50 pt-2 pb-1">
+              <span>Net Taxable Total:</span>
+              <span>₹{(totals.partsTotal + totals.labourTotal).toLocaleString()}</span>
+            </div>
+            
+            {gstDetails.isInterstate ? (
+              <div className="flex justify-between text-xs font-semibold text-slate-550">
+                <span>IGST Total (18%):</span>
+                <span>₹{totals.igstTotal.toLocaleString()}</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between text-xs font-semibold text-slate-550">
+                  <span>CGST Total (9%):</span>
+                  <span>₹{totals.cgstTotal.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs font-semibold text-slate-550">
+                  <span>SGST Total (9%):</span>
+                  <span>₹{totals.sgstTotal.toLocaleString()}</span>
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-between text-sm font-black border-t border-slate-200/50 pt-3 text-slate-900 dark:text-white">
+              <span>Grand Total:</span>
+              <span>₹{totals.grandTotal.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Footers */}
+        <div className="flex justify-between gap-3 pt-6 border-t border-slate-100 dark:border-slate-800 mt-8">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-750 dark:text-slate-350 transition-colors"
+          >
+            Cancel
+          </button>
+          
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => handleSave(false)}
+              className="px-5 py-2.5 bg-slate-805 hover:bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-200"
+            >
+              Save as Draft
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSave(true)}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/10"
+            >
+              Finalize & Deduct Stock
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

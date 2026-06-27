@@ -1,0 +1,201 @@
+const mongoose = require('mongoose');
+
+const invoiceItemSchema = new mongoose.Schema({
+  partId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Inventory',
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  partNo: {
+    type: String,
+    default: '',
+  },
+  hsnCode: {
+    type: String,
+    default: '',
+  },
+  qty: {
+    type: Number,
+    required: true,
+  },
+  rate: {
+    type: Number,
+    required: true,
+  },
+  gstPercent: {
+    type: Number,
+    required: true,
+  },
+  amount: {
+    type: Number,
+    required: true,
+  },
+  gstAmount: {
+    type: Number,
+    required: true,
+  },
+  cgstAmount: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  sgstAmount: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  igstAmount: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  total: {
+    type: Number,
+    required: true,
+  }
+});
+
+const invoiceLabourSchema = new mongoose.Schema({
+  description: {
+    type: String,
+    required: true,
+  },
+  rate: {
+    type: Number,
+    required: true,
+  },
+  gstPercent: {
+    type: Number,
+    required: true,
+  },
+  amount: {
+    type: Number,
+    required: true,
+  },
+  gstAmount: {
+    type: Number,
+    required: true,
+  },
+  cgstAmount: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  sgstAmount: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  igstAmount: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  total: {
+    type: Number,
+    required: true,
+  }
+});
+
+const invoiceSchema = new mongoose.Schema({
+  invoiceNo: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+  },
+  jobCardId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'JobCard',
+    required: true,
+  },
+  estimateId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Estimate',
+  },
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Customer',
+    required: true,
+  },
+  vehicleId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vehicle',
+    required: true,
+  },
+  date: {
+    type: Date,
+    default: Date.now,
+  },
+  poNumber: {
+    type: String,
+    default: '',
+  },
+  roNumber: {
+    type: String,
+    default: '',
+  },
+  preparedBy: {
+    type: String,
+    default: '',
+  },
+  gstDetails: {
+    companyGSTIN: { type: String, default: '' },
+    customerGSTIN: { type: String, default: '' },
+    isInterstate: { type: Boolean, default: false }
+  },
+  parts: [invoiceItemSchema],
+  labour: [invoiceLabourSchema],
+  totals: {
+    partsTotal: { type: Number, required: true, default: 0 },
+    labourTotal: { type: Number, required: true, default: 0 },
+    cgstTotal: { type: Number, required: true, default: 0 },
+    sgstTotal: { type: Number, required: true, default: 0 },
+    igstTotal: { type: Number, required: true, default: 0 },
+    gstTotal: { type: Number, required: true, default: 0 },
+    grandTotal: { type: Number, required: true, default: 0 },
+  },
+  grandTotalWords: {
+    type: String,
+    required: true,
+  },
+  invoiceType: {
+    type: String,
+    enum: ['Proforma invoice', 'Tax Invoice', 'Retail invoice'],
+    default: 'Tax Invoice',
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['Unpaid', 'Partially Paid', 'Paid'],
+    default: 'Unpaid',
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Insurance Claim', 'Split'],
+    default: 'Cash',
+  },
+  amountPaid: {
+    type: Number,
+    default: 0,
+  },
+  insuranceClaimDetails: {
+    claimNo: { type: String, default: '' },
+    insuranceCompany: { type: String, default: '' },
+    surveyorName: { type: String, default: '' },
+    surveyDate: { type: Date },
+    approvedAmount: { type: Number, default: 0 },
+    customerPayableAmount: { type: Number, default: 0 },
+  },
+  status: {
+    type: String,
+    enum: ['Draft', 'Finalized', 'Cancelled'],
+    default: 'Draft',
+  }
+}, {
+  timestamps: true,
+});
+
+module.exports = mongoose.model('Invoice', invoiceSchema);
