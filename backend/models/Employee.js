@@ -57,16 +57,28 @@ employeeSchema.pre('save', async function(next) {
     try {
       const lastEmp = await this.constructor.findOne(
         { employeeId: { $regex: '^EMP-\\d+$' } },
-        {},
-        { sort: { employeeId: -1 } }
+        { employeeId: 1 },
+        { sort: { createdAt: -1 } }
       );
       let nextNum = 1001;
       if (lastEmp && lastEmp.employeeId) {
-        const match = lastEmp.employeeId.match(/\d+/);
+        const match = lastEmp.employeeId.match(/EMP-(\d+)/);
         if (match) {
-          nextNum = parseInt(match[0], 10) + 1;
+          nextNum = parseInt(match[1], 10) + 1;
         }
       }
+      
+      // Defensive check to guarantee absolute uniqueness
+      let isUnique = false;
+      while (!isUnique) {
+        const existing = await this.constructor.findOne({ employeeId: `EMP-${nextNum}` });
+        if (!existing) {
+          isUnique = true;
+        } else {
+          nextNum++;
+        }
+      }
+
       this.employeeId = `EMP-${nextNum}`;
       next();
     } catch (err) {
