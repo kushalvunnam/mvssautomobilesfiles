@@ -70,7 +70,7 @@ export default function Header({ user, token, currentTab, onMenuClick, onLogout 
     <header className="flex flex-col md:flex-row md:h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:px-6 py-3 md:py-0 justify-between items-stretch md:items-center gap-3 select-none relative z-40">
       
       {/* Mobile top-row container */}
-      <div className="flex justify-between items-center md:contents">
+      <div className="w-full flex justify-between items-center md:contents">
         
         {/* Left Side: Hamburger, Logo, Company Name */}
         <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0 md:order-1">

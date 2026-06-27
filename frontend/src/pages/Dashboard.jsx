@@ -164,7 +164,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
     <div className="space-y-6 animate-fade-in p-1 select-none">
       
       {/* 12 Stats Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatsCard 
           title="Total Customers" 
           value={stats.totalCustomers || 0} 

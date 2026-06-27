@@ -1149,7 +1149,7 @@ export default function App() {
       />
 
       {/* Main content body */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         <Header user={user} token={token} currentTab={activeTab} onMenuClick={() => setSidebarOpen(true)} onLogout={handleLogout} />
         
         <main className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6 bg-[#F8FAFC] dark:bg-slate-950 transition-colors">
