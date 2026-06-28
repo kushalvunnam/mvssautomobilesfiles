@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, ShoppingCart, Activity } from 'lucide-react';
+import { Plus, Trash2, Save, ShoppingCart, Activity, AlertCircle } from 'lucide-react';
 
 const STANDARD_SERVICES = [
   { description: 'General Servicing', rate: 1500, gstPercent: 18 },
@@ -129,6 +129,158 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
     };
     fetchData();
   }, [token, editId]);
+
+  // Compile Job Card inspection audit report data for matching and UI
+  const getInspectionAudit = () => {
+    if (!selectedJcId) return null;
+    const jc = jobCards.find(item => item._id === selectedJcId);
+    if (!jc || !jc.inspectionChecklist) return null;
+
+    const failed = [];
+    const matched = [];
+
+    const mapping = {
+      engineOil: ['Engine Oil', 'Oil'],
+      airFilter: ['Air Filter', 'Filter'],
+      cabinFilter: ['Cabin Filter', 'AC Filter'],
+      sparkPlugs: ['Spark Plug', 'Plugs'],
+      brakePadsFront: ['Brake Pads', 'Front Brake Pads'],
+      brakePadsRear: ['Brake Pads', 'Rear Brake Pads'],
+      clutchOperation: ['Clutch Kit', 'Clutch Plate', 'Clutch'],
+      batteryCondition: ['Battery'],
+      tyresCondition: ['Tyre', 'Tyres'],
+      wiperBlades: ['Wiper Blade', 'Wiper'],
+      brakeFluid: ['Brake Fluid'],
+      coolantLevel: ['Coolant'],
+      powerSteeringFluid: ['Steering Fluid'],
+      gearboxOil: ['Gearbox Oil', 'Transmission Fluid'],
+      bulbsLight: ['Bulb', 'Headlight Bulb', 'Indicator Bulb'],
+      fusesCondition: ['Fuse', 'Fuses']
+    };
+
+    Object.keys(jc.inspectionChecklist).forEach(key => {
+      const val = jc.inspectionChecklist[key];
+      let isFail = false;
+      let remarks = '';
+      if (val && typeof val === 'object') {
+        const status = (val.status || '').toUpperCase();
+        isFail = (status === 'NO' || status === 'NOT OK' || status === 'FAIL');
+        remarks = val.remarks || '';
+      } else if (val && typeof val === 'string') {
+        const status = val.toUpperCase();
+        isFail = (status === 'NO' || status === 'NOT OK' || status === 'FAIL');
+      }
+
+      if (isFail) {
+        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+        failed.push({ key, label, remarks });
+
+        const searchTerms = mapping[key] || [key.replace(/([A-Z])/g, ' $1')];
+        let matchedPart = null;
+        for (const term of searchTerms) {
+          matchedPart = inventory.find(item => 
+            item.partName.toLowerCase().includes(term.toLowerCase())
+          );
+          if (matchedPart) break;
+        }
+        if (matchedPart) {
+          matched.push({
+            failedItem: label,
+            partName: matchedPart.partName,
+            sku: matchedPart.partNumber || 'N/A',
+            price: matchedPart.sellingPrice || 0,
+            stock: matchedPart.stockQuantity || 0
+          });
+        }
+      }
+    });
+
+    return { failed, matched };
+  };
+
+  // Auto-map failed inspection items to suggested parts list
+  useEffect(() => {
+    if (editId) return;
+
+    if (!selectedJcId || jobCards.length === 0 || inventory.length === 0) {
+      setPartsList([]);
+      return;
+    }
+
+    const jc = jobCards.find(item => item._id === selectedJcId);
+    if (!jc) return;
+
+    const inspection = jc.inspectionChecklist || {};
+    const failedItems = [];
+
+    Object.keys(inspection).forEach(key => {
+      const val = inspection[key];
+      let isFail = false;
+      if (val && typeof val === 'object') {
+        const status = (val.status || '').toUpperCase();
+        isFail = (status === 'NO' || status === 'NOT OK' || status === 'FAIL');
+      } else if (val && typeof val === 'string') {
+        const status = val.toUpperCase();
+        isFail = (status === 'NO' || status === 'NOT OK' || status === 'FAIL');
+      }
+      if (isFail) {
+        failedItems.push(key);
+      }
+    });
+
+    const mapping = {
+      engineOil: ['Engine Oil', 'Oil'],
+      airFilter: ['Air Filter', 'Filter'],
+      cabinFilter: ['Cabin Filter', 'AC Filter'],
+      sparkPlugs: ['Spark Plug', 'Plugs'],
+      brakePadsFront: ['Brake Pads', 'Front Brake Pads'],
+      brakePadsRear: ['Brake Pads', 'Rear Brake Pads'],
+      clutchOperation: ['Clutch Kit', 'Clutch Plate', 'Clutch'],
+      batteryCondition: ['Battery'],
+      tyresCondition: ['Tyre', 'Tyres'],
+      wiperBlades: ['Wiper Blade', 'Wiper'],
+      brakeFluid: ['Brake Fluid'],
+      coolantLevel: ['Coolant'],
+      powerSteeringFluid: ['Steering Fluid'],
+      gearboxOil: ['Gearbox Oil', 'Transmission Fluid'],
+      bulbsLight: ['Bulb', 'Headlight Bulb', 'Indicator Bulb'],
+      fusesCondition: ['Fuse', 'Fuses']
+    };
+
+    const suggestedParts = [];
+    const matchedPartIds = new Set();
+
+    failedItems.forEach(failedKey => {
+      const searchTerms = mapping[failedKey] || [failedKey.replace(/([A-Z])/g, ' $1')];
+      
+      let matchedInventoryPart = null;
+      for (const term of searchTerms) {
+        matchedInventoryPart = inventory.find(item => 
+          item.partName.toLowerCase().includes(term.toLowerCase())
+        );
+        if (matchedInventoryPart) break;
+      }
+
+      if (matchedInventoryPart) {
+        if (!matchedPartIds.has(matchedInventoryPart._id)) {
+          matchedPartIds.add(matchedInventoryPart._id);
+          suggestedParts.push({
+            partId: matchedInventoryPart._id,
+            name: matchedInventoryPart.partName,
+            partNo: matchedInventoryPart.partNumber || '',
+            hsnCode: matchedInventoryPart.hsnCode || '',
+            unit: matchedInventoryPart.unit || 'Pcs',
+            qty: '1',
+            rate: (matchedInventoryPart.sellingPrice || 0).toString(),
+            discount: '0',
+            gstPercent: (matchedInventoryPart.gstPercent || 18).toString()
+          });
+        }
+      }
+    });
+
+    setPartsList(suggestedParts);
+  }, [selectedJcId, jobCards, inventory, editId]);
 
   // Handle live recalculation
   useEffect(() => {
@@ -305,6 +457,67 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
             ))}
           </select>
         </div>
+
+        {selectedJcId && (() => {
+          const audit = getInspectionAudit();
+          if (!audit) return null;
+          if (audit.failed.length === 0) {
+            return (
+              <div className="bg-slate-50 dark:bg-slate-950/20 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 text-center text-xs text-slate-450 font-semibold italic select-none">
+                No spare parts suggested from inspection.
+              </div>
+            );
+          }
+          return (
+            <div className="bg-indigo-50/30 dark:bg-slate-900/40 p-5 rounded-2xl border border-indigo-150/45 space-y-3 select-none">
+              <div className="flex items-center gap-1.5 border-b border-indigo-100 dark:border-indigo-950 pb-2">
+                <Activity className="w-4 h-4 text-indigo-655 dark:text-indigo-400 animate-pulse" />
+                <h5 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                  Job Card Inspection Audit Report
+                </h5>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-[10px] font-black text-slate-450 uppercase tracking-widest mb-1.5">
+                    Failed Inspection Items ({audit.failed.length})
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {audit.failed.map(item => (
+                      <span key={item.key} className="px-2.5 py-1 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg text-[10px] font-bold text-red-650 dark:text-red-400">
+                        {item.label} {item.remarks ? `(${item.remarks})` : ''}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <span className="block text-[10px] font-black text-slate-450 uppercase tracking-widest mb-1.5">
+                    Suggested Spares matched with Inventory
+                  </span>
+                  <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
+                    {audit.matched.map((m, index) => (
+                      <div key={index} className="flex justify-between items-center bg-white dark:bg-slate-950 p-2 rounded-xl border border-slate-100 dark:border-slate-850 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
+                        <div className="min-w-0">
+                          <span className="font-bold text-indigo-650 dark:text-indigo-400 block">{m.partName}</span>
+                          <span className="text-[8px] text-slate-400 font-mono">SKU: {m.sku} | Stock: {m.stock}</span>
+                        </div>
+                        <span className="font-bold text-slate-900 dark:text-white shrink-0">
+                          ₹{m.price.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    ))}
+                    {audit.matched.length === 0 && (
+                      <span className="text-[10px] text-slate-450 italic">
+                        No matching spare parts found in active inventory.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Spare parts section */}
         <div className="space-y-3">
