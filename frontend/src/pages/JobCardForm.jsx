@@ -1588,29 +1588,7 @@ export default function JobCardForm({ token, onSaved, onCancel, editId = null })
                 />
               </div>
 
-              <div className="col-span-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Est. Repair Amount (Rs.)</label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={formData.estAmt}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    let cleaned = val.replace(/[^0-9.]/g, '');
-                    // only one decimal dot
-                    const parts = cleaned.split('.');
-                    if (parts.length > 2) {
-                      cleaned = parts[0] + '.' + parts.slice(1).join('');
-                    }
-                    if (cleaned.startsWith('0') && cleaned.length > 1 && cleaned[1] !== '.') {
-                      cleaned = cleaned.replace(/^0+/, '');
-                    }
-                    setFormData({ ...formData, estAmt: cleaned });
-                  }}
-                  placeholder="Enter estimated amount"
-                  className="mt-1.5 w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 font-mono"
-                />
-              </div>
+
             </div>
           </div>
 
