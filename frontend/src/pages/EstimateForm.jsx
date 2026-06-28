@@ -14,6 +14,169 @@ const STANDARD_SERVICES = [
   { description: 'Suspension Check & Repair', rate: 2200, gstPercent: 18 }
 ];
 
+const INSPECTION_MAPPING_RULES = {
+  engineOil: {
+    partSearch: ['Engine Oil', 'Oil'],
+    labourName: 'Engine Oil Replacement Service',
+    defaultLabourRate: 350
+  },
+  gearboxFluid: {
+    partSearch: ['Gearbox Oil', 'Transmission Fluid', 'Gear Oil'],
+    labourName: 'Gearbox Fluid Replacement Service',
+    defaultLabourRate: 400
+  },
+  automaticTransmissionFluid: {
+    partSearch: ['ATF', 'Transmission Fluid', 'Automatic Transmission Fluid'],
+    labourName: 'ATF Replacement Service',
+    defaultLabourRate: 500
+  },
+  differentialFluid: {
+    partSearch: ['Differential Fluid', 'Diff Oil'],
+    labourName: 'Differential Fluid Service',
+    defaultLabourRate: 450
+  },
+  brakeClutchFluid: {
+    partSearch: ['Brake Fluid', 'Clutch Fluid'],
+    labourName: 'Brake & Clutch Fluid Bleeding',
+    defaultLabourRate: 350
+  },
+  powerSteeringFluid: {
+    partSearch: ['Steering Fluid', 'Power Steering Fluid'],
+    labourName: 'Power Steering Fluid Flush',
+    defaultLabourRate: 300
+  },
+  batteryFluid: {
+    partSearch: ['Distilled Water', 'Battery Water', 'Battery'],
+    labourName: 'Battery Service & Top-up',
+    defaultLabourRate: 150
+  },
+  windscreenWashingFluid: {
+    partSearch: ['Windshield Washer', 'Wiper Fluid'],
+    labourName: 'Windscreen Washer Refill',
+    defaultLabourRate: 100
+  },
+  coolantAntiFreezeFluid: {
+    partSearch: ['Coolant', 'Antifreeze'],
+    labourName: 'Coolant Level Service',
+    defaultLabourRate: 300
+  },
+  engineOilFilter: {
+    partSearch: ['Oil Filter'],
+    labourName: 'Engine Oil & Filter Service',
+    defaultLabourRate: 400
+  },
+  airFilterAirconFilter: {
+    partSearch: ['Air Filter', 'Cabin Filter', 'AC Filter'],
+    labourName: 'Air & AC Filter Replacement',
+    defaultLabourRate: 250
+  },
+  fuelFilter: {
+    partSearch: ['Fuel Filter'],
+    labourName: 'Fuel Filter Replacement Service',
+    defaultLabourRate: 350
+  },
+  tightnessOfBelts: {
+    partSearch: ['V-Belt', 'Alternator Belt', 'Serpentine Belt', 'Belt'],
+    labourName: 'Belt Tightening & Adjustment Service',
+    defaultLabourRate: 300
+  },
+  engineTuning: {
+    partSearch: ['Spark Plug', 'Sparkplugs', 'Air Intake Cleaner'],
+    labourName: 'Engine Tuning Service',
+    defaultLabourRate: 1200
+  },
+  clutch: {
+    partSearch: ['Clutch Kit', 'Clutch Plate', 'Release Bearing', 'Clutch Cylinder'],
+    labourName: 'Clutch Overhaul & Setting',
+    defaultLabourRate: 2800
+  },
+  handbrakeSystem: {
+    partSearch: ['Handbrake Cable', 'Parking Brake'],
+    labourName: 'Handbrake Setting & Cable Adjustment',
+    defaultLabourRate: 350
+  },
+  vacuumPumpBrakeBooster: {
+    partSearch: ['Brake Booster', 'Vacuum Pump'],
+    labourName: 'Brake Booster Vacuum Testing',
+    defaultLabourRate: 600
+  },
+  sparkPlugs: {
+    partSearch: ['Spark Plug', 'Plugs'],
+    labourName: 'Spark Plug Replacement Service',
+    defaultLabourRate: 200
+  },
+  suspension: {
+    partSearch: ['Shock Absorber', 'Strut', 'Lower Arm', 'Link Rod', 'Bush'],
+    labourName: 'Suspension Inspection & Greasing',
+    defaultLabourRate: 800
+  },
+  rubberMudFlapProtector: {
+    partSearch: ['Mud Flap', 'Mudguard', 'Protector'],
+    labourName: 'Mud Flap Fitting Service',
+    defaultLabourRate: 150
+  },
+  fuelInjectors: {
+    partSearch: ['Fuel Injector', 'Injector Cleaner'],
+    labourName: 'Fuel Injector Cleaning & Calibration',
+    defaultLabourRate: 900
+  },
+  headlightsFoglightsTails: {
+    partSearch: ['Bulb', 'Headlight', 'Foglight Bulb', 'Tail Light'],
+    labourName: 'Lighting System Bulb Replacement',
+    defaultLabourRate: 200
+  },
+  brakelightsReverse: {
+    partSearch: ['Brake Bulb', 'Reverse Bulb'],
+    labourName: 'Brake & Reverse Light Service',
+    defaultLabourRate: 150
+  },
+  signalLights: {
+    partSearch: ['Indicator Bulb', 'Signal Bulb'],
+    labourName: 'Indicator & Signal Light Service',
+    defaultLabourRate: 150
+  },
+  tyreTread: {
+    partSearch: ['Tyre', 'Tyres'],
+    labourName: 'Tyre Tread Depth Inspection',
+    defaultLabourRate: 150
+  },
+  tyrePressure: {
+    partSearch: ['Tyre Valve', 'Air Valve'],
+    labourName: 'Tyre Pressure Correction Service',
+    defaultLabourRate: 100
+  },
+  windscreenWiperWasher: {
+    partSearch: ['Wiper Blade', 'Wiper'],
+    labourName: 'Wiper Motor & Washer Nozzle Adjustment',
+    defaultLabourRate: 200
+  },
+  safetyNutsBolts: {
+    partSearch: ['Lug Nut', 'Bolt', 'Wheel Nut'],
+    labourName: 'Underchassis Nut & Bolt Tightening',
+    defaultLabourRate: 400
+  },
+  horn: {
+    partSearch: ['Horn', 'Dual Horn'],
+    labourName: 'Horn Sound Tuning & Relay check',
+    defaultLabourRate: 200
+  },
+  exhaustPipesMounting: {
+    partSearch: ['Exhaust Hanger', 'Muffler Mount', 'Silencer Clamp'],
+    labourName: 'Exhaust Pipe Mounting Service',
+    defaultLabourRate: 350
+  },
+  safetyBelts: {
+    partSearch: ['Seat Belt', 'Safety Belt'],
+    labourName: 'Seatbelt Lock Lubrication & Test',
+    defaultLabourRate: 150
+  },
+  driveShaftDustCovers: {
+    partSearch: ['Bellows', 'CV Joint Boot', 'Dust Cover', 'Shaft Boot'],
+    labourName: 'CV Joint Boot Fitting Service',
+    defaultLabourRate: 600
+  }
+};
+
 export default function EstimateForm({ token, onSaved, onCancel, editId = null }) {
   const [jobCards, setJobCards] = useState([]);
   const [inventory, setInventory] = useState([]);
@@ -137,26 +300,11 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
     if (!jc || !jc.inspectionChecklist) return null;
 
     const failed = [];
-    const matched = [];
+    const matchedParts = [];
+    const matchedLabour = [];
+    const unmatched = [];
 
-    const mapping = {
-      engineOil: ['Engine Oil', 'Oil'],
-      airFilter: ['Air Filter', 'Filter'],
-      cabinFilter: ['Cabin Filter', 'AC Filter'],
-      sparkPlugs: ['Spark Plug', 'Plugs'],
-      brakePadsFront: ['Brake Pads', 'Front Brake Pads'],
-      brakePadsRear: ['Brake Pads', 'Rear Brake Pads'],
-      clutchOperation: ['Clutch Kit', 'Clutch Plate', 'Clutch'],
-      batteryCondition: ['Battery'],
-      tyresCondition: ['Tyre', 'Tyres'],
-      wiperBlades: ['Wiper Blade', 'Wiper'],
-      brakeFluid: ['Brake Fluid'],
-      coolantLevel: ['Coolant'],
-      powerSteeringFluid: ['Steering Fluid'],
-      gearboxOil: ['Gearbox Oil', 'Transmission Fluid'],
-      bulbsLight: ['Bulb', 'Headlight Bulb', 'Indicator Bulb'],
-      fusesCondition: ['Fuse', 'Fuses']
-    };
+    const mapping = INSPECTION_MAPPING_RULES;
 
     Object.keys(jc.inspectionChecklist).forEach(key => {
       const val = jc.inspectionChecklist[key];
@@ -175,35 +323,61 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
         const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
         failed.push({ key, label, remarks });
 
-        const searchTerms = mapping[key] || [key.replace(/([A-Z])/g, ' $1')];
+        const rule = mapping[key] || {
+          partSearch: [key.replace(/([A-Z])/g, ' $1')],
+          labourName: `${key.replace(/([A-Z])/g, ' $1')} Service`,
+          defaultLabourRate: 500
+        };
+
         let matchedPart = null;
-        for (const term of searchTerms) {
-          matchedPart = inventory.find(item => 
-            item.partName.toLowerCase().includes(term.toLowerCase())
-          );
+        for (const term of rule.partSearch) {
+          matchedPart = inventory.find(item => {
+            const nameMatch = item.partName.toLowerCase().includes(term.toLowerCase());
+            const skuMatch = item.partNumber && item.partNumber.toLowerCase().includes(term.toLowerCase());
+            const compatMatch = item.vehicleCompatibility && item.vehicleCompatibility.toLowerCase().includes(term.toLowerCase());
+            const categoryMatch = item.category && item.category.toLowerCase().includes(term.toLowerCase());
+            return nameMatch || skuMatch || compatMatch || categoryMatch;
+          });
           if (matchedPart) break;
         }
+
         if (matchedPart) {
-          matched.push({
+          matchedParts.push({
             failedItem: label,
             partName: matchedPart.partName,
             sku: matchedPart.partNumber || 'N/A',
             price: matchedPart.sellingPrice || 0,
             stock: matchedPart.stockQuantity || 0
           });
+        } else {
+          const standardMatch = STANDARD_SERVICES.find(s => 
+            s.description.toLowerCase().includes(rule.labourName.toLowerCase()) || 
+            rule.labourName.toLowerCase().includes(s.description.toLowerCase())
+          );
+          const rate = standardMatch ? standardMatch.rate : rule.defaultLabourRate;
+          matchedLabour.push({
+            failedItem: label,
+            serviceName: rule.labourName,
+            rate: rate
+          });
+          unmatched.push({
+            failedItem: label,
+            suggestedService: rule.labourName
+          });
         }
       }
     });
 
-    return { failed, matched };
+    return { failed, matchedParts, matchedLabour, unmatched };
   };
 
-  // Auto-map failed inspection items to suggested parts list
+  // Auto-map failed inspection items to suggested parts list and labour list
   useEffect(() => {
     if (editId) return;
 
     if (!selectedJcId || jobCards.length === 0 || inventory.length === 0) {
       setPartsList([]);
+      setLabourList([{ description: '', rate: '', gstPercent: '' }]);
       return;
     }
 
@@ -228,36 +402,28 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
       }
     });
 
-    const mapping = {
-      engineOil: ['Engine Oil', 'Oil'],
-      airFilter: ['Air Filter', 'Filter'],
-      cabinFilter: ['Cabin Filter', 'AC Filter'],
-      sparkPlugs: ['Spark Plug', 'Plugs'],
-      brakePadsFront: ['Brake Pads', 'Front Brake Pads'],
-      brakePadsRear: ['Brake Pads', 'Rear Brake Pads'],
-      clutchOperation: ['Clutch Kit', 'Clutch Plate', 'Clutch'],
-      batteryCondition: ['Battery'],
-      tyresCondition: ['Tyre', 'Tyres'],
-      wiperBlades: ['Wiper Blade', 'Wiper'],
-      brakeFluid: ['Brake Fluid'],
-      coolantLevel: ['Coolant'],
-      powerSteeringFluid: ['Steering Fluid'],
-      gearboxOil: ['Gearbox Oil', 'Transmission Fluid'],
-      bulbsLight: ['Bulb', 'Headlight Bulb', 'Indicator Bulb'],
-      fusesCondition: ['Fuse', 'Fuses']
-    };
-
+    const mapping = INSPECTION_MAPPING_RULES;
     const suggestedParts = [];
+    const suggestedLabour = [];
     const matchedPartIds = new Set();
+    const matchedLabourNames = new Set();
 
     failedItems.forEach(failedKey => {
-      const searchTerms = mapping[failedKey] || [failedKey.replace(/([A-Z])/g, ' $1')];
-      
+      const rule = mapping[failedKey] || {
+        partSearch: [failedKey.replace(/([A-Z])/g, ' $1')],
+        labourName: `${failedKey.replace(/([A-Z])/g, ' $1')} Service`,
+        defaultLabourRate: 500
+      };
+
       let matchedInventoryPart = null;
-      for (const term of searchTerms) {
-        matchedInventoryPart = inventory.find(item => 
-          item.partName.toLowerCase().includes(term.toLowerCase())
-        );
+      for (const term of rule.partSearch) {
+        matchedInventoryPart = inventory.find(item => {
+          const nameMatch = item.partName.toLowerCase().includes(term.toLowerCase());
+          const skuMatch = item.partNumber && item.partNumber.toLowerCase().includes(term.toLowerCase());
+          const compatMatch = item.vehicleCompatibility && item.vehicleCompatibility.toLowerCase().includes(term.toLowerCase());
+          const categoryMatch = item.category && item.category.toLowerCase().includes(term.toLowerCase());
+          return nameMatch || skuMatch || compatMatch || categoryMatch;
+        });
         if (matchedInventoryPart) break;
       }
 
@@ -276,10 +442,30 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
             gstPercent: (matchedInventoryPart.gstPercent || 18).toString()
           });
         }
+      } else {
+        const name = rule.labourName;
+        if (!matchedLabourNames.has(name)) {
+          matchedLabourNames.add(name);
+          
+          const standardMatch = STANDARD_SERVICES.find(s => 
+            s.description.toLowerCase().includes(name.toLowerCase()) || 
+            name.toLowerCase().includes(s.description.toLowerCase())
+          );
+          const rate = standardMatch ? standardMatch.rate : rule.defaultLabourRate;
+          const gstPercent = standardMatch ? standardMatch.gstPercent : 18;
+
+          suggestedLabour.push({
+            description: name,
+            rate: rate.toString(),
+            discount: '0',
+            gstPercent: gstPercent.toString()
+          });
+        }
       }
     });
 
     setPartsList(suggestedParts);
+    setLabourList(suggestedLabour.length > 0 ? suggestedLabour : [{ description: '', rate: '', gstPercent: '' }]);
   }, [selectedJcId, jobCards, inventory, editId]);
 
   // Handle live recalculation
@@ -471,47 +657,73 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
           return (
             <div className="bg-indigo-50/30 dark:bg-slate-900/40 p-5 rounded-2xl border border-indigo-150/45 space-y-3 select-none">
               <div className="flex items-center gap-1.5 border-b border-indigo-100 dark:border-indigo-950 pb-2">
-                <Activity className="w-4 h-4 text-indigo-655 dark:text-indigo-400 animate-pulse" />
+                <Activity className="w-4 h-4 text-indigo-650 dark:text-indigo-400 animate-pulse" />
                 <h5 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
                   Job Card Inspection Audit Report
                 </h5>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 1. Matched Spare Parts */}
                 <div>
                   <span className="block text-[10px] font-black text-slate-450 uppercase tracking-widest mb-1.5">
-                    Failed Inspection Items ({audit.failed.length})
+                    Matched Spare Parts ({audit.matchedParts.length})
                   </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {audit.failed.map(item => (
-                      <span key={item.key} className="px-2.5 py-1 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg text-[10px] font-bold text-red-650 dark:text-red-400">
-                        {item.label} {item.remarks ? `(${item.remarks})` : ''}
-                      </span>
+                  <div className="space-y-1.5 max-h-[150px] overflow-y-auto pr-1">
+                    {audit.matchedParts.map((m, index) => (
+                      <div key={index} className="bg-white dark:bg-slate-950 p-2 rounded-xl border border-slate-100 dark:border-slate-850 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
+                        <span className="font-bold text-indigo-650 dark:text-indigo-400 block">{m.partName}</span>
+                        <div className="flex justify-between items-center mt-1 text-[8px] text-slate-400">
+                          <span>SKU: {m.sku} | Stock: {m.stock}</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">₹{m.price}</span>
+                        </div>
+                      </div>
                     ))}
+                    {audit.matchedParts.length === 0 && (
+                      <span className="text-[10px] text-slate-450 italic">No parts matched in inventory</span>
+                    )}
                   </div>
                 </div>
                 
+                {/* 2. Suggested Labour Services */}
                 <div>
                   <span className="block text-[10px] font-black text-slate-450 uppercase tracking-widest mb-1.5">
-                    Suggested Spares matched with Inventory
+                    Suggested Labour Services ({audit.matchedLabour.length})
                   </span>
-                  <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
-                    {audit.matched.map((m, index) => (
-                      <div key={index} className="flex justify-between items-center bg-white dark:bg-slate-950 p-2 rounded-xl border border-slate-100 dark:border-slate-850 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
-                        <div className="min-w-0">
-                          <span className="font-bold text-indigo-650 dark:text-indigo-400 block">{m.partName}</span>
-                          <span className="text-[8px] text-slate-400 font-mono">SKU: {m.sku} | Stock: {m.stock}</span>
+                  <div className="space-y-1.5 max-h-[150px] overflow-y-auto pr-1">
+                    {audit.matchedLabour.map((l, index) => (
+                      <div key={index} className="bg-white dark:bg-slate-950 p-2 rounded-xl border border-slate-100 dark:border-slate-850 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
+                        <span className="font-bold text-emerald-650 dark:text-emerald-400 block">{l.serviceName}</span>
+                        <div className="flex justify-between items-center mt-1 text-[8px] text-slate-400">
+                          <span>Mapped from: {l.failedItem}</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">₹{l.rate}</span>
                         </div>
-                        <span className="font-bold text-slate-900 dark:text-white shrink-0">
-                          ₹{m.price.toLocaleString('en-IN')}
-                        </span>
                       </div>
                     ))}
-                    {audit.matched.length === 0 && (
-                      <span className="text-[10px] text-slate-450 italic">
-                        No matching spare parts found in active inventory.
-                      </span>
+                    {audit.matchedLabour.length === 0 && (
+                      <span className="text-[10px] text-slate-450 italic">No labour suggested</span>
                     )}
+                  </div>
+                </div>
+
+                {/* 3. Failed checklist items */}
+                <div>
+                  <span className="block text-[10px] font-black text-slate-450 uppercase tracking-widest mb-1.5">
+                    Failed Checklist Items ({audit.failed.length})
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 max-h-[150px] overflow-y-auto pr-1">
+                    {audit.failed.map(item => {
+                      const hasPart = audit.matchedParts.some(p => p.failedItem === item.label);
+                      return (
+                        <span key={item.key} className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border leading-tight ${
+                          hasPart 
+                            ? 'bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900/50 text-indigo-650 dark:text-indigo-400' 
+                            : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/50 text-amber-650 dark:text-amber-400'
+                        }`}>
+                          {item.label} {item.remarks ? `(${item.remarks})` : ''}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
