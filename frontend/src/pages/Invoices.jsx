@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Search, Plus, Receipt, Download, Share2, Mail, CheckCircle2, Printer, Edit2 } from 'lucide-react';
 import InvoiceForm from './InvoiceForm';
 
@@ -17,7 +18,7 @@ export default function Invoices({ token, user, setActiveTab }) {
 
   const fetchInvoices = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/invoices?status=${statusFilter}`, {
+      const res = await fetch(`${API_BASE_URL}/invoices?status=${statusFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -68,7 +69,7 @@ export default function Invoices({ token, user, setActiveTab }) {
   const finalizeInvoice = async (id) => {
     if (!confirm('Are you sure you want to finalize this invoice? This will deduct parts from inventory.')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/invoices/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/invoices/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -580,8 +581,8 @@ export default function Invoices({ token, user, setActiveTab }) {
                     hostname.includes('pinggy') || 
                     hostname.includes('lhr.life') || 
                     hostname.includes('ngrok');
-    const apiHost = isCloud ? 'localhost:5000' : `${hostname}:5000`;
-    window.open(`http://${apiHost}/api/invoices/${inv._id}/gatepass/pdf`, '_blank');
+    // const apiHost = '';
+    window.open(`${API_BASE_URL}/invoices/${inv._id}/gatepass/pdf`, '_blank');
   };    
 
 
@@ -593,7 +594,7 @@ export default function Invoices({ token, user, setActiveTab }) {
     if (token === 'mock_jwt_token_for_offline_demo') {
       printInvoice(inv);
     } else {
-      window.open(`http://${window.location.hostname}:5000/api/invoices/${inv._id}/pdf?token=${token}`, '_blank');
+      window.open(`${API_BASE_URL}/invoices/${inv._id}/pdf?token=${token}`, '_blank');
     }
   };
 
@@ -813,8 +814,8 @@ export default function Invoices({ token, user, setActiveTab }) {
                     readOnly
                     value={
                       shareModal.type === 'whatsapp' 
-                        ? `Dear ${shareModal.invoice?.customerId?.name || 'Customer'},\nYour vehicle ${shareModal.invoice?.vehicleId?.vehicleNumber || 'TS09'} is ready! Invoice ${shareModal.invoice?.invoiceNo} of amount ₹${shareModal.invoice?.totals?.grandTotal?.toLocaleString()} generated. Download: http://${window.location.hostname}:5000/api/invoices/${shareModal.invoice?._id}/pdf\nThanks, MVSS Automobiles.`
-                        : `Subject: Tax Invoice - MVSS Automobiles\n\nDear Customer,\nPlease find attached your tax invoice details for repairs on vehicle ${shareModal.invoice?.vehicleId?.vehicleNumber || 'TS09'}.\nInvoice No: ${shareModal.invoice?.invoiceNo}\nNet Total: ₹${shareModal.invoice?.totals?.grandTotal?.toLocaleString()}\nDownload copy: http://${window.location.hostname}:5000/api/invoices/${shareModal.invoice?._id}/pdf`
+                        ? `Dear ${shareModal.invoice?.customerId?.name || 'Customer'},\nYour vehicle ${shareModal.invoice?.vehicleId?.vehicleNumber || 'TS09'} is ready! Invoice ${shareModal.invoice?.invoiceNo} of amount ₹${shareModal.invoice?.totals?.grandTotal?.toLocaleString()} generated. Download: ${API_BASE_URL}/invoices/${shareModal.invoice?._id}/pdf\nThanks, MVSS Automobiles.`
+                        : `Subject: Tax Invoice - MVSS Automobiles\n\nDear Customer,\nPlease find attached your tax invoice details for repairs on vehicle ${shareModal.invoice?.vehicleId?.vehicleNumber || 'TS09'}.\nInvoice No: ${shareModal.invoice?.invoiceNo}\nNet Total: ₹${shareModal.invoice?.totals?.grandTotal?.toLocaleString()}\nDownload copy: ${API_BASE_URL}/invoices/${shareModal.invoice?._id}/pdf`
                     }
                     className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-[10px] font-medium text-slate-500 resize-none focus:outline-none"
                   />

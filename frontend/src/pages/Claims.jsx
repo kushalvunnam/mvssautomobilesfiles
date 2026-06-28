@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Search, ShieldAlert, FileText, Upload, Calendar, CheckCircle2, User, Car } from 'lucide-react';
 
 export default function Claims({ token, user }) {
@@ -40,7 +41,7 @@ export default function Claims({ token, user }) {
 
   const fetchClaims = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/claims?status=${statusFilter}`, {
+      const res = await fetch(`${API_BASE_URL}/claims?status=${statusFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -56,10 +57,10 @@ export default function Claims({ token, user }) {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       const [cRes, vRes, iRes, jRes] = await Promise.all([
-        fetch('http://localhost:5000/api/customers', { headers }),
-        fetch('http://localhost:5000/api/vehicles', { headers }),
-        fetch('http://localhost:5000/api/invoices', { headers }),
-        fetch('http://localhost:5000/api/jobcards', { headers }),
+        fetch(`${API_BASE_URL}/customers`, { headers }),
+        fetch(`${API_BASE_URL}/vehicles`, { headers }),
+        fetch(`${API_BASE_URL}/invoices`, { headers }),
+        fetch(`${API_BASE_URL}/jobcards`, { headers }),
       ]);
       if (cRes.ok && vRes.ok && iRes.ok && jRes.ok) {
         setCustomers(await cRes.json());
@@ -79,7 +80,7 @@ export default function Claims({ token, user }) {
 
   const handleClaimSelect = async (claim) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/claims/${claim._id}`, {
+      const res = await fetch(`${API_BASE_URL}/claims/${claim._id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -116,7 +117,7 @@ export default function Claims({ token, user }) {
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/claims', {
+      const res = await fetch(`${API_BASE_URL}/claims`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,7 +134,7 @@ export default function Claims({ token, user }) {
           formData.append('document', addDocumentFile);
           formData.append('name', addDocumentName);
           
-          await fetch(`http://localhost:5000/api/claims/${createdClaim._id}/upload`, {
+          await fetch(`${API_BASE_URL}/claims/${createdClaim._id}/upload`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: formData
@@ -173,7 +174,7 @@ export default function Claims({ token, user }) {
 
   const handleUpdateStatus = async (claimId, nextStatus) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/claims/${claimId}`, {
+      const res = await fetch(`${API_BASE_URL}/claims/${claimId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -201,7 +202,7 @@ export default function Claims({ token, user }) {
     formData.append('name', uploadDocName);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/claims/${selectedClaim._id}/upload`, {
+      const res = await fetch(`${API_BASE_URL}/claims/${selectedClaim._id}/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData
@@ -429,21 +430,16 @@ export default function Claims({ token, user }) {
                   return (
                     <div key={docName} className="flex justify-between items-center py-1 border-b border-slate-50 dark:border-slate-800/30">
                       <span className="font-semibold text-slate-700 dark:text-slate-350">{docName}</span>
-                       {uploaded ? (() => {
-                         const hostname = window.location.hostname;
-                         const isCloud = hostname.includes('vercel.app') || hostname.includes('surge.sh') || hostname.includes('github.io') || hostname.includes('loca.lt') || hostname.includes('pinggy') || hostname.includes('lhr.life') || hostname.includes('ngrok');
-                         const base = isCloud ? 'localhost:5000' : `${hostname}:5000`;
-                         return (
+                       {uploaded ? (
                            <a
-                             href={`http://${base}${uploaded.url}`}
+                             href={`${API_BASE_URL.replace('/api', '')}${uploaded.url}`}
                              target="_blank"
                              rel="noreferrer"
                              className="text-emerald-650 dark:text-emerald-400 font-bold flex items-center gap-1 hover:underline"
                            >
                              <CheckCircle2 className="w-3.5 h-3.5" /> View
                            </a>
-                         );
-                       })() : (
+                       ) : (
                         <span className="text-[10px] text-red-500 font-bold">Pending upload</span>
                       )}
                     </div>

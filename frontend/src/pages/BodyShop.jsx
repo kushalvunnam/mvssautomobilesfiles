@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { API_BASE_URL } from '../config';
 import { 
   Wrench, 
   Car, 
@@ -48,7 +49,7 @@ export default function BodyShop({ token, user, onNavigateToJobCard }) {
 
   const fetchJobCards = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/jobcards', {
+      const res = await fetch(`${API_BASE_URL}/jobcards`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -182,7 +183,7 @@ export default function BodyShop({ token, user, onNavigateToJobCard }) {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/jobcards/${selectedJc._id}`, {
+      const res = await fetch(`${API_BASE_URL}/jobcards/${selectedJc._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -220,7 +221,7 @@ export default function BodyShop({ token, user, onNavigateToJobCard }) {
     formData.append('photoType', photoTypeUpload);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/jobcards/${selectedJc._id}/photo`, {
+      const res = await fetch(`${API_BASE_URL}/jobcards/${selectedJc._id}/photo`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`
@@ -553,8 +554,7 @@ export default function BodyShop({ token, user, onNavigateToJobCard }) {
                               const isAbsolute = p.url.startsWith('http') || p.url.startsWith('blob:') || p.url.startsWith('data:');
                               const hostname = window.location.hostname;
                               const isCloud = hostname.includes('vercel.app') || hostname.includes('surge.sh') || hostname.includes('github.io') || hostname.includes('loca.lt') || hostname.includes('pinggy') || hostname.includes('lhr.life') || hostname.includes('ngrok');
-                              const base = isCloud ? 'localhost:5000' : `${hostname}:5000`;
-                              const src = isAbsolute ? p.url : `http://${base}${p.url}`;
+                              const src = isAbsolute ? p.url : `${API_BASE_URL.replace('/api', '')}${p.url}`;
                               return (
                                 <div key={i} className="aspect-video w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
                                   <img 
@@ -697,7 +697,7 @@ export default function BodyShop({ token, user, onNavigateToJobCard }) {
                       onClick={async () => {
                         setUpdating(true);
                         try {
-                          const res = await fetch(`http://localhost:5000/api/jobcards/${selectedJc._id}`, {
+                          const res = await fetch(`${API_BASE_URL}/jobcards/${selectedJc._id}`, {
                             method: 'PUT',
                             headers: {
                               'Content-Type': 'application/json',

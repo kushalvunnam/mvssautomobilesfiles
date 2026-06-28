@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Plus, Trash2, Save, ShoppingCart, Activity, AlertCircle } from 'lucide-react';
 
 const STANDARD_SERVICES = [
@@ -245,8 +246,8 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
         const headers = { Authorization: `Bearer ${token}` };
         
         // Load active jobcards (excluding fully delivered ones)
-        const jcRes = await fetch('http://localhost:5000/api/jobcards', { headers });
-        const invRes = await fetch('http://localhost:5000/api/inventory', { headers });
+        const jcRes = await fetch(`${API_BASE_URL}/jobcards`, { headers });
+        const invRes = await fetch(`${API_BASE_URL}/inventory`, { headers });
         
         if (jcRes.ok && invRes.ok) {
           const jcData = await jcRes.ok ? await jcRes.json() : [];
@@ -263,7 +264,7 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
 
         // If editing an existing estimate
         if (editId) {
-          const estRes = await fetch(`http://localhost:5000/api/estimates/${editId}`, { headers });
+          const estRes = await fetch(`${API_BASE_URL}/estimates/${editId}`, { headers });
           if (estRes.ok) {
             const est = await estRes.json();
             setSelectedJcId(est.jobCardId._id);
@@ -579,8 +580,8 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
     };
 
     const url = editId
-      ? `http://localhost:5000/api/estimates/${editId}`
-      : 'http://localhost:5000/api/estimates';
+      ? `${API_BASE_URL}/estimates/${editId}`
+      : `${API_BASE_URL}/estimates`;
     const method = editId ? 'PUT' : 'POST';
 
     try {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { 
   Users, 
   Car, 
@@ -14,7 +15,8 @@ import {
   Package,
   Calendar,
   ChevronRight,
-  ShoppingBag
+  ShoppingBag,
+  Bell
 } from 'lucide-react';
 import StatsCard from '../components/StatsCard';
 
@@ -44,6 +46,8 @@ export default function Dashboard({ token, user, setActiveTab }) {
   });
 
   const [loading, setLoading] = useState(true);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
 
   // 3. Restore the original Promise.all backend data fetch logic
   useEffect(() => {
@@ -51,8 +55,8 @@ export default function Dashboard({ token, user, setActiveTab }) {
       try {
         const headers = { Authorization: `Bearer ${token}` };
         const [statsRes, chartsRes] = await Promise.all([
-          fetch('http://localhost:5000/api/dashboard/stats', { headers }),
-          fetch('http://localhost:5000/api/dashboard/charts', { headers }),
+          fetch(`${API_BASE_URL}/dashboard/stats`, { headers }),
+          fetch(`${API_BASE_URL}/dashboard/charts`, { headers }),
         ]);
 
         if (statsRes.ok && chartsRes.ok) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from './config';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Login from './pages/Login';
@@ -992,7 +993,7 @@ export default function App() {
       return;
     }
     try {
-      const res = await fetch('http://localhost:5000/api/auth/profile', {
+      const res = await fetch('https://mvssautomobiles.com/api/auth/profile', {
         headers: { Authorization: `Bearer ${sessionToken}` }
       });
       if (res.ok) {

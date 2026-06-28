@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Search, Plus, Edit2, FileText, ChevronRight, Eye } from 'lucide-react';
 import JobCardForm from './JobCardForm';
 import JobCardDetails from './JobCardDetails';
@@ -20,7 +21,7 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
 
   const fetchJobCards = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/jobcards?search=${encodeURIComponent(search)}&status=${statusFilter}`, {
+      const res = await fetch(`${API_BASE_URL}/jobcards?search=${encodeURIComponent(search)}&status=${statusFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { ChevronLeft, ChevronRight, Save, User, Car, CheckSquare, Plus, Trash2, Camera, Settings, Gauge, Calendar, Flame, Wrench } from 'lucide-react';
 import VehicleDamageCanvas from '../components/VehicleDamageCanvas';
 import SignaturePad from '../components/SignaturePad';
@@ -428,8 +429,8 @@ export default function JobCardForm({ token, onSaved, onCancel, editId = null })
       try {
         const headers = { Authorization: `Bearer ${token}` };
         const [cRes, vRes] = await Promise.all([
-          fetch('http://localhost:5000/api/customers', { headers }),
-          fetch('http://localhost:5000/api/vehicles', { headers })
+          fetch(`${API_BASE_URL}/customers`, { headers }),
+          fetch(`${API_BASE_URL}/vehicles`, { headers })
         ]);
         if (cRes.ok && vRes.ok) {
           const cData = await cRes.json();
@@ -439,7 +440,7 @@ export default function JobCardForm({ token, onSaved, onCancel, editId = null })
 
           // If in edit mode, fetch the job card details
           if (editId) {
-            const jcRes = await fetch(`http://localhost:5000/api/jobcards/${editId}`, { headers });
+            const jcRes = await fetch(`${API_BASE_URL}/jobcards/${editId}`, { headers });
             if (jcRes.ok) {
               const jc = await jcRes.json();
               setSelectedCustomerId(jc.customerId._id);
@@ -579,8 +580,8 @@ export default function JobCardForm({ token, onSaved, onCancel, editId = null })
     };
 
     const url = editId
-      ? `http://localhost:5000/api/jobcards/${editId}`
-      : 'http://localhost:5000/api/jobcards';
+      ? `${API_BASE_URL}/jobcards/${editId}`
+      : `${API_BASE_URL}/jobcards`;
     
     const method = editId ? 'PUT' : 'POST';
 
@@ -610,7 +611,7 @@ export default function JobCardForm({ token, onSaved, onCancel, editId = null })
             // XHR Upload with progress
             await new Promise((resolve, reject) => {
               const xhr = new XMLHttpRequest();
-              xhr.open('POST', `http://localhost:5000/api/jobcards/${savedJc._id}/photo`);
+              xhr.open('POST', `${API_BASE_URL}/jobcards/${savedJc._id}/photo`);
               xhr.setRequestHeader('Authorization', `Bearer ${token}`);
               
               xhr.upload.onprogress = (e) => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Search, Plus, Edit2, FileCheck, Check, X, Download } from 'lucide-react';
 import EstimateForm from './EstimateForm';
 
@@ -11,7 +12,7 @@ export default function Estimates({ token, user, setActiveTab }) {
 
   const fetchEstimates = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/estimates?status=${statusFilter}`, {
+      const res = await fetch(`${API_BASE_URL}/estimates?status=${statusFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -32,7 +33,7 @@ export default function Estimates({ token, user, setActiveTab }) {
   const updateStatus = async (id, newStatus, e) => {
     e.stopPropagation(); // prevent row click
     try {
-      const res = await fetch(`http://localhost:5000/api/estimates/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/estimates/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -493,7 +494,7 @@ export default function Estimates({ token, user, setActiveTab }) {
     if (token === 'mock_jwt_token_for_offline_demo') {
       printEstimate(est);
     } else {
-      window.open(`http://${window.location.hostname}:5000/api/estimates/${est._id}/pdf?token=${token}`, '_blank');
+      window.open(`${API_BASE_URL}/estimates/${est._id}/pdf?token=${token}`, '_blank');
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { ShieldCheck, History, AlertTriangle } from 'lucide-react';
 
 export default function AuditLogs({ token }) {
@@ -7,7 +8,7 @@ export default function AuditLogs({ token }) {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/dashboard/auditlogs', {
+      const res = await fetch(`${API_BASE_URL}/dashboard/auditlogs`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {

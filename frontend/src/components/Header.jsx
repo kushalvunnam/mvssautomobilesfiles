@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Sun, Moon, Bell, AlertTriangle, Menu, LogOut, Search, Calendar, MessageSquare } from 'lucide-react';
 
 export default function Header({ user, token, currentTab, onMenuClick, onLogout }) {
@@ -38,7 +39,7 @@ export default function Header({ user, token, currentTab, onMenuClick, onLogout 
     if (!token) return;
     const fetchLowStockAlerts = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/inventory?lowStock=true', {
+        const res = await fetch('https://mvssautomobiles.com/api/inventory?lowStock=true', {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {

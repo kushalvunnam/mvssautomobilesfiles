@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Search, Plus, Edit2, Calendar, FileText, Receipt, ShieldAlert, Trash2 } from 'lucide-react';
 
 export default function Customers({ token, user }) {
@@ -26,7 +27,7 @@ export default function Customers({ token, user }) {
 
   const fetchCustomers = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/customers?search=${encodeURIComponent(search)}&type=${typeFilter}`, {
+      const res = await fetch(`${API_BASE_URL}/customers?search=${encodeURIComponent(search)}&type=${typeFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -46,7 +47,7 @@ export default function Customers({ token, user }) {
     setSelectedCustomer(customer);
     setCustomerVehicles([]);
     try {
-      const res = await fetch(`http://localhost:5000/api/customers/${customer._id}/timeline`, {
+      const res = await fetch(`${API_BASE_URL}/customers/${customer._id}/timeline`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -58,7 +59,7 @@ export default function Customers({ token, user }) {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/vehicles/customer/${customer._id}`, {
+      const res = await fetch(`${API_BASE_URL}/vehicles/customer/${customer._id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -160,8 +161,8 @@ export default function Customers({ token, user }) {
     }
 
     const url = modalMode === 'add' 
-      ? 'http://localhost:5000/api/customers'
-      : `http://localhost:5000/api/customers/${selectedCustomer._id}`;
+      ? `${API_BASE_URL}/customers`
+      : `${API_BASE_URL}/customers/${selectedCustomer._id}`;
     
     const method = modalMode === 'add' ? 'POST' : 'PUT';
 
@@ -196,7 +197,7 @@ export default function Customers({ token, user }) {
     if (!confirm('Are you sure you want to delete this customer? This action cannot be undone.')) return;
     
     try {
-      const res = await fetch(`http://localhost:5000/api/customers/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/customers/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });

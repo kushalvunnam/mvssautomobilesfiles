@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Save, ShoppingBag, ShieldCheck, Scale, Receipt, Plus, Trash2, Activity, ShoppingCart } from 'lucide-react';
 
 const STANDARD_SERVICES = [
@@ -153,9 +154,9 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
     const fetchData = async () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const jcRes = await fetch('http://localhost:5000/api/jobcards', { headers });
-        const estRes = await fetch('http://localhost:5000/api/estimates', { headers });
-        const invRes = await fetch('http://localhost:5000/api/inventory', { headers });
+        const jcRes = await fetch(`${API_BASE_URL}/jobcards`, { headers });
+        const estRes = await fetch(`${API_BASE_URL}/estimates`, { headers });
+        const invRes = await fetch(`${API_BASE_URL}/inventory`, { headers });
 
         if (jcRes.ok && estRes.ok && invRes.ok) {
           const jcData = await jcRes.json();
@@ -177,7 +178,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
           localStorage.removeItem('convert_estimate_id');
           localStorage.removeItem('create_invoice_jc_id');
 
-          const estDetailsRes = await fetch(`http://localhost:5000/api/estimates/${convertEstId}`, { headers });
+          const estDetailsRes = await fetch(`${API_BASE_URL}/estimates/${convertEstId}`, { headers });
           if (estDetailsRes.ok) {
             const est = await estDetailsRes.json();
             
@@ -218,7 +219,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
         }
 
         if (editId) {
-          const invDetailsRes = await fetch(`http://localhost:5000/api/invoices/${editId}`, { headers });
+          const invDetailsRes = await fetch(`${API_BASE_URL}/invoices/${editId}`, { headers });
           if (invDetailsRes.ok) {
             const inv = await invDetailsRes.json();
             setSelectedJcId(inv.jobCardId?._id || inv.jobCardId || '');
@@ -361,7 +362,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
 
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      const jcRes = await fetch(`http://localhost:5000/api/jobcards/${jcId}`, { headers });
+      const jcRes = await fetch(`${API_BASE_URL}/jobcards/${jcId}`, { headers });
       if (jcRes.ok) {
         const jc = await jcRes.json();
         const cust = jc.customerId || {};
@@ -380,7 +381,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
         }));
 
         // Fetch approved estimate for this jobcard
-        const estRes = await fetch(`http://localhost:5000/api/estimates?jobCardId=${jcId}`, { headers });
+        const estRes = await fetch(`${API_BASE_URL}/estimates?jobCardId=${jcId}`, { headers });
         if (estRes.ok) {
           const estimatesList = await estRes.json();
           const approvedEst = estimatesList.find(e => e.status === 'Approved') || estimatesList[0];
@@ -505,8 +506,8 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
 
     try {
       const url = editId
-        ? `http://localhost:5000/api/invoices/${editId}`
-        : 'http://localhost:5000/api/invoices';
+        ? `${API_BASE_URL}/invoices/${editId}`
+        : `${API_BASE_URL}/invoices`;
       const method = editId ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -523,7 +524,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
         
         // 2. If finalize is requested, trigger finalization route
         if (isFinalize) {
-          const finalRes = await fetch(`http://localhost:5000/api/invoices/${createdInv._id}`, {
+          const finalRes = await fetch(`${API_BASE_URL}/invoices/${createdInv._id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',

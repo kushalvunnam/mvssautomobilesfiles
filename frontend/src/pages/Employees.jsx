@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Search, Plus, Calendar, Receipt, Download, FileText, CheckCircle2, XCircle, AlertCircle, Save, Edit2, Trash2, Eye } from 'lucide-react';
 
 export default function Employees({ token, user }) {
@@ -178,7 +179,7 @@ export default function Employees({ token, user }) {
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/employees', {
+      const res = await fetch(`${API_BASE_URL}/employees`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -286,7 +287,7 @@ export default function Employees({ token, user }) {
     if (photoFile) formData.append('photoDoc', photoFile);
 
     try {
-      const res = await fetch('http://localhost:5000/api/employees', {
+      const res = await fetch(`${API_BASE_URL}/employees`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData
@@ -380,7 +381,7 @@ export default function Employees({ token, user }) {
     if (editPhotoFile) formData.append('photoDoc', editPhotoFile);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/employees/${editForm._id}`, {
+      const res = await fetch(`${API_BASE_URL}/employees/${editForm._id}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`
@@ -408,7 +409,7 @@ export default function Employees({ token, user }) {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`http://localhost:5000/api/employees/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/employees/${id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`
@@ -430,7 +431,7 @@ export default function Employees({ token, user }) {
   const handleToggleStatus = async (emp) => {
     const newStatus = emp.status === 'Inactive' ? 'Active' : 'Inactive';
     try {
-      const res = await fetch(`http://localhost:5000/api/employees/${emp._id}`, {
+      const res = await fetch(`${API_BASE_URL}/employees/${emp._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -449,7 +450,7 @@ export default function Employees({ token, user }) {
   const handleSaveAttendance = async (empId) => {
     const status = attendanceMap[empId];
     try {
-      const res = await fetch(`http://localhost:5000/api/employees/${empId}/attendance`, {
+      const res = await fetch(`${API_BASE_URL}/employees/${empId}/attendance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -471,7 +472,7 @@ export default function Employees({ token, user }) {
     if (!salaryForm.employeeId) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/employees/${salaryForm.employeeId}/salary`, {
+      const res = await fetch(`${API_BASE_URL}/employees/${salaryForm.employeeId}/salary`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -738,9 +739,9 @@ export default function Employees({ token, user }) {
                     hostname.includes('lhr.life') || 
                     hostname.includes('ngrok');
     if (isCloud) {
-      return `http://localhost:5000${url}`;
+      return `${API_BASE_URL.replace('/api', '')}${url}`;
     }
-    return `http://${hostname}:5000${url}`;
+    return `${API_BASE_URL.replace('/api', '')}${url}`;
   };
 
   const handleDownloadResume = async (e, resumeUrl) => {

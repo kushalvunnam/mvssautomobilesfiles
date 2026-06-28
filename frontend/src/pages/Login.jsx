@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Wrench, Eye, EyeOff, ShieldAlert, CheckCircle, FileText, Receipt, Package, Users, ChevronRight, Check } from 'lucide-react';
 
 export default function Login({ onLoginSuccess }) {
@@ -120,7 +121,7 @@ export default function Login({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -453,18 +454,18 @@ export default function Login({ onLoginSuccess }) {
           {/* Mobile Connection Helper */}
           <div className="border-t border-slate-200 pt-6">
             <div className="bg-white/80 border border-slate-200/80 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
-              {window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? (
+              {window.location.hostname === '127.0.0.1' || window.location.hostname === '127.0.0.1' ? (
                 <div className="flex-1 space-y-1.5 text-center lg:text-left">
                   <span className="block text-[10px] font-extrabold uppercase tracking-widest text-indigo-650">Mobile Connection Tip</span>
                   <p className="text-[10px] text-slate-550 leading-relaxed font-medium">
-                    To open this on your phone, run <code className="text-slate-800 bg-slate-100 px-1 py-0.5 rounded font-mono">ipconfig</code> in your laptop's command prompt to find your IPv4 IP (e.g. <code className="text-indigo-655 font-semibold">192.168.1.21</code>), and navigate to <code className="text-slate-800 bg-slate-100 px-1 py-0.5 rounded font-mono">http://192.168.1.21:5173</code> on your browser. A scan-to-connect QR code will then render here automatically!
+                    To open this on your phone, run <code className="text-slate-800 bg-slate-100 px-1 py-0.5 rounded font-mono">ipconfig</code> in your laptop's command prompt to find your IPv4 IP (e.g. <code className="text-indigo-655 font-semibold">192.168.1.21</code>), and navigate to <code className="text-slate-800 bg-slate-100 px-1 py-0.5 rounded font-mono">https://192.168.1.21:5173</code> on your browser. A scan-to-connect QR code will then render here automatically!
                   </p>
                 </div>
               ) : (
                 <>
                   <div className="bg-white p-1.5 rounded-xl shrink-0 shadow-md border border-slate-200">
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=http://${window.location.hostname}:5173/`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=https://${window.location.hostname}:5173/`}
                       alt="Scan to open on Mobile"
                       className="w-[72px] h-[72px]"
                     />
@@ -478,7 +479,7 @@ export default function Login({ onLoginSuccess }) {
                       Connect your phone to the same Wi-Fi network and scan the QR code to launch or navigate to:
                     </p>
                     <code className="block text-[10px] text-indigo-600 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200/50 font-mono font-bold select-all">
-                      http://{window.location.hostname}:5173/
+                      https://{window.location.hostname}:5173/
                     </code>
                   </div>
                 </>

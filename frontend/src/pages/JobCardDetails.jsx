@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../config';
 import { 
   FileText, 
   Printer, 
@@ -39,7 +40,7 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
       return;
     }
     try {
-      const res = await fetch(`http://localhost:5000/api/estimates/${estimate._id}/parts/issue`, {
+      const res = await fetch(`${API_BASE_URL}/estimates/${estimate._id}/parts/issue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +68,7 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
       return;
     }
     try {
-      const res = await fetch(`http://localhost:5000/api/estimates/${estimate._id}/parts/return`, {
+      const res = await fetch(`${API_BASE_URL}/estimates/${estimate._id}/parts/return`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +103,7 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
 
   const fetchEstimate = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/estimates?jobCardId=${jcId}`, {
+      const res = await fetch(`${API_BASE_URL}/estimates?jobCardId=${jcId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -121,7 +122,7 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
 
   const fetchDetails = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/jobcards/${jcId}`, {
+      const res = await fetch(`${API_BASE_URL}/jobcards/${jcId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -143,7 +144,7 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
   const updateFields = async (updates) => {
     setUpdating(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/jobcards/${jcId}`, {
+      const res = await fetch(`${API_BASE_URL}/jobcards/${jcId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -189,8 +190,8 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
                     hostname.includes('pinggy') || 
                     hostname.includes('lhr.life') || 
                     hostname.includes('ngrok');
-    const apiHost = isCloud ? 'localhost:5000' : `${hostname}:5000`;
-    window.open(`http://${apiHost}/api/jobcards/${jc._id}/gatepass/pdf`, '_blank');
+    // const apiHost = '';
+    window.open(`${API_BASE_URL}/jobcards/${jc._id}/gatepass/pdf`, '_blank');
   };
 
   if (loading) {
@@ -204,7 +205,7 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
   const formatKey = (str) => str.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
 
   // PDF download URL
-  const pdfUrl = `http://${window.location.hostname}:5000/api/jobcards/${jc._id}/pdf?token=${token}`;
+  const pdfUrl = `${API_BASE_URL}/jobcards/${jc._id}/pdf?token=${token}`;
 
   return (
     <div className="space-y-6 animate-fade-in p-1">
@@ -662,8 +663,8 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
                 const isAbsolute = photo.url.startsWith('http') || photo.url.startsWith('blob:') || photo.url.startsWith('data:');
                 const hostname = window.location.hostname;
                 const isCloud = hostname.includes('vercel.app') || hostname.includes('surge.sh') || hostname.includes('github.io') || hostname.includes('loca.lt') || hostname.includes('pinggy') || hostname.includes('lhr.life') || hostname.includes('ngrok');
-                const base = isCloud ? 'localhost:5000' : `${hostname}:5000`;
-                const src = isAbsolute ? photo.url : `http://${base}${photo.url}`;
+                // const base = '';
+                const src = isAbsolute ? photo.url : `${API_BASE_URL.replace('/api', '')}${photo.url}`;
                 
                 return (
                   <div key={index} className="relative group border border-slate-200 dark:border-slate-850 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-950 shadow-sm transition-all hover:shadow-md">

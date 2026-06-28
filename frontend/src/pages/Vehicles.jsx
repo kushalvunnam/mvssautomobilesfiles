@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Search, Plus, Edit2, Calendar, FileText, ClipboardList } from 'lucide-react';
 
 export default function Vehicles({ token }) {
@@ -30,7 +31,7 @@ export default function Vehicles({ token }) {
 
   const fetchVehicles = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/vehicles?search=${encodeURIComponent(search)}`, {
+      const res = await fetch(`${API_BASE_URL}/vehicles?search=${encodeURIComponent(search)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -44,7 +45,7 @@ export default function Vehicles({ token }) {
 
   const fetchCustomers = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/customers', {
+      const res = await fetch(`${API_BASE_URL}/customers`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -64,7 +65,7 @@ export default function Vehicles({ token }) {
   const loadHistory = async (vehicle) => {
     setSelectedVehicle(vehicle);
     try {
-      const res = await fetch(`http://localhost:5000/api/vehicles/${vehicle._id}/history`, {
+      const res = await fetch(`${API_BASE_URL}/vehicles/${vehicle._id}/history`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -127,8 +128,8 @@ export default function Vehicles({ token }) {
       odometerReading: Number(formData.odometerReading) || 0
     };
     const url = modalMode === 'add'
-      ? 'http://localhost:5000/api/vehicles'
-      : `http://localhost:5000/api/vehicles/${selectedVehicle._id}`;
+      ? `${API_BASE_URL}/vehicles`
+      : `${API_BASE_URL}/vehicles/${selectedVehicle._id}`;
     
     const method = modalMode === 'add' ? 'POST' : 'PUT';
 

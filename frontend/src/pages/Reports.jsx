@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { 
   FileText, 
   Search, 
@@ -50,14 +51,14 @@ export default function Reports({ token, user }) {
       const headers = { Authorization: `Bearer ${token}` };
       
       const promises = [
-        fetch('http://localhost:5000/api/jobcards', { headers }),
-        fetch('http://localhost:5000/api/invoices', { headers }),
-        fetch('http://localhost:5000/api/inventory', { headers })
+        fetch(`${API_BASE_URL}/jobcards`, { headers }),
+        fetch(`${API_BASE_URL}/invoices`, { headers }),
+        fetch(`${API_BASE_URL}/inventory`, { headers })
       ];
 
       // Only fetch employees if Admin or Accounts (to prevent authorization errors for Service/Spares role)
       if (isAdminOrAccounts) {
-        promises.push(fetch('http://localhost:5000/api/employees', { headers }));
+        promises.push(fetch(`${API_BASE_URL}/employees`, { headers }));
       }
 
       const results = await Promise.all(promises);

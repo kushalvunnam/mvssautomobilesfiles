@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { Search, Plus, AlertTriangle, ArrowUpRight, Save } from 'lucide-react';
 
 export default function Inventory({ token, user }) {
@@ -112,7 +113,7 @@ export default function Inventory({ token, user }) {
 
   const fetchInventory = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/inventory?search=${encodeURIComponent(search)}&lowStock=${lowStockFilter}&category=${encodeURIComponent(categoryFilter)}`, {
+      const res = await fetch(`${API_BASE_URL}/inventory?search=${encodeURIComponent(search)}&lowStock=${lowStockFilter}&category=${encodeURIComponent(categoryFilter)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -140,7 +141,7 @@ export default function Inventory({ token, user }) {
         gstPercent: Number(addForm.gstPercent) || 0,
         reorderLevel: Number(addForm.reorderLevel) || 0
       };
-      const res = await fetch('http://localhost:5000/api/inventory', {
+      const res = await fetch(`${API_BASE_URL}/inventory`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +188,7 @@ export default function Inventory({ token, user }) {
         purchasePrice: Number(restockForm.purchasePrice) || 0,
         sellingPrice: Number(restockForm.sellingPrice) || 0
       };
-      const res = await fetch('http://localhost:5000/api/inventory/purchase', {
+      const res = await fetch(`${API_BASE_URL}/inventory/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,7 +215,7 @@ export default function Inventory({ token, user }) {
         ...reduceForm,
         quantityToReduce: Number(reduceForm.quantityToReduce) || 0
       };
-      const res = await fetch('http://localhost:5000/api/inventory/reduce', {
+      const res = await fetch(`${API_BASE_URL}/inventory/reduce`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,7 +238,7 @@ export default function Inventory({ token, user }) {
 
   const fetchHistory = async (partNumber) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/inventory/history/${partNumber}`, {
+      const res = await fetch(`${API_BASE_URL}/inventory/history/${partNumber}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -305,7 +306,7 @@ export default function Inventory({ token, user }) {
         gstPercent: Number(editForm.gstPercent) || 0,
         reorderLevel: Number(editForm.reorderLevel) || 0
       };
-      const res = await fetch(`http://localhost:5000/api/inventory/${editForm._id}`, {
+      const res = await fetch(`${API_BASE_URL}/inventory/${editForm._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
