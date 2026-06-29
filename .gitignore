@@ -19,3 +19,8 @@ Thumbs.db
 *.log
 .system_generated/
 /backend/uploads/
+
+# Temporary files
+backend.zip.zip
+query
+
