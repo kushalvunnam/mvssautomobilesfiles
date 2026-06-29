@@ -334,7 +334,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
                   background: `conic-gradient(#f59e0b 0% ${pendingPct}%, #2563eb ${pendingPct}% ${pendingPct + progressPct}%, #10b981 ${pendingPct + progressPct}% ${pendingPct + progressPct + completedPct}%, #8b5cf6 ${pendingPct + progressPct + completedPct}% ${pendingPct + progressPct + completedPct + waitingPct}%, #06b6d4 ${pendingPct + progressPct + completedPct + waitingPct}% 100%)`
                 }}
               >
-                <div className="absolute inset-4.5 bg-white dark:bg-slate-900 rounded-full flex flex-col items-center justify-center">
+                <div className="absolute inset-4 bg-white dark:bg-slate-900 rounded-full flex flex-col items-center justify-center">
                   <span className="text-xl font-black text-slate-900 dark:text-white leading-none">{totalJobs}</span>
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider mt-1 block">Total</span>
                 </div>
