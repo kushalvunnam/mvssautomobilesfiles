@@ -327,9 +327,9 @@ export default function Dashboard({ token, user, setActiveTab }) {
         <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 p-5 rounded-xl shadow-sm lg:col-span-6 flex flex-col justify-between">
           <div>
             <h4 className="text-xs font-bold text-slate-955 dark:text-white uppercase tracking-wider mb-4">Job Card Status</h4>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-12 mt-2">
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 mt-2">
               <div 
-                className="w-32 h-32 rounded-full relative shrink-0 shadow-xs" 
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full relative shrink-0 shadow-xs max-w-full max-h-full" 
                 style={{
                   background: `conic-gradient(#f59e0b 0% ${pendingPct}%, #2563eb ${pendingPct}% ${pendingPct + progressPct}%, #10b981 ${pendingPct + progressPct}% ${pendingPct + progressPct + completedPct}%, #8b5cf6 ${pendingPct + progressPct + completedPct}% ${pendingPct + progressPct + completedPct + waitingPct}%, #06b6d4 ${pendingPct + progressPct + completedPct + waitingPct}% 100%)`
                 }}
@@ -341,7 +341,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
               </div>
               
               {/* Legend details */}
-              <div className="space-y-2 text-xs font-semibold text-slate-500 dark:text-slate-455 w-full max-w-xs">
+              <div className="space-y-2 text-xs font-semibold text-slate-500 dark:text-slate-455 w-full max-w-full lg:max-w-xs">
                 <div className="flex justify-between items-center py-0.5 border-b border-slate-55 dark:border-slate-800/30">
                   <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" />Pending</span>
                   <span className="font-extrabold text-slate-850 dark:text-slate-200">{stats.pendingJobCards || 0}</span>
