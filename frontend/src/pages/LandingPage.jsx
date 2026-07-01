@@ -305,6 +305,49 @@ export default function LandingPage({ onLoginSuccess }) {
         </div>
       </section>
 
+      {/* Workshop Gallery Section */}
+      <section className="py-20 max-w-7xl mx-auto px-6 space-y-12 border-t border-slate-900">
+        <div className="text-center space-y-2">
+          <span className="text-[10px] font-extrabold text-indigo-400 uppercase tracking-widest">Our Facility Tour</span>
+          <h3 className="text-2xl font-extrabold text-white">MVSS Workshop Gallery</h3>
+          <p className="text-xs text-slate-400 font-semibold max-w-md mx-auto">
+            Take a visual tour of our modern diagnostic checkouts, premium brand service bays, and genuine spares stock.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { src: '/workshop/page_1_img_1.png', title: 'Workshop Entrance', desc: 'Secure entrance and customer desk for booking check-in.' },
+            { src: '/workshop/page_2_img_1.jpeg', title: 'Service Bays', desc: 'Modern bays with heavy-duty lifts and workshop bays.' },
+            { src: '/workshop/page_3_img_1.jpeg', title: 'BMW Service Vehicle', desc: 'Active scanning diagnostics for luxury BMW cars.' },
+            { src: '/workshop/page_4_img_1.jpeg', title: 'Mercedes Vehicle', desc: 'Engine tuning, running repairs and component servicing.' },
+            { src: '/workshop/page_5_img_1.jpeg', title: 'Tata Harrier Service Bay', desc: 'Lubrication PMS checkout, oil change and filters.' },
+            { src: '/workshop/page_6_img_1.jpeg', title: 'Reception & Office', desc: 'Comfortable client lounge with live tracking boards.' },
+            { src: '/workshop/page_7_img_1.jpeg', title: 'Spare Parts Room', desc: 'Fully organized catalog room for genuine spares and parts.' },
+            { src: '/workshop/page_8_img_1.jpeg', title: 'Bosch Equipment', desc: 'Bosch scanner and vehicle alignment calibration diagnostics.' },
+            { src: '/workshop/page_9_img_1.jpeg', title: 'Team Photo', desc: 'Professional team of MVSS certified workshop technicians.' }
+          ].map((photo, idx) => (
+            <div 
+              key={idx}
+              className="bg-slate-900/40 border border-slate-900 rounded-2xl overflow-hidden shadow-xl hover:border-slate-800 transition-all duration-300 flex flex-col hover:-translate-y-1"
+            >
+              <div className="relative aspect-video w-full overflow-hidden shrink-0 bg-slate-950">
+                <img 
+                  src={photo.src} 
+                  alt={photo.title}
+                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                  loading="lazy"
+                />
+              </div>
+              <div className="p-4 flex-1 flex flex-col justify-between space-y-1">
+                <h4 className="text-sm font-black text-white">{photo.title}</h4>
+                <p className="text-[11px] text-slate-400 font-medium leading-relaxed">{photo.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Contact & Location Section */}
       <section id="contact" className="py-20 border-t border-slate-900 bg-slate-950/40">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12">
