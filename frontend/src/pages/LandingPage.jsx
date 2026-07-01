@@ -22,7 +22,7 @@ export default function LandingPage({ onLoginSuccess }) {
     { key: 'Delivered', label: 'Released', desc: 'Payment received & Gate Pass issued.' }
   ];
 
-  // Hero slideshow photos - STRICT ORDER requested by client
+  // Hero slideshow photos (Workshop photos only - NO LOGO)
   const heroSlides = [
     { src: '/workshop/page_2_img_1.jpeg', label: 'Large Workshop Floor' },
     { src: '/workshop/page_9_img_1.jpeg', label: 'Technicians at Work' },
@@ -32,26 +32,27 @@ export default function LandingPage({ onLoginSuccess }) {
     { src: '/workshop/page_1_img_1.png', label: 'Customer Vehicle Parking Yard' }
   ];
 
-  // Gallery Categories - exactly mapped to client specifications
+  // 10 Gallery photos mapped EXACTLY to their visual contents
   const galleryPhotos = [
     // CATEGORY 1: Workshop Infrastructure
-    { src: '/workshop/page_2_img_1.jpeg', category: 'Infrastructure', title: 'Workshop Floor View', desc: 'Modern service bays with multi-vehicle handling capacity.' },
-    { src: '/workshop/page_10_img_1.jpeg', category: 'Infrastructure', title: 'Workshop Floor Area', desc: 'Modern service bays with multi-vehicle handling capacity.' },
+    { src: '/workshop/page_10_img_1.jpeg', category: 'Infrastructure', title: 'Large Workshop Floor', desc: 'Modern service bays with multi-vehicle handling capacity.' },
+    { src: '/workshop/page_2_img_1.jpeg', category: 'Infrastructure', title: 'Hydraulic Lift Service Bay', desc: 'Dedicated workstations with modern lifting systems.' },
+    { src: '/workshop/page_6_img_1.jpeg', category: 'Infrastructure', title: 'Customer Reception Area', desc: 'Customer support, service consultation and billing desk.' },
 
     // CATEGORY 2: Live Service Operations
-    { src: '/workshop/page_5_img_1.jpeg', category: 'Operations', title: 'Tata Harrier Repair', desc: 'Experienced technicians performing repairs and maintenance.' },
-    { src: '/workshop/page_9_img_1.jpeg', category: 'Operations', title: 'Swift Service Check', desc: 'Experienced technicians performing repairs and maintenance.' },
-    { src: '/workshop/page_3_img_1.jpeg', category: 'Operations', title: 'BMW Service Diagnostic', desc: 'Experienced technicians performing repairs and maintenance.' },
+    { src: '/workshop/page_3_img_1.jpeg', category: 'Operations', title: 'Live Service Operations', desc: 'Experienced technicians performing repairs and maintenance.' },
+    { src: '/workshop/page_5_img_1.jpeg', category: 'Operations', title: 'Live Service Operations', desc: 'Experienced technicians performing repairs and maintenance.' },
+    { src: '/workshop/page_9_img_1.jpeg', category: 'Operations', title: 'Expert Technician Team', desc: 'Certified and experienced workshop professionals.' },
 
     // CATEGORY 3: Body Shop & Paint
-    { src: '/workshop/page_4_img_1.jpeg', category: 'Body Shop', title: 'Paint Booth', desc: 'Professional denting, painting and restoration services.' },
+    { src: '/workshop/page_4_img_1.jpeg', category: 'Body Shop', title: 'Body Shop & Paint Center', desc: 'Professional denting, painting and restoration services.' },
 
     // CATEGORY 4: Advanced Equipment
-    { src: '/workshop/page_8_img_1.jpeg', category: 'Equipment', title: 'Bosch Nitrogen Equipment', desc: 'Modern workshop tools and advanced service equipment.' },
-    { src: '/workshop/page_7_img_1.jpeg', category: 'Equipment', title: 'Tool Trolley Spares', desc: 'Modern workshop tools and advanced service equipment.' },
+    { src: '/workshop/page_8_img_1.jpeg', category: 'Equipment', title: 'Advanced Workshop Equipment', desc: 'Advanced scanning and vehicle analysis equipment.' },
+    { src: '/workshop/page_7_img_1.jpeg', category: 'Equipment', title: 'Spare Parts Inventory', desc: 'Organized storage of genuine spare parts.' },
 
     // CATEGORY 5: Vehicle Yard
-    { src: '/workshop/page_1_img_1.png', category: 'Vehicle Yard', title: 'Customer Parking Area', desc: 'Organized vehicle holding and delivery area.' }
+    { src: '/workshop/page_1_img_1.png', category: 'Vehicle Yard', title: 'Customer Vehicle Parking Area', desc: 'Organized vehicle holding and delivery area.' }
   ];
 
   // Testimonials
@@ -276,7 +277,7 @@ export default function LandingPage({ onLoginSuccess }) {
             ))}
           </div>
 
-          {/* Grid Layout: Desktop 3-4 columns, Tablet 2 columns, Mobile 1 column */}
+          {/* Grid Layout: Desktop 3 columns, Tablet 2 columns, Mobile 1 column */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPhotos.map((photo, idx) => (
               <div 
