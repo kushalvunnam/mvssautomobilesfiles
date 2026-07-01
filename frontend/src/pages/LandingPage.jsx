@@ -329,19 +329,19 @@ export default function LandingPage({ onLoginSuccess }) {
           ].map((photo, idx) => (
             <div 
               key={idx}
-              className="bg-slate-900/40 border border-slate-900 rounded-2xl overflow-hidden shadow-xl hover:border-slate-800 transition-all duration-300 flex flex-col hover:-translate-y-1"
+              className="h-[220px] sm:h-[280px] lg:h-[320px] bg-slate-900/40 border border-slate-900 rounded-2xl overflow-hidden shadow-xl hover:border-slate-800 transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-indigo-600/5 group"
             >
-              <div className="relative aspect-video w-full overflow-hidden shrink-0 bg-slate-950">
+              <div className="flex-1 w-full overflow-hidden bg-slate-950 relative">
                 <img 
                   src={photo.src} 
                   alt={photo.title}
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
               </div>
-              <div className="p-4 flex-1 flex flex-col justify-between space-y-1">
-                <h4 className="text-sm font-black text-white">{photo.title}</h4>
-                <p className="text-[11px] text-slate-400 font-medium leading-relaxed">{photo.desc}</p>
+              <div className="p-4 bg-slate-900/90 dark:bg-slate-900/90 border-t border-slate-950 flex flex-col justify-center text-center space-y-1">
+                <h4 className="text-xs sm:text-sm font-black text-white">{photo.title}</h4>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium leading-relaxed truncate">{photo.desc}</p>
               </div>
             </div>
           ))}
