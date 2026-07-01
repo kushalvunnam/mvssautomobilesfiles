@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ArrowRight, Lock, X, Star, CheckCircle, Award, Settings } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ArrowRight, Lock, X, CheckCircle, Navigation, Star } from 'lucide-react';
 import Login from './Login';
 
 export default function LandingPage({ onLoginSuccess }) {
@@ -7,6 +7,7 @@ export default function LandingPage({ onLoginSuccess }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [trackerResult, setTrackerResult] = useState(null);
   const [searched, setSearched] = useState(false);
+  const [slideIdx, setSlideIdx] = useState(0);
 
   // 8 Servicing Stages list
   const stages = [
@@ -19,6 +20,21 @@ export default function LandingPage({ onLoginSuccess }) {
     { key: 'Ready for Delivery', label: 'Ready', desc: 'Final wash, polishing & bill generation.' },
     { key: 'Delivered', label: 'Released', desc: 'Payment received & Gate Pass issued.' }
   ];
+
+  const heroSlides = [
+    '/workshop/page_1_img_1.png', // Workshop exterior
+    '/workshop/page_2_img_1.jpeg', // Workshop floor
+    '/workshop/page_3_img_1.jpeg', // BMW service
+    '/workshop/page_4_img_1.jpeg', // Mercedes service
+    '/workshop/page_5_img_1.jpeg'  // Tata Harrier service
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSlideIdx((prev) => (prev + 1) % heroSlides.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -41,11 +57,6 @@ export default function LandingPage({ onLoginSuccess }) {
     }
   };
 
-  const handleLogoClick = (e) => {
-    e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   // Find the index of the current stage
   const getCurrentStageIndex = (status) => {
     return stages.findIndex(s => s.key === status);
@@ -55,92 +66,100 @@ export default function LandingPage({ onLoginSuccess }) {
     <div className="min-h-screen bg-white text-[#0F172A] font-sans relative overflow-x-hidden">
       
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] px-6 py-4 flex justify-between items-center max-w-7xl mx-auto w-full">
-        <a href="#" onClick={handleLogoClick} className="flex items-center gap-2.5 select-none group">
-          <div className="p-1 bg-white rounded-lg border border-[#E2E8F0] shrink-0 transition-colors group-hover:border-[#DC2626]">
+      <header className="sticky top-0 z-40 bg-white border-b border-[#E2E8F0] px-6 py-4 flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto w-full gap-4 md:gap-0 select-none">
+        <a href="/" className="flex items-center gap-2.5 select-none shrink-0 mr-auto md:mr-0 group">
+          <div className="p-1 bg-white rounded-lg border border-[#E2E8F0] shrink-0 transition-colors group-hover:border-blue-500">
             <img 
               src="/workshop/page_1_img_1.png" 
               alt="MVSS Logo" 
               className="h-8.5 w-auto object-contain"
             />
           </div>
-          <div>
-            <h1 className="text-sm font-black tracking-wider uppercase text-[#0F172A] leading-tight">
-              MVSS <span className="text-[#DC2626] transition-colors group-hover:text-red-700">AUTOMOBILES</span>
+          <div className="text-left">
+            <h1 className="text-xs sm:text-sm font-black tracking-wider uppercase text-slate-900 leading-none">
+              MVSS AUTOMOBILES
             </h1>
             <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest leading-none mt-0.5">Pvt. Ltd.</p>
           </div>
         </a>
 
-        <nav className="hidden md:flex items-center gap-8 text-xs font-bold text-[#0F172A] uppercase tracking-wider">
-          <a href="#services" className="hover:text-[#DC2626] transition-colors">Services</a>
-          <a href="#gallery" className="hover:text-[#DC2626] transition-colors">Gallery</a>
-          <a href="#why-choose" className="hover:text-[#DC2626] transition-colors">Why Choose Us</a>
-          <a href="#tracker" className="hover:text-[#DC2626] transition-colors">Track Progress</a>
-          <a href="#testimonials" className="hover:text-[#DC2626] transition-colors">Testimonials</a>
-          <a href="#contact" className="hover:text-[#DC2626] transition-colors">Contact</a>
+        <nav className="flex flex-wrap items-center justify-start md:justify-end gap-x-6 gap-y-2 text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider w-full md:w-auto">
+          <a href="#services" className="hover:text-blue-600 transition-colors">Services</a>
+          <a href="#gallery" className="hover:text-blue-600 transition-colors">Gallery</a>
+          <a href="#why-choose" className="hover:text-blue-600 transition-colors">Why Choose Us</a>
+          <a href="#tracker" className="hover:text-blue-600 transition-colors">Track Vehicle</a>
+          <a href="#contact" className="hover:text-blue-600 transition-colors">Contact</a>
+          <button
+            onClick={() => setShowLogin(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-blue-600 text-white rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all"
+          >
+            <Lock className="w-3 h-3" />
+            Staff Login
+          </button>
         </nav>
-
-        <button
-          onClick={() => setShowLogin(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#0F172A] hover:bg-[#DC2626] text-white rounded-xl text-xs font-extrabold transition-all shadow-sm"
-        >
-          <Lock className="w-3.5 h-3.5" />
-          Staff Portal
-        </button>
       </header>
 
       {/* Hero Section */}
-      <section id="home" className="relative bg-white border-b border-[#E2E8F0]/40 max-w-7xl mx-auto px-6 pt-16 pb-20 text-center lg:text-left grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        <div className="lg:col-span-7 space-y-6">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border border-[#DC2626]/20 bg-red-50 text-[#DC2626] mx-auto lg:mx-0 w-fit">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse" />
-            MVSS Automobiles Service Center
+      <section className="relative bg-white border-b border-[#E2E8F0]/40 max-w-7xl mx-auto px-6 pt-16 pb-20 text-center lg:text-left grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="lg:col-span-6 space-y-6">
+          <div className="space-y-1">
+            <span className="block text-xs font-black text-blue-600 uppercase tracking-wider">MVSS Automobiles Pvt Ltd</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#0F172A] leading-tight tracking-tight uppercase">
+              Multi Brand Car Workshop
+            </h2>
+            <p className="text-lg font-bold text-slate-700">Body Shop & Insurance Claims</p>
+            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border border-blue-500/20 bg-blue-50 text-blue-600 mt-2">
+              ✓ Trusted Car Care Experts
+            </span>
           </div>
-          <h2 className="text-4xl lg:text-5xl font-black text-[#0F172A] leading-tight tracking-tight uppercase">
-            Premium Car Care & <br className="hidden sm:inline" />
-            <span className="bg-gradient-to-r from-[#DC2626] to-[#0F172A] bg-clip-text text-transparent">Multi-Brand Diagnostics</span>
-          </h2>
-          <p className="text-sm lg:text-base text-slate-500 font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
-            Secunderabad's trusted automotive workshop for premium repairs, periodic maintenance, and body shop solutions. Track your vehicle status and view reports directly online.
+
+          <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
+            Welcome to Secunderabad's modern automobile workshop facility. We provide high-quality servicing, computer diagnostics, panel paint booth repairs, and transparent live checklist status boards.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-center lg:justify-start">
+          <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
             <a
               href="#tracker"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#DC2626] hover:bg-red-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-lg shadow-[#DC2626]/10"
+              className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-600/10"
             >
-              Track Active Job Card
-              <ArrowRight className="w-4 h-4" />
+              Track Vehicle
+              <ArrowRight className="w-3.5 h-3.5" />
             </a>
-            <a
-              href="#services"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#F8FAFC] hover:bg-slate-200 text-[#0F172A] rounded-xl text-xs font-extrabold border border-[#E2E8F0] transition-all"
+            <button
+              onClick={() => setShowLogin(true)}
+              className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold transition-all"
             >
-              Explore Our Services
+              <Lock className="w-3.5 h-3.5" />
+              Staff Login
+            </button>
+            <a
+              href="#contact"
+              className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-750 border border-[#E2E8F0] rounded-xl text-xs font-extrabold transition-all"
+            >
+              Contact Workshop
             </a>
           </div>
         </div>
 
-        {/* Hero Card Visual - Workshop Entrance */}
-        <div className="lg:col-span-5 relative">
-          <div className="absolute inset-0 bg-[#DC2626]/5 rounded-3xl blur-2xl pointer-events-none transform rotate-3" />
-          <div className="relative border border-[#E2E8F0] bg-white p-2 rounded-3xl shadow-lg">
+        {/* Hero Slide visual */}
+        <div className="lg:col-span-6 relative w-full h-[220px] sm:h-[320px] lg:h-[400px] overflow-hidden rounded-3xl border border-[#E2E8F0] shadow-lg">
+          {heroSlides.map((slide, idx) => (
             <img 
-              src="/workshop/page_1_img_1.png" 
-              alt="MVSS Automobiles Workshop Entrance" 
-              className="w-full h-auto object-cover rounded-2xl aspect-video lg:aspect-square"
+              key={slide}
+              src={slide}
+              alt="Workshop Slide"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${idx === slideIdx ? 'opacity-100' : 'opacity-0'}`}
             />
-          </div>
+          ))}
         </div>
       </section>
 
       {/* Services Section */}
       <section id="services" className="py-20 max-w-7xl mx-auto px-6 bg-white space-y-12">
         <div className="text-center space-y-2">
-          <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Our Capabilities</span>
-          <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Multi-Stream Servicing</h3>
-          <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">We provide comprehensive diagnostics, paint solutions, and insurance checkout workflows.</p>
+          <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Our Capabilities</span>
+          <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Automotive Servicing Capabilities</h3>
+          <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">We provide comprehensive automobile repairs and maintenance checkouts across multiple operational streams.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -148,49 +167,38 @@ export default function LandingPage({ onLoginSuccess }) {
             {
               title: 'Running Repair (RR)',
               desc: 'Suspension maintenance, brake overhauls, diagnostic scan, clutch repairs and general component overhauls.',
-              tag: 'RR',
-              icon: Settings
+              tag: 'RR'
             },
             {
               title: 'Periodic Services (PMS)',
-              desc: 'Lubrication PMS checkout, engine oil replacements, fluid topups, filter changes, and detailed 32-point checklist.',
-              tag: 'PMS',
-              icon: CheckCircle
+              desc: 'Standard lubrication service, engine oil replacements, fluid topups, filter changes, and detailed 32-point checklist.',
+              tag: 'PMS'
             },
             {
               title: 'Body Shop (B/P)',
               desc: 'Dent adjustments, panel replacements, custom paint booths, scratch removals, and detailing finish.',
-              tag: 'B/P',
-              icon: Wrench
+              tag: 'B/P'
             },
             {
               title: 'Insurance Claims',
-              desc: 'Surveyor coordination, damage canvas updates, cash-free settlements, and insurance catalog management.',
-              tag: 'Claims',
-              icon: ShieldCheck
+              desc: 'Direct surveyor coordination, digital damage canvas tracking, cash-free settlements, and insurance catalog updates.',
+              tag: 'Claims'
             }
-          ].map(service => {
-            const Icon = service.icon;
-            return (
-              <div 
-                key={service.title} 
-                className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-2xl transition-all duration-200 hover:border-[#DC2626]/30 hover:bg-white hover:shadow-md flex flex-col justify-between group shadow-xs"
-              >
-                <div className="space-y-4">
-                  <div className="p-3 bg-white border border-[#E2E8F0] text-[#DC2626] rounded-xl w-fit group-hover:border-[#DC2626]">
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-black text-[#0F172A]">{service.title}</h4>
-                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{service.desc}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 text-[10px] font-extrabold text-[#0F172A] group-hover:text-[#DC2626] uppercase tracking-wider mt-5 cursor-pointer transition-colors">
-                  Learn More <ChevronRight className="w-3.5 h-3.5" />
-                </div>
+          ].map(service => (
+            <div 
+              key={service.title} 
+              className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-2xl transition-all duration-200 hover:border-blue-500/30 hover:bg-white hover:shadow-md flex flex-col justify-between group shadow-xs"
+            >
+              <div className="space-y-3">
+                <span className="inline-block px-2.5 py-0.5 bg-white border border-[#E2E8F0] rounded-md text-[9px] font-black text-slate-600 uppercase tracking-widest">{service.tag}</span>
+                <h4 className="text-sm font-black text-[#0F172A] group-hover:text-blue-600 transition-colors">{service.title}</h4>
+                <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{service.desc}</p>
               </div>
-            );
-          })}
+              <div className="flex items-center gap-1 text-[10px] font-extrabold text-slate-800 group-hover:text-blue-600 uppercase tracking-wider mt-4 cursor-pointer transition-colors">
+                Learn More <ChevronRight className="w-3.5 h-3.5 text-blue-600" />
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -198,16 +206,16 @@ export default function LandingPage({ onLoginSuccess }) {
       <section id="gallery" className="py-20 bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
         <div className="max-w-7xl mx-auto px-6 space-y-12">
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Our Facility Tour</span>
-            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">MVSS Workshop Gallery</h3>
+            <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Our Facility Tour</span>
+            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Workshop Gallery</h3>
             <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">
-              Take a visual tour of our modern diagnostic checkouts, premium brand service bays, and genuine spares stock.
+              Visual tour of our modern diagnostic checkouts, premium brand service bays, and genuine spares stock.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { src: '/workshop/page_1_img_1.png', title: 'Workshop Building', desc: 'Secure entrance and customer desk for booking check-in.' },
+              { src: '/workshop/page_1_img_1.png', title: 'Workshop Entrance', desc: 'Secure entrance and customer desk for booking check-in.' },
               { src: '/workshop/page_9_img_1.jpeg', title: 'Team Photo', desc: 'Professional team of MVSS certified workshop technicians.' },
               { src: '/workshop/page_3_img_1.jpeg', title: 'BMW Service', desc: 'Active scanning diagnostics for luxury BMW cars.' },
               { src: '/workshop/page_4_img_1.jpeg', title: 'Mercedes Service', desc: 'Engine tuning, running repairs and component servicing.' },
@@ -219,7 +227,7 @@ export default function LandingPage({ onLoginSuccess }) {
             ].map((photo, idx) => (
               <div 
                 key={idx}
-                className="h-[220px] sm:h-[280px] lg:h-[320px] bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm hover:border-[#DC2626]/40 transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-lg group"
+                className="h-[240px] sm:h-[300px] lg:h-[340px] bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm hover:border-blue-500/40 transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-lg group"
               >
                 <div className="flex-1 w-full overflow-hidden bg-slate-100 relative">
                   <img 
@@ -239,53 +247,41 @@ export default function LandingPage({ onLoginSuccess }) {
         </div>
       </section>
 
-      {/* Why Choose MVSS Section */}
+      {/* Why Choose Us */}
       <section id="why-choose" className="py-20 bg-white max-w-7xl mx-auto px-6 space-y-12">
         <div className="text-center space-y-2">
-          <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Enterprise Car Care</span>
-          <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Why Choose MVSS</h3>
+          <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Enterprise Car Care</span>
+          <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Why Choose Us</h3>
           <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">We provide premium multi-brand diagnostics with full digital tracking transparency.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            {
-              title: '100% Paperless Workflow',
-              desc: 'From check-in to checkout, estimates, diagnostic checklists, and signatures are managed digitally.',
-              icon: FileText
-            },
-            {
-              title: 'Genuine Spares Inventory',
-              desc: 'Stocked with OEM oil, filters, belts, and mechanical parts to ensure long-term repair reliability.',
-              icon: CheckCircle
-            },
-            {
-              title: 'Certified Technicians',
-              desc: 'Our mechanical, body paint, and scanner diagnostics specialists are factory certified.',
-              icon: Award
-            }
-          ].map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div key={idx} className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-2xl space-y-4 shadow-xs text-center md:text-left">
-                <div className="p-3 bg-white border border-[#E2E8F0] text-[#DC2626] rounded-xl w-fit mx-auto md:mx-0">
-                  <Icon className="w-5 h-5" />
-                </div>
-                <h4 className="text-sm font-black text-[#0F172A]">{item.title}</h4>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed">{item.desc}</p>
+            { title: 'Bosch Diagnostic Equipment', desc: 'Equipped with Bosch automobile scanners and alignment diagnostic kits.' },
+            { title: 'Multi Brand Service', desc: 'Certified engine servicing, chassis PMS and mechanical repair for premium brands.' },
+            { title: 'Insurance Claims Support', desc: 'Coordinated claims survey, damage documentation, and cashless insurance checkout.' },
+            { title: 'Genuine Spare Parts', desc: 'OEM filters, high-grade engine oil, spark plugs, and brake pads in spares room.' },
+            { title: 'Experienced Technicians', desc: 'Workshop floor staffed with certified mechanical and body workshop specialists.' },
+            { title: 'Digital Job Card Tracking', desc: 'Secure digital tracking boards showing stages registered, repair progress, and QC.' }
+          ].map((item, idx) => (
+            <div key={idx} className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-2xl flex gap-4 items-start shadow-xs">
+              <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="text-xs sm:text-sm font-black text-[#0F172A]">{item.title}</h4>
+                <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{item.desc}</p>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Live Vehicle Status Tracker Section */}
-      <section id="tracker-section" className="py-20 bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
+      {/* Vehicle Tracking */}
+      <section id="tracker" className="py-20 bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
         <div className="max-w-4xl mx-auto px-6 space-y-8">
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Real-time tracking</span>
-            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Live Progress Timeline</h3>
-            <p className="text-xs text-slate-500 font-semibold">Enter your plate registration or Job Card ID below to verify your vehicle stream progress.</p>
+            <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Real-time status</span>
+            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Vehicle Tracking</h3>
+            <p className="text-xs text-slate-500 font-semibold">Enter your registration number or Job Card ID below to verify your vehicle stream progress.</p>
           </div>
 
           <form onSubmit={handleSearch} className="max-w-md mx-auto flex gap-3">
@@ -297,14 +293,14 @@ export default function LandingPage({ onLoginSuccess }) {
                 placeholder="e.g. TS-09-EA-1234 or JC-1001"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-[#E2E8F0] rounded-xl text-xs font-semibold focus:outline-none focus:border-[#DC2626] text-slate-800 placeholder-slate-405 transition-all font-mono uppercase"
+                className="w-full pl-10 pr-4 py-3 bg-white border border-[#E2E8F0] rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-slate-800 placeholder-slate-400 transition-all font-mono uppercase"
               />
             </div>
             <button
               type="submit"
-              className="px-5 py-3 bg-[#0F172A] hover:bg-[#DC2626] text-white rounded-xl text-xs font-bold transition-all shadow-sm shrink-0"
+              className="px-5 py-3 bg-[#0F172A] hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm shrink-0"
             >
-              Track Status
+              Track Vehicle
             </button>
           </form>
 
@@ -321,7 +317,7 @@ export default function LandingPage({ onLoginSuccess }) {
                     </div>
                     <div className="text-left sm:text-right">
                       <span className="text-[10px] text-slate-455 font-extrabold uppercase">Job Card ID</span>
-                      <span className="block text-xs font-bold text-[#DC2626] font-mono mt-0.5">{trackerResult.jobCardNo}</span>
+                      <span className="block text-xs font-bold text-blue-600 font-mono mt-0.5">{trackerResult.jobCardNo}</span>
                       <span className="block text-[10px] text-slate-500 font-semibold mt-0.5">Service: {trackerResult.serviceType}</span>
                     </div>
                   </div>
@@ -334,7 +330,7 @@ export default function LandingPage({ onLoginSuccess }) {
                       {/* Timeline Bar */}
                       <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-100 -translate-y-1/2 z-0" />
                       <div 
-                        className="absolute top-1/2 left-0 h-1 bg-[#DC2626] -translate-y-1/2 z-0 transition-all duration-700" 
+                        className="absolute top-1/2 left-0 h-1 bg-blue-600 -translate-y-1/2 z-0 transition-all duration-700" 
                         style={{
                           width: `${(getCurrentStageIndex(trackerResult.status) / (stages.length - 1)) * 100}%`
                         }}
@@ -352,7 +348,7 @@ export default function LandingPage({ onLoginSuccess }) {
                               <div 
                                 className={`w-8 h-8 rounded-full flex items-center justify-center border font-mono text-[10px] font-black transition-all ${
                                   isActive 
-                                    ? 'bg-[#DC2626] border-red-500 text-white scale-110 shadow-lg shadow-red-650/30' 
+                                    ? 'bg-blue-600 border-blue-500 text-white scale-110 shadow-lg shadow-blue-600/30' 
                                     : isCompleted 
                                       ? 'bg-[#0F172A] border-[#0F172A] text-white' 
                                       : 'bg-white border-[#E2E8F0] text-slate-400'
@@ -361,7 +357,7 @@ export default function LandingPage({ onLoginSuccess }) {
                                 {idx + 1}
                               </div>
                               <span className={`text-[9px] font-extrabold uppercase tracking-wide transition-colors ${
-                                isActive ? 'text-[#DC2626]' : isCompleted ? 'text-slate-900 font-bold' : 'text-slate-400'
+                                isActive ? 'text-blue-600 font-bold' : isCompleted ? 'text-slate-900 font-bold' : 'text-slate-400'
                               }`}>
                                 {stage.label}
                               </span>
@@ -373,8 +369,8 @@ export default function LandingPage({ onLoginSuccess }) {
                   </div>
 
                   {/* Active Stage Alert */}
-                  <div className="p-4 bg-red-50 border border-red-100/60 rounded-2xl flex items-center gap-3.5 mt-4">
-                    <Clock className="w-5 h-5 text-[#DC2626] shrink-0" />
+                  <div className="p-4 bg-blue-50 border border-blue-100/60 rounded-2xl flex items-center gap-3.5 mt-4">
+                    <Clock className="w-5 h-5 text-blue-600 shrink-0" />
                     <div className="text-left text-xs leading-relaxed">
                       <span className="font-bold text-[#0F172A] uppercase tracking-wide">
                         Current Status: {stages[getCurrentStageIndex(trackerResult.status)].label}
@@ -393,10 +389,10 @@ export default function LandingPage({ onLoginSuccess }) {
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Testimonials */}
       <section id="testimonials" className="py-20 bg-white max-w-7xl mx-auto px-6 space-y-12">
         <div className="text-center space-y-2">
-          <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Client Feedback</span>
+          <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Client Feedback</span>
           <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Testimonials</h3>
           <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">Read what premium multi-brand automobile owners say about our workshop services.</p>
         </div>
@@ -444,14 +440,13 @@ export default function LandingPage({ onLoginSuccess }) {
       <section id="contact" className="py-20 bg-[#F8FAFC] border-t border-[#E2E8F0]">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-6">
-            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Contact Details</h3>
-            <p className="text-xs text-slate-500 font-semibold leading-relaxed">MVSS Automobiles Pvt. Ltd. operates modern service facilities with certified specialists. Contact us for diagnostic quotes or mechanical checkout.</p>
+            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">MVSS Automobiles Pvt Ltd</h3>
             
             <div className="space-y-4 text-xs font-semibold text-slate-600">
               <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-[#DC2626] shrink-0 mt-0.5" />
+                <MapPin className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                 <div>
-                  <span className="block font-bold text-[#0F172A] text-xs mb-1">Workshops Addresses</span>
+                  <span className="block font-bold text-[#0F172A] text-xs mb-1">Workshop Address</span>
                   <p className="leading-relaxed">
                     - Survey No. 25/1, Opp. Cine Planet, Kompally, Secunderabad - 500067 <br />
                     - Survey No. 48/5, Gundlapochampally, Medchal-Malkajgiri Dist - 500014
@@ -459,11 +454,22 @@ export default function LandingPage({ onLoginSuccess }) {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-[#DC2626] shrink-0" />
+                <Phone className="w-5 h-5 text-blue-600 shrink-0" />
                 <div>
-                  <span className="block font-bold text-[#0F172A] text-xs mb-0.5">Cellular Contacts</span>
-                  <a href="tel:+919949479765" className="hover:underline text-[#DC2626] font-mono font-bold">+91 99494 79765</a> | <a href="tel:+919876543210" className="hover:underline text-[#DC2626] font-mono font-bold">+91 98765 43210</a>
+                  <span className="block font-bold text-[#0F172A] text-xs mb-0.5">Phone Number</span>
+                  <a href="tel:+919949479765" className="hover:underline text-blue-650 font-mono font-bold">+91 99494 79765</a>
                 </div>
+              </div>
+              <div className="pt-2">
+                <a 
+                  href="https://maps.google.com/?q=MVSS+Automobiles+Gundlapochampally"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-600/10"
+                >
+                  <Navigation className="w-4 h-4" />
+                  Google Maps Button
+                </a>
               </div>
             </div>
           </div>
@@ -474,21 +480,21 @@ export default function LandingPage({ onLoginSuccess }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Your Name</label>
-                  <input type="text" required placeholder="John Doe" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-[#DC2626]" />
+                  <input type="text" required placeholder="John Doe" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Contact Phone</label>
-                  <input type="tel" required placeholder="9988776655" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-[#DC2626]" />
+                  <input type="tel" required placeholder="9988776655" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Vehicle Plate No</label>
-                  <input type="text" required placeholder="TS-09-EA-1234" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-[#DC2626] uppercase" />
+                  <input type="text" required placeholder="TS-09-EA-1234" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500 uppercase" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Preferred Stream</label>
-                  <select className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-bold focus:outline-none focus:border-[#DC2626]">
+                  <select className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-bold focus:outline-none focus:border-blue-500">
                     <option>General Servicing (PMS)</option>
                     <option>Running Repair (RR)</option>
                     <option>Body Shop (Dent/Paint)</option>
@@ -496,7 +502,7 @@ export default function LandingPage({ onLoginSuccess }) {
                   </select>
                 </div>
               </div>
-              <button type="submit" className="w-full py-3 px-4 bg-[#DC2626] hover:bg-red-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-red-600/10">
+              <button type="submit" className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-600/10">
                 Book Diagnostic Appointment
               </button>
             </form>
