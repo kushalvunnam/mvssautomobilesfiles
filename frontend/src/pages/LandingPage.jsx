@@ -32,35 +32,29 @@ export default function LandingPage({ onLoginSuccess }) {
     { src: '/workshop/page_1_img_1.png', label: 'Customer Vehicle Parking Yard' }
   ];
 
-  // 16 Unique Gallery Photos mapped across 6 categories (No reused files)
+  // 10 Unique Gallery Photos mapped EXACTLY to client specifications (No duplicates, no Auto4m logo)
   const galleryPhotos = [
     // CATEGORY A: Workshop Infrastructure
-    { src: '/workshop/page_10_img_1.jpeg', category: 'Infrastructure', title: 'Large Workshop Floor', desc: 'Modern service bays with multi-vehicle handling capacity.' },
-    { src: '/workshop/rendered_pages/page_2.png', category: 'Infrastructure', title: 'Service Bays Area', desc: 'Modern service bays with multi-vehicle handling capacity.' },
-    { src: '/workshop/page_2_img_1.jpeg', category: 'Infrastructure', title: 'Hydraulic Lifts Station', desc: 'Modern service bays with multi-vehicle handling capacity.' },
+    { src: '/workshop/page_10_img_1.jpeg', category: 'Infrastructure', title: 'Large Workshop Floor', desc: 'Workshop interior photo with multiple vehicles and service bays.' },
+    { src: '/workshop/page_2_img_1.jpeg', category: 'Infrastructure', title: 'Hydraulic Lift Service Bay', desc: 'Vehicle on lift servicing photo.' },
 
     // CATEGORY B: Live Service Operations
-    { src: '/workshop/page_9_img_1.jpeg', category: 'Operations', title: 'Technicians at Work', desc: 'Experienced technicians performing repairs and maintenance.' },
-    { src: '/workshop/page_3_img_1.jpeg', category: 'Operations', title: 'BMW Vehicle Service', desc: 'Experienced technicians performing repairs and maintenance.' },
-    { src: '/workshop/page_5_img_1.jpeg', category: 'Operations', title: 'Tata Harrier Service', desc: 'Experienced technicians performing repairs and maintenance.' },
-    { src: '/workshop/rendered_pages/page_5.png', category: 'Operations', title: 'Multi-Brand Servicing Floor', desc: 'Experienced technicians performing repairs and maintenance.' },
+    { src: '/workshop/page_3_img_1.jpeg', category: 'Operations', title: 'Live Service Operations', desc: 'Technicians actively working on vehicles.' },
+    { src: '/workshop/page_5_img_1.jpeg', category: 'Operations', title: 'Expert Technician Team', desc: 'Technicians performing repairs and maintenance.' },
 
     // CATEGORY C: Body Shop & Paint
-    { src: '/workshop/page_4_img_1.jpeg', category: 'Body Shop', title: 'Painting Process Chamber', desc: 'Professional denting, painting and restoration services.' },
-    { src: '/workshop/rendered_pages/page_4.png', category: 'Body Shop', title: 'Denting and Body Repairs Floor', desc: 'Professional denting, painting and restoration services.' },
+    { src: '/workshop/page_4_img_1.jpeg', category: 'Body Shop', title: 'Body Shop & Paint Center', desc: 'Painting, denting, body repair photos.' },
 
     // CATEGORY D: Equipment & Tools
-    { src: '/workshop/page_8_img_1.jpeg', category: 'Equipment', title: 'Bosch Diagnostic Scanner', desc: 'Modern workshop tools and advanced service equipment.' },
-    { src: '/workshop/page_7_img_1.jpeg', category: 'Equipment', title: 'Tool Trolley station', desc: 'Modern workshop tools and advanced service equipment.' },
-    { src: '/workshop/rendered_pages/page_8.png', category: 'Equipment', title: 'Workshop Machinery Center', desc: 'Modern workshop tools and advanced service equipment.' },
+    { src: '/workshop/page_8_img_1.jpeg', category: 'Equipment', title: 'Advanced Workshop Equipment', desc: 'Bosch NTI 101 machine and workshop equipment photos.' },
+    { src: '/workshop/page_7_img_1.jpeg', category: 'Equipment', title: 'Spare Parts Inventory', desc: 'Spare parts storage and inventory photos.' },
+    { src: '/workshop/page_9_img_1.jpeg', category: 'Equipment', title: 'Tool Station', desc: 'Red workshop toolbox and tools photo.' },
 
     // CATEGORY E: Customer Vehicle Yard
-    { src: '/workshop/page_1_img_1.png', category: 'Vehicle Yard', title: 'Customer Parking Area', desc: 'Organized vehicle holding and delivery area.' },
-    { src: '/workshop/rendered_pages/page_1.png', category: 'Vehicle Yard', title: 'Vehicle Holding Area', desc: 'Organized vehicle holding and delivery area.' },
+    { src: '/workshop/page_1_img_1.png', category: 'Vehicle Yard', title: 'Customer Vehicle Parking Area', desc: 'Parking lot photo with multiple customer vehicles.' },
 
     // CATEGORY F: Customer Facilities
-    { src: '/workshop/page_6_img_1.jpeg', category: 'Customer Facilities', title: 'Customer Reception Desk', desc: 'Customer support, service consultation and waiting area.' },
-    { src: '/workshop/rendered_pages/page_6.png', category: 'Customer Facilities', title: 'Customer Waiting Lounge', desc: 'Customer support, service consultation and waiting area.' }
+    { src: '/workshop/page_6_img_1.jpeg', category: 'Customer Facilities', title: 'Customer Reception Area', desc: 'Reception/office/waiting area photo.' }
   ];
 
   // Testimonials
@@ -229,13 +223,13 @@ export default function LandingPage({ onLoginSuccess }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { title: 'Multi Brand Service', desc: 'Chassis general repairs and engine diagnostics overhauls for premium brands.', icon: Car },
+            { title: 'Multi Brand Service', desc: 'Chassis general repairs and engine service overhauls for premium brands.', icon: Car },
             { title: 'Body Shop & Painting', desc: 'Panel paint booth refinish, dent adjustments, corporate detailing finish and scratch removals.', icon: Wrench },
             { title: 'Insurance Claims', desc: 'Surveyor damage canvas tracking, cash-free claims handling, and insurance catalog estimates.', icon: ShieldCheck },
             { title: 'Genuine Spare Parts', desc: 'OEM filters, replacement spark plugs, certified high-grade components directly from catalog room.', icon: Award },
             { title: 'Wheel Alignment', desc: 'Computerized alignment calibration, wheel weight balancing, and tyre pressure correction.', icon: Settings },
             { title: 'Engine Repair', desc: 'Full engine block repairs, mechanical component overhauls, and transmission tuning.', icon: Settings },
-            { title: 'Periodic Maintenance', desc: 'Periodic lubrication checkout, Mobil oil replacements, engine diagnostics and standard fluid topups.', icon: CheckCircle },
+            { title: 'Periodic Maintenance', desc: 'Periodic lubrication checkout, Mobil oil replacements, engine checkups and standard fluid topups.', icon: CheckCircle },
             { title: 'Vehicle Pickup & Delivery', desc: 'Secure door-to-door vehicle transport checkout, pickup check-in and delivery mapping.', icon: Navigation }
           ].map((service, idx) => {
             const Icon = service.icon;
@@ -264,7 +258,7 @@ export default function LandingPage({ onLoginSuccess }) {
             <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Our Facility Tour</span>
             <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Workshop Gallery</h3>
             <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">
-              Visual tour of our modern diagnostic checkouts, premium brand service bays, and genuine spares stock.
+              Visual tour of our modern service checkouts, premium brand service bays, and genuine spares stock.
             </p>
           </div>
 
@@ -323,17 +317,17 @@ export default function LandingPage({ onLoginSuccess }) {
         <div className="text-center space-y-2">
           <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Enterprise Car Care</span>
           <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Why Choose MVSS</h3>
-          <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">We provide premium multi-brand diagnostics with full digital tracking transparency.</p>
+          <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">We provide premium multi-brand services with full digital tracking transparency.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { title: 'Certified Technicians', desc: 'Workshop floor staffed with certified mechanical and body workshop specialists.' },
             { title: 'Multi Brand Expertise', desc: 'Certified engine servicing, chassis PMS and mechanical repair for premium brands.' },
-            { title: 'Bosch Equipment', desc: 'Bosch automobile scanners and computerized alignment calibration diagnostics.' },
+            { title: 'Bosch Equipment', desc: 'Bosch automobile scanners and computerized alignment calibration checkups.' },
             { title: 'Digital Job Cards', desc: 'Secure digital tracking boards showing check-in status, progress, estimation and release.' },
             { title: 'GST Billing', desc: 'Auto-generated invoice details with clear spares selling price and labor fees.' },
-            { title: 'Transparent Workflow', desc: 'From check-in to checkout, estimates, diagnostic checklists, and signatures are managed digitally.' },
+            { title: 'Transparent Workflow', desc: 'From check-in to checkout, estimates, service checklists, and signatures are managed digitally.' },
             { title: 'Quality Spare Parts', desc: 'OEM filters, high-grade lubrication motor oil, spark plugs, and brake pads.' },
             { title: 'Customer Satisfaction', desc: 'Post-repair quality inspect checks before vehicle delivery and gate pass release.' }
           ].map((item, idx) => (
@@ -608,7 +602,7 @@ export default function LandingPage({ onLoginSuccess }) {
                 </div>
               </div>
               <button type="submit" className="w-full py-3 px-4 bg-[#C1121F] hover:bg-red-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-red-650/10">
-                Book Diagnostic Appointment
+                Book Service Appointment
               </button>
             </form>
           </div>
@@ -670,4 +664,19 @@ export default function LandingPage({ onLoginSuccess }) {
 
     </div>
   );
+}
+
+function getCurrentStageIndex(status) {
+  const stagesKeys = [
+    'Created',
+    'Inspect Stage',
+    'Estimation',
+    'Customer Approval',
+    'Work In Progress',
+    'Quality Check',
+    'Ready for Delivery',
+    'Delivered'
+  ];
+  const idx = stagesKeys.indexOf(status);
+  return idx === -1 ? 0 : idx;
 }
