@@ -1129,9 +1129,9 @@ export default function App() {
   const primaryMobileItems = showMoreButton ? filteredNavItems.slice(0, 4) : filteredNavItems;
   const isMoreActive = showMoreButton && !primaryMobileItems.some(item => item.id === activeTab);
 
-  // If not logged in, render the login page directly
+  // If not logged in, render the landing page directly
   if (!token || !user) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+    return <LandingPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
