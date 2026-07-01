@@ -23,13 +23,13 @@ export default function LandingPage({ onLoginSuccess }) {
     { key: 'Delivered', label: 'Released', desc: 'Payment received & Gate Pass issued.' }
   ];
 
-  // Hero slideshow photos
+  // Hero slideshow photos (Workshop photos only - NO LOGO)
   const heroSlides = [
     { src: '/workshop/page_1_img_1.png', label: 'Workshop Front View' },
     { src: '/workshop/page_2_img_1.jpeg', label: 'Service Bay' },
-    { src: '/workshop/page_9_img_1.jpeg', label: 'Team Photo' },
-    { src: '/workshop/page_4_img_1.jpeg', label: 'Mercedes Service Photo' },
-    { src: '/workshop/page_3_img_1.jpeg', label: 'BMW Service Photo' },
+    { src: '/workshop/page_9_img_1.jpeg', label: 'Technician Team' },
+    { src: '/workshop/page_3_img_1.jpeg', label: 'BMW Service Area' },
+    { src: '/workshop/page_4_img_1.jpeg', label: 'Mercedes Service Area' },
     { src: '/workshop/page_10_img_1.jpeg', label: 'Workshop Interior' }
   ];
 
@@ -102,7 +102,7 @@ export default function LandingPage({ onLoginSuccess }) {
             <img 
               src="/workshop/page_1_img_1.png" 
               alt="MVSS Logo" 
-              className="h-8.5 w-auto object-contain"
+              className="h-[60px] max-w-[180px] object-contain"
             />
           </div>
           <div className="text-left">
@@ -134,61 +134,68 @@ export default function LandingPage({ onLoginSuccess }) {
       </header>
 
       {/* Hero Section */}
-      <section className="relative bg-white border-b border-[#E2E8F0]/40 max-w-7xl mx-auto px-6 pt-16 pb-20 text-center lg:text-left grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        <div className="lg:col-span-6 space-y-6">
-          <div className="space-y-1">
-            <span className="block text-xs font-black text-[#DC2626] uppercase tracking-wider">MVSS AUTOMOBILES PVT LTD</span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#0F172A] leading-tight tracking-tight uppercase">
-              Premium Multi-Brand Car Service Center
-            </h2>
-            <p className="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wide leading-relaxed">
-              Body Shop • Insurance Claims • Advanced Vehicle Scanning • Genuine Parts
-            </p>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed mt-4">
-              Trusted automobile workshop in Hyderabad delivering professional service, transparent billing and digital vehicle tracking.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3 justify-center lg:justify-start pt-2">
-            <a
-              href="#tracker"
-              className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#DC2626] hover:bg-red-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-[#DC2626]/10"
-            >
-              Track Vehicle
-              <ArrowRight className="w-3.5 h-3.5" />
-            </a>
-            <a
-              href="#services"
-              className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold transition-all"
-            >
-              Our Services
-            </a>
-            <a
-              href="#contact"
-              className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-750 border border-[#E2E8F0] rounded-xl text-xs font-extrabold transition-all"
-            >
-              Contact Workshop
-            </a>
-          </div>
-        </div>
-
-        {/* Hero Slideshow */}
-        <div className="lg:col-span-6 relative w-full h-[220px] sm:h-[320px] lg:h-[400px] overflow-hidden rounded-3xl border border-[#E2E8F0] shadow-lg">
-          {heroSlides.map((slide, idx) => (
-            <div 
-              key={idx}
-              className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${idx === heroIdx ? 'opacity-100' : 'opacity-0'}`}
-            >
-              <img 
-                src={slide.src}
-                alt={slide.label}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute bottom-4 left-4 bg-[#0F172A]/85 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-700/50">
-                <span className="text-[10px] text-white font-extrabold uppercase tracking-wide">{slide.label}</span>
-              </div>
+      <section id="home" className="relative bg-white border-b border-[#E2E8F0]/40 max-w-7xl mx-auto px-6 lg:h-[700px] flex items-center py-12 lg:py-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full">
+          {/* Left Content (50%) */}
+          <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
+            <div className="space-y-1">
+              <span className="block text-xs font-black text-[#DC2626] uppercase tracking-wider">MVSS AUTOMOBILES PVT LTD</span>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#0F172A] leading-tight tracking-tight uppercase">
+                Premium Multi-Brand Car Service Center
+              </h2>
+              <p className="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wide leading-relaxed">
+                Body Shop • Insurance Claims • Advanced Vehicle Scanning • Genuine Parts
+              </p>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed mt-4">
+                Trusted automobile workshop in Hyderabad delivering professional service, transparent billing and digital vehicle tracking.
+              </p>
             </div>
-          ))}
+
+            <div className="flex flex-wrap gap-3 justify-center lg:justify-start pt-2">
+              <a
+                href="#tracker"
+                className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#DC2626] hover:bg-red-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-[#DC2626]/10"
+              >
+                Track Vehicle
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+              <a
+                href="#services"
+                className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold transition-all"
+              >
+                Our Services
+              </a>
+              <a
+                href="#contact"
+                className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-750 border border-[#E2E8F0] rounded-xl text-xs font-extrabold transition-all"
+              >
+                Contact Workshop
+              </a>
+            </div>
+          </div>
+
+          {/* Right Image Container (50%) */}
+          <div className="lg:col-span-6 w-full h-[320px] sm:h-[450px] lg:h-[550px] lg:max-h-[550px] rounded-[24px] overflow-hidden relative border border-[#E2E8F0] shadow-lg select-none bg-slate-50">
+            {heroSlides.map((slide, idx) => (
+              <div 
+                key={idx}
+                className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${idx === heroIdx ? 'opacity-100' : 'opacity-0'}`}
+              >
+                <img 
+                  src={slide.src}
+                  alt={slide.label}
+                  className="w-full h-full object-cover object-center"
+                  onError={(e) => {
+                    // Fallback to next image by incrementing index
+                    setHeroIdx((prev) => (prev + 1) % heroSlides.length);
+                  }}
+                />
+                <div className="absolute bottom-4 left-4 bg-[#0F172A]/85 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-700/50">
+                  <span className="text-[10px] text-white font-extrabold uppercase tracking-wide">{slide.label}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -244,9 +251,9 @@ export default function LandingPage({ onLoginSuccess }) {
             {visiblePhotos.map((photo, idx) => (
               <div 
                 key={idx}
-                className="h-[240px] sm:h-[300px] lg:h-[340px] bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm hover:border-[#DC2626]/40 transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-lg group"
+                className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm hover:border-[#DC2626]/40 transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-lg group"
               >
-                <div className="flex-1 w-full overflow-hidden bg-slate-100 relative">
+                <div className="h-[280px] w-full overflow-hidden bg-slate-100 relative">
                   <img 
                     src={photo.src} 
                     alt={photo.title}
@@ -300,6 +307,24 @@ export default function LandingPage({ onLoginSuccess }) {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Featured Workshop Spotlight Section */}
+      <section className="py-20 bg-white border-b border-[#E2E8F0]/40">
+        <div className="max-w-7xl mx-auto px-6 space-y-8">
+          <div className="text-center space-y-2">
+            <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Facility spotlight</span>
+            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Featured Workshop Operations</h3>
+            <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">Take a detailed look at our primary multi-brand service floor operations.</p>
+          </div>
+          <div className="w-full h-[320px] sm:h-[400px] lg:h-[500px] rounded-3xl overflow-hidden border border-[#E2E8F0] shadow-md select-none">
+            <img 
+              src="/workshop/page_2_img_1.jpeg" 
+              alt="Featured Workshop Operations" 
+              className="w-full h-full object-cover" 
+            />
+          </div>
         </div>
       </section>
 
@@ -549,7 +574,7 @@ export default function LandingPage({ onLoginSuccess }) {
                 <img 
                   src="/workshop/page_1_img_1.png" 
                   alt="MVSS Logo" 
-                  className="h-6 w-auto object-contain"
+                  className="h-[60px] max-w-[180px] object-contain"
                 />
               </div>
               <span className="font-extrabold text-white text-xs uppercase tracking-wider">MVSS AUTOMOBILES</span>
