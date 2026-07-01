@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ArrowRight, Lock, X, CheckCircle, Navigation, Star, Award, Settings, Users, HelpCircle, Eye, ShieldAlert } from 'lucide-react';
+import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ArrowRight, Lock, X, CheckCircle, Navigation, Star, Award, Settings, Users, ShieldAlert } from 'lucide-react';
 import Login from './Login';
 
 export default function LandingPage({ onLoginSuccess }) {
@@ -8,7 +8,7 @@ export default function LandingPage({ onLoginSuccess }) {
   const [trackerResult, setTrackerResult] = useState(null);
   const [searched, setSearched] = useState(false);
   const [heroIdx, setHeroIdx] = useState(0);
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('All');
 
   // 8 Servicing Stages list
   const stages = [
@@ -22,34 +22,39 @@ export default function LandingPage({ onLoginSuccess }) {
     { key: 'Delivered', label: 'Released', desc: 'Payment received & Gate Pass issued.' }
   ];
 
-  // Hero slideshow photos (Workshop photos only - NO LOGO)
+  // Hero slideshow photos - STRICT ORDER requested by client
   const heroSlides = [
-    { src: '/workshop/page_1_img_1.png', label: 'Workshop Building' },
-    { src: '/workshop/page_2_img_1.jpeg', label: 'Service Bay' },
-    { src: '/workshop/page_9_img_1.jpeg', label: 'Team Photo' },
-    { src: '/workshop/page_3_img_1.jpeg', label: 'BMW Service' },
-    { src: '/workshop/page_4_img_1.jpeg', label: 'Mercedes Service' },
-    { src: '/workshop/page_10_img_1.jpeg', label: 'Workshop Interior' }
+    { src: '/workshop/page_2_img_1.jpeg', label: 'Large Workshop Floor' },
+    { src: '/workshop/page_9_img_1.jpeg', label: 'Technicians at Work' },
+    { src: '/workshop/page_3_img_1.jpeg', label: 'BMW Service Bay' },
+    { src: '/workshop/page_4_img_1.jpeg', label: 'Body Shop Paint Section' },
+    { src: '/workshop/page_8_img_1.jpeg', label: 'Bosch Equipment Area' },
+    { src: '/workshop/page_1_img_1.png', label: 'Customer Vehicle Parking Yard' }
   ];
 
-  // 13 Gallery photos mapped exactly to user requirements
+  // Gallery Categories - exactly mapped to client specifications
   const galleryPhotos = [
-    { src: '/workshop/page_1_img_1.png', title: 'Workshop Building', desc: 'Modern multi-brand automobile workshop facility.' },
-    { src: '/workshop/page_1_img_1.png', title: 'Workshop Entrance', desc: 'Dedicated customer entry and vehicle reception area.' },
-    { src: '/workshop/page_6_img_1.jpeg', title: 'Reception Office', desc: 'Customer support, service consultation and billing desk.' },
-    { src: '/workshop/page_9_img_1.jpeg', title: 'Expert Technician Team', desc: 'Certified and experienced workshop professionals.' },
-    { src: '/workshop/page_8_img_1.jpeg', title: 'Bosch Equipment', desc: 'Advanced scanning and vehicle analysis equipment.' },
-    { src: '/workshop/page_3_img_1.jpeg', title: 'BMW Service', desc: 'Premium service and maintenance for BMW vehicles.' },
-    { src: '/workshop/page_4_img_1.jpeg', title: 'Mercedes Service', desc: 'Professional servicing and repairs for Mercedes vehicles.' },
-    { src: '/workshop/page_5_img_1.jpeg', title: 'Tata Harrier Service', desc: 'Comprehensive service and inspection support.' },
-    { src: '/workshop/page_2_img_1.jpeg', title: 'Service Bay', desc: 'Dedicated workstations for vehicle servicing.' },
-    { src: '/workshop/page_2_img_1.jpeg', title: 'Workshop Floor', desc: 'Spacious service area with modern lifting systems.' },
-    { src: '/workshop/page_7_img_1.jpeg', title: 'Spare Parts Inventory', desc: 'Organized storage of genuine spare parts.' },
-    { src: '/workshop/page_2_img_1.jpeg', title: 'Body Shop Section', desc: 'Denting, painting and restoration services.' },
-    { src: '/workshop/page_10_img_1.jpeg', title: 'Insurance Support', desc: 'Insurance inspection and claim assistance.' }
+    // CATEGORY 1: Workshop Infrastructure
+    { src: '/workshop/page_2_img_1.jpeg', category: 'Infrastructure', title: 'Workshop Floor View', desc: 'Modern service bays with multi-vehicle handling capacity.' },
+    { src: '/workshop/page_10_img_1.jpeg', category: 'Infrastructure', title: 'Workshop Floor Area', desc: 'Modern service bays with multi-vehicle handling capacity.' },
+
+    // CATEGORY 2: Live Service Operations
+    { src: '/workshop/page_5_img_1.jpeg', category: 'Operations', title: 'Tata Harrier Repair', desc: 'Experienced technicians performing repairs and maintenance.' },
+    { src: '/workshop/page_9_img_1.jpeg', category: 'Operations', title: 'Swift Service Check', desc: 'Experienced technicians performing repairs and maintenance.' },
+    { src: '/workshop/page_3_img_1.jpeg', category: 'Operations', title: 'BMW Service Diagnostic', desc: 'Experienced technicians performing repairs and maintenance.' },
+
+    // CATEGORY 3: Body Shop & Paint
+    { src: '/workshop/page_4_img_1.jpeg', category: 'Body Shop', title: 'Paint Booth', desc: 'Professional denting, painting and restoration services.' },
+
+    // CATEGORY 4: Advanced Equipment
+    { src: '/workshop/page_8_img_1.jpeg', category: 'Equipment', title: 'Bosch Nitrogen Equipment', desc: 'Modern workshop tools and advanced service equipment.' },
+    { src: '/workshop/page_7_img_1.jpeg', category: 'Equipment', title: 'Tool Trolley Spares', desc: 'Modern workshop tools and advanced service equipment.' },
+
+    // CATEGORY 5: Vehicle Yard
+    { src: '/workshop/page_1_img_1.png', category: 'Vehicle Yard', title: 'Customer Parking Area', desc: 'Organized vehicle holding and delivery area.' }
   ];
 
-  // Testimonials list
+  // Testimonials
   const testimonials = [
     { rating: 5, quote: 'Excellent service and transparent billing. Highly recommended.', author: 'Ravi Kumar' },
     { rating: 5, quote: 'Professional team and quality work.', author: 'Sandeep Reddy' },
@@ -68,10 +73,7 @@ export default function LandingPage({ onLoginSuccess }) {
     if (!searchQuery.trim()) return;
 
     setSearched(true);
-    // Retrieve mock jobcards from localStorage
     const localJcs = JSON.parse(localStorage.getItem('mock_jobcards') || '[]');
-    
-    // Find matching jobcard by plate number or jobcard number
     const match = localJcs.find(jc => 
       (jc.vehicleId?.vehicleNumber || '').toLowerCase().replace(/\s+/g, '') === searchQuery.toLowerCase().replace(/\s+/g, '') ||
       (jc.jobCardNo || '').toLowerCase().replace(/\s+/g, '') === searchQuery.toLowerCase().replace(/\s+/g, '')
@@ -87,15 +89,21 @@ export default function LandingPage({ onLoginSuccess }) {
     }
   };
 
-  const visiblePhotos = showAllPhotos ? galleryPhotos : galleryPhotos.slice(0, 4);
+  const filteredPhotos = activeCategory === 'All' 
+    ? galleryPhotos 
+    : galleryPhotos.filter(p => p.category === activeCategory);
 
   return (
-    <div className="min-h-screen bg-white text-[#0F172A] font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-white text-[#111827] font-sans relative overflow-x-hidden">
       
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white border-b border-[#E2E8F0] px-6 py-4 flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto w-full gap-4 md:gap-0 select-none">
-        <a href="/" className="flex items-center gap-2.5 select-none shrink-0 mr-auto md:mr-0 group">
-          <div className="p-1 bg-white rounded-lg border border-[#E2E8F0] shrink-0 transition-colors group-hover:border-[#DC2626]">
+        <a 
+          href="/" 
+          onClick={(e) => { e.preventDefault(); window.location.href = '/'; }} 
+          className="flex items-center gap-2.5 select-none shrink-0 mr-auto md:mr-0 group"
+        >
+          <div className="p-1 bg-white rounded-lg border border-[#E2E8F0] shrink-0 transition-colors group-hover:border-[#C1121F]">
             <img 
               src="/workshop/page_1_img_1.png" 
               alt="MVSS Logo" 
@@ -103,27 +111,27 @@ export default function LandingPage({ onLoginSuccess }) {
             />
           </div>
           <div className="text-left">
-            <h1 className="text-xs sm:text-sm font-black tracking-wider uppercase text-slate-900 leading-none">
+            <h1 className="text-xs sm:text-sm font-black tracking-wider uppercase text-[#111827] leading-none">
               MVSS AUTOMOBILES
             </h1>
-            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest leading-none mt-0.5">Pvt. Ltd.</p>
+            <p className="text-[8px] text-[#6B7280] font-bold uppercase tracking-widest leading-none mt-0.5">Pvt. Ltd.</p>
           </div>
         </a>
 
         {/* Center Navigation */}
-        <nav className="flex flex-wrap items-center justify-start md:justify-center gap-x-6 gap-y-2 text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">
-          <a href="#" className="hover:text-[#DC2626] transition-colors">Home</a>
-          <a href="#services" className="hover:text-[#DC2626] transition-colors">Services</a>
-          <a href="#gallery" className="hover:text-[#DC2626] transition-colors">Gallery</a>
-          <a href="#why-choose" className="hover:text-[#DC2626] transition-colors">Why Choose Us</a>
-          <a href="#tracker" className="hover:text-[#DC2626] transition-colors">Track Vehicle</a>
-          <a href="#contact" className="hover:text-[#DC2626] transition-colors">Contact</a>
+        <nav className="flex flex-wrap items-center justify-start md:justify-center gap-x-6 gap-y-2 text-[11px] sm:text-xs font-bold text-[#6B7280] uppercase tracking-wider">
+          <a href="#" className="hover:text-[#C1121F] transition-colors">Home</a>
+          <a href="#services" className="hover:text-[#C1121F] transition-colors">Services</a>
+          <a href="#gallery" className="hover:text-[#C1121F] transition-colors">Gallery</a>
+          <a href="#why-choose" className="hover:text-[#C1121F] transition-colors">Why Choose Us</a>
+          <a href="#tracker" className="hover:text-[#C1121F] transition-colors">Track Vehicle</a>
+          <a href="#contact" className="hover:text-[#C1121F] transition-colors">Contact</a>
         </nav>
 
         {/* Right Action */}
         <button
           onClick={() => setShowLogin(true)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0F172A] hover:bg-[#DC2626] text-white rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all shrink-0"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#111827] hover:bg-[#C1121F] text-white rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all shrink-0"
         >
           <Lock className="w-3 h-3" />
           Staff Login
@@ -136,36 +144,36 @@ export default function LandingPage({ onLoginSuccess }) {
           {/* Left Content (50%) */}
           <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
             <div className="space-y-1">
-              <span className="block text-xs font-black text-[#DC2626] uppercase tracking-wider">MVSS AUTOMOBILES PVT LTD</span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#0F172A] leading-tight tracking-tight uppercase">
+              <span className="block text-xs font-black text-[#C1121F] uppercase tracking-wider">MVSS AUTOMOBILES PVT. LTD.</span>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#111827] leading-tight tracking-tight uppercase">
                 Premium Multi-Brand Car Service Center
               </h2>
-              <p className="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wide leading-relaxed">
-                Body Shop • Insurance Claims • Advanced Vehicle Scanning • Genuine Parts
+              <p className="text-xs sm:text-sm font-semibold text-[#6B7280] uppercase tracking-wide leading-relaxed">
+                Complete Car Care, Body Shop Repairs, Insurance Claims, Genuine Parts, Vehicle Tracking, and GST Billing under one roof.
               </p>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed mt-4">
+              <p className="text-xs sm:text-sm text-[#6B7280] font-medium leading-relaxed mt-4">
                 Trusted automobile workshop in Hyderabad delivering professional service, transparent billing and digital vehicle tracking.
               </p>
             </div>
 
-            {/* Buttons list including red [Book Service] button */}
+            {/* Buttons list incorporating red [Book A Service] button */}
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start pt-2">
               <a
                 href="#tracker"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold transition-all shadow-sm"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#111827] hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold transition-all shadow-sm"
               >
                 Track Vehicle
               </a>
               <a
                 href="#contact"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#DC2626] hover:bg-red-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-[#DC2626]/10 animate-pulse"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#C1121F] hover:bg-red-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-[#C1121F]/10 animate-pulse"
               >
                 <Wrench className="w-3.5 h-3.5" />
-                Book Service
+                Book A Service
               </a>
               <a
                 href="#services"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-extrabold transition-all"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-[#111827] rounded-xl text-xs font-extrabold transition-all"
               >
                 Our Services
               </a>
@@ -193,7 +201,7 @@ export default function LandingPage({ onLoginSuccess }) {
                     setHeroIdx((prev) => (prev + 1) % heroSlides.length);
                   }}
                 />
-                <div className="absolute bottom-4 left-4 bg-[#0F172A]/85 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-700/50">
+                <div className="absolute bottom-4 left-4 bg-[#111827]/85 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-750/50">
                   <span className="text-[10px] text-white font-extrabold uppercase tracking-wide">{slide.label}</span>
                 </div>
               </div>
@@ -205,33 +213,34 @@ export default function LandingPage({ onLoginSuccess }) {
       {/* Services Section */}
       <section id="services" className="py-20 max-w-7xl mx-auto px-6 bg-white space-y-12">
         <div className="text-center space-y-2">
-          <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Expert capabilities</span>
-          <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Rebuilt Service Capabilities</h3>
-          <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">Modern service streams designed to keep your vehicle in prime manufacturer condition.</p>
+          <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Our Capabilities</span>
+          <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Rebuilt Service Capabilities</h3>
+          <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">Modern service streams designed to keep your vehicle in prime manufacturer condition.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { title: 'General Service', desc: 'Periodic lubrication checkout, Mobil oil replacements, engine diagnostics and standard fluid topups.', tag: 'PMS', icon: CheckCircle },
-            { title: 'Body Shop & Painting', desc: 'Panel paint booth refinish, dent adjustments, corporate detailing finish and scratch removals.', tag: 'B/P', icon: Wrench },
-            { title: 'Insurance Claims', desc: 'Surveyor damage canvas tracking, cash-free claims handling, and insurance catalog estimates.', tag: 'Claims', icon: ShieldCheck },
-            { title: 'Advanced Vehicle Scanning', desc: 'Chassis diagnostics scans, electrical checking, battery overhauls, and sensor resets.', tag: 'Scanner', icon: Settings },
-            { title: 'Genuine Spare Parts', desc: 'OEM filters, replacement spark plugs, certified high-grade components directly from catalog room.', tag: 'Inventory', icon: Award },
-            { title: 'Wheel Alignment & Balancing', desc: 'Computerized alignment calibration, wheel weight balancing, and tyre pressure correction.', tag: 'Tyres', icon: Car }
-          ].map(service => {
+            { title: 'Multi Brand Service', desc: 'Chassis general repairs and engine diagnostics overhauls for premium brands.', icon: Car },
+            { title: 'Body Shop & Painting', desc: 'Panel paint booth refinish, dent adjustments, corporate detailing finish and scratch removals.', icon: Wrench },
+            { title: 'Insurance Claims', desc: 'Surveyor damage canvas tracking, cash-free claims handling, and insurance catalog estimates.', icon: ShieldCheck },
+            { title: 'Genuine Spare Parts', desc: 'OEM filters, replacement spark plugs, certified high-grade components directly from catalog room.', icon: Award },
+            { title: 'Wheel Alignment', desc: 'Computerized alignment calibration, wheel weight balancing, and tyre pressure correction.', icon: Settings },
+            { title: 'Engine Repair', desc: 'Full engine block repairs, mechanical component overhauls, and transmission tuning.', icon: Settings },
+            { title: 'Periodic Maintenance', desc: 'Periodic lubrication checkout, Mobil oil replacements, engine diagnostics and standard fluid topups.', icon: CheckCircle },
+            { title: 'Vehicle Pickup & Delivery', desc: 'Secure door-to-door vehicle transport checkout, pickup check-in and delivery mapping.', icon: Navigation }
+          ].map((service, idx) => {
             const Icon = service.icon;
             return (
               <div 
-                key={service.title} 
-                className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-2xl transition-all duration-200 hover:border-[#DC2626]/30 hover:bg-white hover:shadow-md flex flex-col justify-between group shadow-xs w-full h-[220px]"
+                key={idx} 
+                className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-2xl transition-all duration-200 hover:border-[#C1121F]/30 hover:bg-white hover:shadow-md flex flex-col justify-between group shadow-xs w-full h-[220px]"
               >
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="inline-block px-2 py-0.5 bg-white border border-[#E2E8F0] rounded-md text-[9px] font-black text-slate-600 uppercase tracking-widest">{service.tag}</span>
-                    <Icon className="w-4.5 h-4.5 text-[#DC2626]" />
+                    <Icon className="w-5 h-5 text-[#C1121F]" />
                   </div>
-                  <h4 className="text-sm font-black text-[#0F172A] group-hover:text-[#DC2626] transition-colors">{service.title}</h4>
-                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed line-clamp-3">{service.desc}</p>
+                  <h4 className="text-sm font-black text-[#111827] group-hover:text-[#C1121F] transition-colors">{service.title}</h4>
+                  <p className="text-[11px] text-[#6B7280] font-medium leading-relaxed line-clamp-3">{service.desc}</p>
                 </div>
               </div>
             );
@@ -243,19 +252,36 @@ export default function LandingPage({ onLoginSuccess }) {
       <section id="gallery" className="py-20 bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
         <div className="max-w-7xl mx-auto px-6 space-y-12">
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Our Facility Tour</span>
-            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Workshop Gallery</h3>
-            <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">
+            <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Our Facility Tour</span>
+            <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Workshop Gallery</h3>
+            <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">
               Visual tour of our modern diagnostic checkouts, premium brand service bays, and genuine spares stock.
             </p>
           </div>
 
-          {/* Grid Layout: Desktop 4 columns, Tablet 2 columns, Mobile 1 column */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {visiblePhotos.map((photo, idx) => (
+          {/* Category Filter Controls */}
+          <div className="flex flex-wrap justify-center gap-2 select-none">
+            {['All', 'Infrastructure', 'Operations', 'Body Shop', 'Equipment', 'Vehicle Yard'].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                  activeCategory === cat 
+                    ? 'bg-[#C1121F] border-[#C1121F] text-white shadow-sm' 
+                    : 'bg-white border-[#E2E8F0] text-[#6B7280] hover:text-[#111827]'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Grid Layout: Desktop 3-4 columns, Tablet 2 columns, Mobile 1 column */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPhotos.map((photo, idx) => (
               <div 
                 key={idx}
-                className="h-[420px] bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm hover:border-[#DC2626]/45 transition-all duration-350 flex flex-col hover:-translate-y-1.5 hover:shadow-lg group"
+                className="h-[420px] bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm hover:border-[#C1121F]/45 transition-all duration-350 flex flex-col hover:-translate-y-1.5 hover:shadow-lg group"
               >
                 {/* Image Height: 280px */}
                 <div className="h-[280px] w-full overflow-hidden bg-slate-100 relative shrink-0">
@@ -269,107 +295,85 @@ export default function LandingPage({ onLoginSuccess }) {
                 {/* Content Box */}
                 <div className="p-4 bg-white border-t border-[#E2E8F0] flex flex-col justify-start space-y-1 flex-1">
                   {/* Title Height: 40px */}
-                  <h4 className="text-xs sm:text-sm font-black text-[#0F172A] h-[40px] flex items-center leading-tight">
+                  <h4 className="text-xs sm:text-sm font-black text-[#111827] h-[40px] flex items-center leading-tight">
                     {photo.title}
                   </h4>
                   {/* Description Height: 60px */}
-                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium leading-relaxed h-[60px] overflow-hidden">
+                  <p className="text-[10px] sm:text-[11px] text-[#6B7280] font-medium leading-relaxed h-[60px] overflow-hidden">
                     {photo.desc}
                   </p>
                 </div>
               </div>
             ))}
           </div>
-
-          <div className="text-center">
-            <button
-              onClick={() => setShowAllPhotos(!showAllPhotos)}
-              className="inline-flex items-center gap-1.5 px-6 py-2.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-            >
-              {showAllPhotos ? 'Show Less Photos' : 'View More Photos'}
-            </button>
-          </div>
         </div>
       </section>
 
-      {/* Why Choose MVSS */}
+      {/* Why Choose Us */}
       <section id="why-choose" className="py-20 bg-white max-w-7xl mx-auto px-6 space-y-12">
         <div className="text-center space-y-2">
-          <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Enterprise Car Care</span>
-          <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Why Choose MVSS</h3>
-          <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">We provide premium multi-brand diagnostics with full digital tracking transparency.</p>
+          <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Enterprise Car Care</span>
+          <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Why Choose MVSS</h3>
+          <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">We provide premium multi-brand diagnostics with full digital tracking transparency.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
+            { title: 'Certified Technicians', desc: 'Workshop floor staffed with certified mechanical and body workshop specialists.' },
+            { title: 'Multi Brand Expertise', desc: 'Certified engine servicing, chassis PMS and mechanical repair for premium brands.' },
             { title: 'Bosch Equipment', desc: 'Bosch automobile scanners and computerized alignment calibration diagnostics.' },
-            { title: 'Multi Brand Service', desc: 'Chassis general repairs and engine diagnostics overhauls for premium brands.' },
-            { title: 'Insurance Claim Support', desc: 'Surveyor damage canvas tracking and cash-free insurance checkout settlements.' },
-            { title: 'Genuine Spare Parts', desc: 'OEM filters, high-grade lubrication motor oil, spark plugs, and brake pads.' },
-            { title: 'Experienced Technicians', desc: 'Workshop floor staffed with certified mechanical and body workshop specialists.' },
-            { title: 'Digital Job Card Tracking', desc: 'Secure tracking boards showing check-in status, progress, estimation and release.' },
-            { title: 'Transparent Billing', desc: 'Auto-generated invoice details with clear spares selling price and labor fees.' },
-            { title: 'Quality Assurance Process', desc: 'Post-repair quality inspect checks before vehicle delivery and gate pass release.' }
+            { title: 'Digital Job Cards', desc: 'Secure digital tracking boards showing check-in status, progress, estimation and release.' },
+            { title: 'GST Billing', desc: 'Auto-generated invoice details with clear spares selling price and labor fees.' },
+            { title: 'Transparent Workflow', desc: 'From check-in to checkout, estimates, diagnostic checklists, and signatures are managed digitally.' },
+            { title: 'Quality Spare Parts', desc: 'OEM filters, high-grade lubrication motor oil, spark plugs, and brake pads.' },
+            { title: 'Customer Satisfaction', desc: 'Post-repair quality inspect checks before vehicle delivery and gate pass release.' }
           ].map((item, idx) => (
             <div key={idx} className="bg-[#F8FAFC] border border-[#E2E8F0] p-5 rounded-2xl flex gap-3.5 items-start shadow-xs h-[160px]">
-              <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+              <CheckCircle className="w-5 h-5 text-blue-650 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <h4 className="text-xs sm:text-sm font-black text-[#0F172A]">{item.title}</h4>
-                <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium leading-relaxed line-clamp-3">{item.desc}</p>
+                <h4 className="text-xs sm:text-sm font-black text-[#111827]">{item.title}</h4>
+                <p className="text-[10px] sm:text-[11px] text-[#6B7280] font-medium leading-relaxed line-clamp-3">{item.desc}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Featured Workshop Spotlight Section */}
-      <section className="py-20 bg-white border-b border-[#E2E8F0]/40">
-        <div className="max-w-7xl mx-auto px-6 space-y-8">
+      {/* Customer Experience Spotlight Section */}
+      <section className="py-20 bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
+        <div className="max-w-7xl mx-auto px-6 space-y-12">
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Facility spotlight</span>
-            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Featured Workshop Operations</h3>
-            <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">Take a detailed look at our primary multi-brand service floor operations.</p>
+            <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Spotlight</span>
+            <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Customer Experience Highlights</h3>
+            <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">Discover our key operational statistics across multi-brand automobile servicing.</p>
           </div>
-          <div className="w-full h-[320px] sm:h-[400px] lg:h-[500px] rounded-3xl overflow-hidden border border-[#E2E8F0] shadow-md select-none">
-            <img 
-              src="/workshop/page_2_img_1.jpeg" 
-              alt="Featured Workshop Operations" 
-              className="w-full h-full object-cover" 
-            />
-          </div>
-        </div>
-      </section>
 
-      {/* Achievements Section */}
-      <section className="py-16 bg-[#0F172A] text-white select-none">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-          {[
-            { val: '5000+', label: 'Happy Customers', icon: Users },
-            { val: '15+', label: 'Expert Technicians', icon: Award },
-            { val: '98%', label: 'Customer Satisfaction', icon: ShieldCheck },
-            { val: '24/7', label: 'Customer Support', icon: Phone }
-          ].map((ach, idx) => {
-            const Icon = ach.icon;
-            return (
-              <div key={idx} className="space-y-2 group">
-                <div className="p-3 bg-slate-800 border border-slate-700 text-[#DC2626] rounded-2xl w-fit mx-auto transition-transform group-hover:scale-105">
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div className="text-2xl sm:text-3xl font-black font-mono">{ach.val}</div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{ach.label}</div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { val: '1000+', label: 'Vehicles Serviced', desc: 'Multi-brand mechanical checkouts.' },
+              { val: 'GST Compliant', label: 'Billing', desc: 'Clear spare parts pricing.' },
+              { val: 'Real-Time', label: 'Vehicle Tracking', desc: 'Digital check-in progress.' },
+              { val: 'Multi-Brand', label: 'Expertise', desc: 'BMW, Mercedes, Harrier, Swift.' },
+              { val: 'Insurance', label: 'Claim Assistance', desc: 'Coordinated claims survey.' },
+              { val: 'Body Shop', label: 'Specialists', desc: 'Professional denting restoration.' }
+            ].map((stat, idx) => (
+              <div key={idx} className="bg-white border border-[#E2E8F0] p-6 rounded-2xl space-y-2 shadow-xs group">
+                <div className="text-xl sm:text-2xl font-black text-[#C1121F] font-mono">{stat.val}</div>
+                <h4 className="text-xs sm:text-sm font-black text-[#111827]">{stat.label}</h4>
+                <p className="text-[10px] sm:text-[11px] text-[#6B7280] font-medium leading-relaxed">{stat.desc}</p>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Live Vehicle Tracker */}
-      <section id="tracker" className="py-20 bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
+      <section id="tracker" className="py-20 bg-white">
         <div className="max-w-4xl mx-auto px-6 space-y-8">
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Real-time status</span>
-            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Live Vehicle Tracker</h3>
-            <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">Enter your plate registration number or Job Card ID below to verify your vehicle stream progress.</p>
+            <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Real-time status</span>
+            <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Live Progress Timeline</h3>
+            <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">Track your vehicle service progress using Vehicle Number or Job Card Number.</p>
           </div>
 
           <form onSubmit={handleSearch} className="max-w-md mx-auto flex gap-3">
@@ -381,14 +385,14 @@ export default function LandingPage({ onLoginSuccess }) {
                 placeholder="e.g. TS-09-EA-1234 or JC-1001"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-[#E2E8F0] rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-slate-800 placeholder-slate-400 transition-all font-mono uppercase"
+                className="w-full pl-10 pr-4 py-3 bg-white border border-[#E2E8F0] rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-[#111827] placeholder-slate-400 transition-all font-mono uppercase"
               />
             </div>
             <button
               type="submit"
-              className="px-5 py-3 bg-[#0F172A] hover:bg-[#DC2626] text-white rounded-xl text-xs font-bold transition-all shadow-sm shrink-0"
+              className="px-5 py-3 bg-[#111827] hover:bg-[#C1121F] text-white rounded-xl text-xs font-bold transition-all shadow-sm shrink-0"
             >
-              Track Now
+              Track Vehicle
             </button>
           </form>
 
@@ -400,13 +404,13 @@ export default function LandingPage({ onLoginSuccess }) {
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
                     <div>
                       <span className="text-[10px] text-slate-400 font-extrabold uppercase">Vehicle Owner / Details</span>
-                      <h4 className="text-sm font-black text-[#0F172A] mt-0.5">{trackerResult.customerId?.name || 'Customer'}</h4>
-                      <p className="text-[10px] text-slate-500 font-mono mt-0.5">{trackerResult.vehicleId?.make} {trackerResult.vehicleId?.model} ({trackerResult.vehicleId?.vehicleNumber})</p>
+                      <h4 className="text-sm font-black text-[#111827] mt-0.5">{trackerResult.customerId?.name || 'Customer'}</h4>
+                      <p className="text-[10px] text-[#6B7280] font-mono mt-0.5">{trackerResult.vehicleId?.make} {trackerResult.vehicleId?.model} ({trackerResult.vehicleId?.vehicleNumber})</p>
                     </div>
                     <div className="text-left sm:text-right">
                       <span className="text-[10px] text-slate-455 font-extrabold uppercase">Job Card ID</span>
                       <span className="block text-xs font-bold text-blue-600 font-mono mt-0.5">{trackerResult.jobCardNo}</span>
-                      <span className="block text-[10px] text-slate-500 font-semibold mt-0.5">Service: {trackerResult.serviceType}</span>
+                      <span className="block text-[10px] text-slate-550 font-semibold mt-0.5">Service: {trackerResult.serviceType}</span>
                     </div>
                   </div>
 
@@ -438,14 +442,14 @@ export default function LandingPage({ onLoginSuccess }) {
                                   isActive 
                                     ? 'bg-blue-600 border-blue-500 text-white scale-110 shadow-lg shadow-blue-600/30' 
                                     : isCompleted 
-                                      ? 'bg-[#0F172A] border-[#0F172A] text-white' 
-                                      : 'bg-white border-[#E2E8F0] text-slate-400'
+                                      ? 'bg-[#111827] border-[#111827] text-white' 
+                                      : 'bg-white border-[#E2E8F0] text-[#6B7280]'
                                 }`}
                               >
                                 {idx + 1}
                               </div>
                               <span className={`text-[9px] font-extrabold uppercase tracking-wide transition-colors ${
-                                isActive ? 'text-blue-650 font-bold' : isCompleted ? 'text-slate-900 font-bold' : 'text-slate-400'
+                                isActive ? 'text-blue-650 font-bold' : isCompleted ? 'text-slate-900 font-bold' : 'text-[#6B7280]'
                               }`}>
                                 {stage.label}
                               </span>
@@ -460,7 +464,7 @@ export default function LandingPage({ onLoginSuccess }) {
                   <div className="p-4 bg-blue-50 border border-blue-100/60 rounded-2xl flex items-center gap-3.5 mt-4">
                     <Clock className="w-5 h-5 text-blue-600 shrink-0" />
                     <div className="text-left text-xs leading-relaxed">
-                      <span className="font-bold text-[#0F172A] uppercase tracking-wide">
+                      <span className="font-bold text-[#111827] uppercase tracking-wide">
                         Current Status: {stages[getCurrentStageIndex(trackerResult.status)].label}
                       </span>
                       <p className="text-slate-600 font-semibold">{stages[getCurrentStageIndex(trackerResult.status)].desc}</p>
@@ -478,43 +482,45 @@ export default function LandingPage({ onLoginSuccess }) {
       </section>
 
       {/* Customer Testimonials */}
-      <section id="testimonials" className="py-20 bg-white max-w-7xl mx-auto px-6 space-y-12">
-        <div className="text-center space-y-2">
-          <span className="text-[10px] font-extrabold text-[#DC2626] uppercase tracking-widest">Client Feedback</span>
-          <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">Customer Testimonials</h3>
-          <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">Read what premium multi-brand automobile owners say about our workshop services.</p>
-        </div>
+      <section id="testimonials" className="py-20 bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
+        <div className="max-w-7xl mx-auto px-6 space-y-12">
+          <div className="text-center space-y-2">
+            <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Client Feedback</span>
+            <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Customer Testimonials</h3>
+            <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">Read what premium multi-brand automobile owners say about our workshop services.</p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {testimonials.map((item, idx) => (
-            <div key={idx} className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-2xl space-y-4 shadow-xs relative flex flex-col justify-between h-[180px]">
-              <div className="space-y-3">
-                <div className="flex gap-1 text-[#DC2626]">
-                  {[...Array(item.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-current" />
-                  ))}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((item, idx) => (
+              <div key={idx} className="bg-white border border-[#E2E8F0] p-6 rounded-2xl space-y-4 shadow-xs relative flex flex-col justify-between h-[180px]">
+                <div className="space-y-3">
+                  <div className="flex gap-1 text-[#C1121F]">
+                    {[...Array(item.rating)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-current" />
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-600 font-semibold italic">"{item.quote}"</p>
                 </div>
-                <p className="text-xs text-slate-600 font-semibold italic">"{item.quote}"</p>
+                <div className="mt-4 border-t border-slate-200/60 pt-3">
+                  <span className="block text-xs font-black text-[#111827]">— {item.author}</span>
+                </div>
               </div>
-              <div className="mt-4 border-t border-slate-200/60 pt-3">
-                <span className="block text-xs font-black text-[#0F172A]">— {item.author}</span>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-20 bg-[#F8FAFC] border-t border-[#E2E8F0]">
+      <section id="contact" className="py-20 bg-white">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-6">
-            <h3 className="text-2xl font-extrabold text-[#0F172A] uppercase">MVSS Automobiles Pvt Ltd</h3>
+            <h3 className="text-2xl font-extrabold text-[#111827] uppercase">MVSS Automobiles Pvt Ltd</h3>
             
-            <div className="space-y-5 text-xs font-semibold text-slate-600">
+            <div className="space-y-5 text-xs font-semibold text-[#6B7280]">
               <div className="flex items-start gap-3.5">
-                <MapPin className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <MapPin className="w-5 h-5 text-[#C1121F] shrink-0 mt-0.5" />
                 <div>
-                  <span className="block font-black text-[#0F172A] text-xs mb-1 uppercase tracking-wider">Workshop Address</span>
+                  <span className="block font-black text-[#111827] text-xs mb-1 uppercase tracking-wider">Workshop Address</span>
                   <p className="leading-relaxed">
                     Survey No. 25/1, Opp. Cine Planet, Kompally, Secunderabad - 500067 <br />
                     Survey No. 48/5, Gundlapochampally, Medchal-Malkajgiri Dist - 500014
@@ -522,26 +528,26 @@ export default function LandingPage({ onLoginSuccess }) {
                 </div>
               </div>
               <div className="flex items-center gap-3.5">
-                <Phone className="w-5 h-5 text-blue-600 shrink-0" />
+                <Phone className="w-5 h-5 text-[#C1121F] shrink-0" />
                 <div>
-                  <span className="block font-black text-[#0F172A] text-xs mb-0.5 uppercase tracking-wider">Phone Numbers</span>
+                  <span className="block font-black text-[#111827] text-xs mb-0.5 uppercase tracking-wider">Phone Numbers</span>
                   <a href="tel:+919949479765" className="hover:underline text-blue-650 font-mono font-bold">+91 99494 79765</a>
                   <span className="text-slate-350 mx-2">|</span>
                   <a href="tel:+919876543210" className="hover:underline text-blue-650 font-mono font-bold">+91 98765 43210</a>
                 </div>
               </div>
               <div className="flex items-center gap-3.5">
-                <FileText className="w-5 h-5 text-blue-600 shrink-0" />
+                <FileText className="w-5 h-5 text-[#C1121F] shrink-0" />
                 <div>
-                  <span className="block font-black text-[#0F172A] text-xs mb-0.5 uppercase tracking-wider">Email Address</span>
+                  <span className="block font-black text-[#111827] text-xs mb-0.5 uppercase tracking-wider">Email Address</span>
                   <a href="mailto:service@mvssautomobiles.com" className="hover:underline text-blue-650 font-bold">service@mvssautomobiles.com</a>
                 </div>
               </div>
               <div className="flex items-start gap-3.5">
-                <Clock className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <Clock className="w-5 h-5 text-[#C1121F] shrink-0 mt-0.5" />
                 <div>
-                  <span className="block font-black text-[#0F172A] text-xs mb-1 uppercase tracking-wider">Business Hours</span>
-                  <p className="leading-relaxed text-slate-500">
+                  <span className="block font-black text-[#111827] text-xs mb-1 uppercase tracking-wider">Business Hours</span>
+                  <p className="leading-relaxed text-[#6B7280]">
                     Monday - Saturday: 9:00 AM - 7:00 PM <br />
                     Sunday: Closed
                   </p>
@@ -554,7 +560,7 @@ export default function LandingPage({ onLoginSuccess }) {
                   href="https://maps.google.com/?q=MVSS+Automobiles+Gundlapochampally"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-600/10"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#C1121F] hover:bg-red-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-[#C1121F]/10"
                 >
                   <Navigation className="w-4 h-4" />
                   Google Maps Button
@@ -564,21 +570,44 @@ export default function LandingPage({ onLoginSuccess }) {
           </div>
 
           {/* Interactive Map Embed */}
-          <div className="w-full h-[280px] sm:h-[320px] rounded-3xl border border-[#E2E8F0] overflow-hidden shadow-sm relative bg-slate-100">
-            <iframe 
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3803.968798993132!2d78.473555!3d17.556272!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bcb8f3cf55f98cf%3A0xe21ba58752c0022f!2sMVSS%20Automobiles%20Pvt%20Ltd!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" 
-              className="w-full h-full border-0"
-              allowFullScreen="" 
-              loading="lazy" 
-              referrerPolicy="no-referrer-when-downgrade"
-              title="MVSS Google Maps Location"
-            />
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-3xl space-y-4 shadow-sm">
+            <h4 className="text-sm font-black text-[#111827] uppercase tracking-wide">Request a Service Slot</h4>
+            <form onSubmit={(e) => { e.preventDefault(); alert('Booking request sent successfully. Service team will contact you shortly.'); }} className="space-y-4 text-xs font-semibold">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Your Name</label>
+                  <input type="text" required placeholder="John Doe" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-[#C1121F]" />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Contact Phone</label>
+                  <input type="tel" required placeholder="9988776655" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-[#C1121F]" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Vehicle Plate No</label>
+                  <input type="text" required placeholder="TS-09-EA-1234" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-[#C1121F] uppercase" />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Preferred Stream</label>
+                  <select className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-bold focus:outline-none focus:border-[#C1121F]">
+                    <option>General Servicing (PMS)</option>
+                    <option>Running Repair (RR)</option>
+                    <option>Body Shop (Dent/Paint)</option>
+                    <option>Insurance Claims</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" className="w-full py-3 px-4 bg-[#C1121F] hover:bg-red-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-red-650/10">
+                Book Diagnostic Appointment
+              </button>
+            </form>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[#E2E8F0] py-10 bg-[#0F172A] text-slate-400">
+      <footer className="border-t border-[#E2E8F0] py-10 bg-[#111827] text-slate-400">
         <div className="max-w-7xl mx-auto px-6 space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs select-none">
             <div className="flex items-center gap-2.5">
