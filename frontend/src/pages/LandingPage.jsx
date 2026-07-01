@@ -9,7 +9,6 @@ export default function LandingPage({ onLoginSuccess }) {
   const [searched, setSearched] = useState(false);
   const [heroIdx, setHeroIdx] = useState(0);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
-  const [testimonialIdx, setTestimonialIdx] = useState(0);
 
   // 8 Servicing Stages list
   const stages = [
@@ -25,31 +24,29 @@ export default function LandingPage({ onLoginSuccess }) {
 
   // Hero slideshow photos (Workshop photos only - NO LOGO)
   const heroSlides = [
-    { src: '/workshop/page_1_img_1.png', label: 'Workshop Front View' },
+    { src: '/workshop/page_1_img_1.png', label: 'Workshop Building' },
     { src: '/workshop/page_2_img_1.jpeg', label: 'Service Bay' },
-    { src: '/workshop/page_9_img_1.jpeg', label: 'Technician Team' },
-    { src: '/workshop/page_3_img_1.jpeg', label: 'BMW Service Area' },
-    { src: '/workshop/page_4_img_1.jpeg', label: 'Mercedes Service Area' },
+    { src: '/workshop/page_9_img_1.jpeg', label: 'Team Photo' },
+    { src: '/workshop/page_3_img_1.jpeg', label: 'BMW Service' },
+    { src: '/workshop/page_4_img_1.jpeg', label: 'Mercedes Service' },
     { src: '/workshop/page_10_img_1.jpeg', label: 'Workshop Interior' }
   ];
 
-  // 15 Gallery photos mapped to existing assets
+  // 13 Gallery photos mapped exactly to user requirements
   const galleryPhotos = [
-    { src: '/workshop/page_1_img_1.png', title: 'Workshop Building', desc: 'State-of-the-art facility exterior check-in points.' },
-    { src: '/workshop/page_1_img_1.png', title: 'Workshop Entrance', desc: 'Customer desk and secure entry for vehicle diagnostic booking.' },
-    { src: '/workshop/page_6_img_1.jpeg', title: 'Reception Office', desc: 'Clean greeting counter with advisor workstations.' },
-    { src: '/workshop/page_6_img_1.jpeg', title: 'Customer Lounge', desc: 'Comfortable waiting area with digital status progress boards.' },
-    { src: '/workshop/page_2_img_1.jpeg', title: 'Service Bay', desc: 'Modern hydraulic lifts and specialized service points.' },
-    { src: '/workshop/page_2_img_1.jpeg', title: 'Workshop Floor', desc: 'Organized tool carts, mechanical bays, and cleaning points.' },
-    { src: '/workshop/page_9_img_1.jpeg', title: 'Technician Team', desc: 'MVSS certified mechanical, alignment, and paint specialists.' },
-    { src: '/workshop/page_4_img_1.jpeg', title: 'Mercedes Service', desc: 'Engine tuning, sensors diagnostics and transmission servicing.' },
-    { src: '/workshop/page_3_img_1.jpeg', title: 'BMW Service', desc: 'Computer scan and running repair overhauls for premium BMWs.' },
-    { src: '/workshop/page_5_img_1.jpeg', title: 'Tata Harrier Service', desc: 'General periodic servicing, lubrication check, and PMS checklists.' },
-    { src: '/workshop/page_8_img_1.jpeg', title: 'Bosch Equipment', desc: 'Bosch scanning tools and computerized wheel alignments.' },
-    { src: '/workshop/page_7_img_1.jpeg', title: 'Spare Parts Room', desc: 'Fully organized OEM filters, engine oils, and running spares inventory.' },
-    { src: '/workshop/page_10_img_1.jpeg', title: 'Insurance Claim Area', desc: 'Digital insurance canvas mapping, surveys, and claim support.' },
-    { src: '/workshop/page_2_img_1.jpeg', title: 'Body Shop Area', desc: 'Denting adjustments, panels replacements, and detailing finish.' },
-    { src: '/workshop/page_10_img_1.jpeg', title: 'Vehicle Inspection Area', desc: '32-point inspection diagnostic checks before delivery release.' }
+    { src: '/workshop/page_1_img_1.png', title: 'Workshop Building', desc: 'Modern multi-brand automobile workshop facility.' },
+    { src: '/workshop/page_1_img_1.png', title: 'Workshop Entrance', desc: 'Dedicated customer entry and vehicle reception area.' },
+    { src: '/workshop/page_6_img_1.jpeg', title: 'Reception Office', desc: 'Customer support, service consultation and billing desk.' },
+    { src: '/workshop/page_9_img_1.jpeg', title: 'Expert Technician Team', desc: 'Certified and experienced workshop professionals.' },
+    { src: '/workshop/page_8_img_1.jpeg', title: 'Bosch Equipment', desc: 'Advanced scanning and vehicle analysis equipment.' },
+    { src: '/workshop/page_3_img_1.jpeg', title: 'BMW Service', desc: 'Premium service and maintenance for BMW vehicles.' },
+    { src: '/workshop/page_4_img_1.jpeg', title: 'Mercedes Service', desc: 'Professional servicing and repairs for Mercedes vehicles.' },
+    { src: '/workshop/page_5_img_1.jpeg', title: 'Tata Harrier Service', desc: 'Comprehensive service and inspection support.' },
+    { src: '/workshop/page_2_img_1.jpeg', title: 'Service Bay', desc: 'Dedicated workstations for vehicle servicing.' },
+    { src: '/workshop/page_2_img_1.jpeg', title: 'Workshop Floor', desc: 'Spacious service area with modern lifting systems.' },
+    { src: '/workshop/page_7_img_1.jpeg', title: 'Spare Parts Inventory', desc: 'Organized storage of genuine spare parts.' },
+    { src: '/workshop/page_2_img_1.jpeg', title: 'Body Shop Section', desc: 'Denting, painting and restoration services.' },
+    { src: '/workshop/page_10_img_1.jpeg', title: 'Insurance Support', desc: 'Insurance inspection and claim assistance.' }
   ];
 
   // Testimonials list
@@ -90,7 +87,7 @@ export default function LandingPage({ onLoginSuccess }) {
     }
   };
 
-  const visiblePhotos = showAllPhotos ? galleryPhotos : galleryPhotos.slice(0, 6);
+  const visiblePhotos = showAllPhotos ? galleryPhotos : galleryPhotos.slice(0, 4);
 
   return (
     <div className="min-h-screen bg-white text-[#0F172A] font-sans relative overflow-x-hidden">
@@ -151,30 +148,37 @@ export default function LandingPage({ onLoginSuccess }) {
               </p>
             </div>
 
+            {/* Buttons list including red [Book Service] button */}
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start pt-2">
               <a
                 href="#tracker"
-                className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#DC2626] hover:bg-red-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-[#DC2626]/10"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold transition-all shadow-sm"
               >
                 Track Vehicle
-                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+              <a
+                href="#contact"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#DC2626] hover:bg-red-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-[#DC2626]/10 animate-pulse"
+              >
+                <Wrench className="w-3.5 h-3.5" />
+                Book Service
               </a>
               <a
                 href="#services"
-                className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold transition-all"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-extrabold transition-all"
               >
                 Our Services
               </a>
               <a
                 href="#contact"
-                className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-750 border border-[#E2E8F0] rounded-xl text-xs font-extrabold transition-all"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-750 border border-[#E2E8F0] rounded-xl text-xs font-extrabold transition-all"
               >
                 Contact Workshop
               </a>
             </div>
           </div>
 
-          {/* Right Image Container (50%) */}
+          {/* Right Image Container (50% / 550px height) */}
           <div className="lg:col-span-6 w-full h-[320px] sm:h-[450px] lg:h-[550px] lg:max-h-[550px] rounded-[24px] overflow-hidden relative border border-[#E2E8F0] shadow-lg select-none bg-slate-50">
             {heroSlides.map((slide, idx) => (
               <div 
@@ -186,7 +190,6 @@ export default function LandingPage({ onLoginSuccess }) {
                   alt={slide.label}
                   className="w-full h-full object-cover object-center"
                   onError={(e) => {
-                    // Fallback to next image by incrementing index
                     setHeroIdx((prev) => (prev + 1) % heroSlides.length);
                   }}
                 />
@@ -247,13 +250,15 @@ export default function LandingPage({ onLoginSuccess }) {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Grid Layout: Desktop 4 columns, Tablet 2 columns, Mobile 1 column */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {visiblePhotos.map((photo, idx) => (
               <div 
                 key={idx}
-                className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm hover:border-[#DC2626]/40 transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-lg group"
+                className="h-[420px] bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm hover:border-[#DC2626]/45 transition-all duration-350 flex flex-col hover:-translate-y-1.5 hover:shadow-lg group"
               >
-                <div className="h-[280px] w-full overflow-hidden bg-slate-100 relative">
+                {/* Image Height: 280px */}
+                <div className="h-[280px] w-full overflow-hidden bg-slate-100 relative shrink-0">
                   <img 
                     src={photo.src} 
                     alt={photo.title}
@@ -261,9 +266,16 @@ export default function LandingPage({ onLoginSuccess }) {
                     loading="lazy"
                   />
                 </div>
-                <div className="p-4 bg-white border-t border-[#E2E8F0] flex flex-col justify-center text-center space-y-1 shrink-0">
-                  <h4 className="text-xs sm:text-sm font-black text-[#0F172A]">{photo.title}</h4>
-                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium leading-relaxed truncate">{photo.desc}</p>
+                {/* Content Box */}
+                <div className="p-4 bg-white border-t border-[#E2E8F0] flex flex-col justify-start space-y-1 flex-1">
+                  {/* Title Height: 40px */}
+                  <h4 className="text-xs sm:text-sm font-black text-[#0F172A] h-[40px] flex items-center leading-tight">
+                    {photo.title}
+                  </h4>
+                  {/* Description Height: 60px */}
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium leading-relaxed h-[60px] overflow-hidden">
+                    {photo.desc}
+                  </p>
                 </div>
               </div>
             ))}
