@@ -129,6 +129,14 @@ export default function Inventory({ token, user }) {
     fetchInventory();
   }, [search, lowStockFilter, categoryFilter]);
 
+  useEffect(() => {
+    const globalFilter = localStorage.getItem('global_search_filter');
+    if (globalFilter) {
+      setSearch(globalFilter);
+      localStorage.removeItem('global_search_filter');
+    }
+  }, []);
+
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     try {

@@ -195,6 +195,14 @@ export default function Employees({ token, user }) {
     fetchEmployees();
   }, [token]);
 
+  useEffect(() => {
+    const globalFilter = localStorage.getItem('global_search_filter');
+    if (globalFilter) {
+      setSearch(globalFilter);
+      localStorage.removeItem('global_search_filter');
+    }
+  }, []);
+
   // Sync attendance map when date changes
   useEffect(() => {
     const map = {};

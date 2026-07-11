@@ -54,6 +54,22 @@ router.post('/', auth, async (req, res) => {
       updatedAt: new Date()
     });
     await claim.save();
+
+    // Automatically create a notification
+    try {
+      const Notification = require('../models/Notification');
+      const notification = new Notification({
+        type: 'claim',
+        title: 'Insurance Claim Request',
+        message: `New insurance claim request submitted for vehicle ${claim.vehicleNumber || 'Pending'}.`,
+        vehicleNumber: claim.vehicleNumber,
+        customerName: claim.customerName
+      });
+      await notification.save();
+    } catch (notifErr) {
+      console.error('Failed to create claim notification:', notifErr);
+    }
+
     claim = await InsuranceClaim.findById(claim._id)
       .populate('customerId')
       .populate('vehicleId')

@@ -181,6 +181,15 @@ const invoiceSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  isSent: {
+    type: Boolean,
+    default: false,
+  },
+  sentStatus: {
+    type: String,
+    enum: ['Unsent', 'Sent'],
+    default: 'Unsent',
+  },
   insuranceClaimDetails: {
     claimNo: { type: String, default: '' },
     insuranceCompany: { type: String, default: '' },

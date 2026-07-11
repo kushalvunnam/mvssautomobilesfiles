@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Search, Plus, Edit2, FileText, ChevronRight, Eye } from 'lucide-react';
+import { Search, Plus, Edit2, FileText, ChevronRight, Eye, Trash2 } from 'lucide-react';
 import JobCardForm from './JobCardForm';
 import JobCardDetails from './JobCardDetails';
 
@@ -39,6 +39,14 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
     }
   }, [search, statusFilter, viewMode]);
 
+  useEffect(() => {
+    const globalFilter = localStorage.getItem('global_search_filter');
+    if (globalFilter) {
+      setSearch(globalFilter);
+      localStorage.removeItem('global_search_filter');
+    }
+  }, []);
+
   const handleOpenDetails = (id) => {
     setSelectedJcId(id);
     setViewMode('details');
@@ -48,6 +56,33 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
     e.stopPropagation();
     setSelectedJcId(id);
     setViewMode('edit');
+  };
+
+  const handleDeleteJobCard = async (id, e) => {
+    if (e) e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this job card permanently? This will also affect billing records and estimates linked.')) return;
+    
+    try {
+      if (token === 'mock_jwt_token_for_offline_demo') {
+        const db = JSON.parse(sessionStorage.getItem('mock_jobcards') || '[]');
+        const filtered = db.filter(jc => jc._id !== id);
+        sessionStorage.setItem('mock_jobcards', JSON.stringify(filtered));
+        fetchJobCards();
+      } else {
+        const res = await fetch(`${API_BASE_URL}/jobcards/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          fetchJobCards();
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Failed to delete job card.');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to delete job card:', err);
+    }
   };
 
   const handleSaved = () => {
@@ -199,6 +234,15 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
                         className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {user?.role === 'Admin' && (
+                      <button
+                        onClick={(e) => handleDeleteJobCard(jc._id, e)}
+                        className="text-slate-400 hover:text-red-650 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                        title="Delete Job Card"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
                       </button>
                     )}
                     <span className="text-indigo-600 dark:text-indigo-400 p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/20 group-hover:translate-x-0.5 transition-all">

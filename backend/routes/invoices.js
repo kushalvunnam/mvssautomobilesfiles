@@ -163,6 +163,10 @@ router.get('/:id', auth, async (req, res) => {
       .populate('vehicleId')
       .populate('jobCardId');
     if (!invoice) return res.status(404).send({ error: 'Invoice not found.' });
+
+    // Log Invoice Viewed
+    await logAction(req.user, 'INVOICE_VIEW', `Viewed Invoice ${invoice.invoiceNo}`, req);
+
     res.send(invoice);
   } catch (error) {
     res.status(500).send({ error: 'Failed to fetch invoice.' });
@@ -217,6 +221,27 @@ router.post('/', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
     const invoice = new Invoice(invoiceData);
     await invoice.save();
 
+    // Automatically create a notification
+    try {
+      const Customer = require('../models/Customer');
+      const VehicleModel = require('../models/Vehicle');
+      const Notification = require('../models/Notification');
+      
+      const customer = await Customer.findById(invoice.customerId);
+      const vehicle = await VehicleModel.findById(invoice.vehicleId);
+
+      const notification = new Notification({
+        type: 'invoice',
+        title: 'Bill Generated',
+        message: `Invoice ${invoice.invoiceNo} of amount Rs. ${invoice.totals ? invoice.totals.grandTotal : 0} has been generated.`,
+        vehicleNumber: vehicle ? vehicle.vehicleNumber : undefined,
+        customerName: customer ? customer.name : undefined
+      });
+      await notification.save();
+    } catch (notifErr) {
+      console.error('Failed to create invoice notification:', notifErr);
+    }
+
     await logAction(req.user, 'INVOICE_CREATE', `Created Invoice ${invoiceNo} for Job Card ${jobCard.jobCardNo}`, req);
     res.status(201).send(invoice);
   } catch (error) {
@@ -234,9 +259,12 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
     const isFinalizing = status === 'Finalized' && invoice.status !== 'Finalized';
 
     if (parts || labour) {
+      // Allow modifying items even if finalized
+      /*
       if (invoice.status === 'Finalized') {
         return res.status(400).send({ error: 'Cannot modify items on a finalized invoice.' });
       }
+      */
       const calculations = recalculateInvoice(
         parts || invoice.parts,
         labour || invoice.labour,
@@ -250,6 +278,9 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
 
     if (status) {
       invoice.status = status;
+      if (status === 'Finalized') {
+        invoice.date = new Date();
+      }
     }
 
     if (paymentStatus) {
@@ -306,7 +337,7 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
       await JobCard.findByIdAndUpdate(invoice.jobCardId, { status: 'Delivered' });
       await logAction(req.user, 'INVOICE_FINALIZE', `Finalized Invoice ${invoice.invoiceNo} & deducted inventory items`, req);
     } else {
-      await logAction(req.user, 'INVOICE_UPDATE', `Updated Invoice ${invoice.invoiceNo}`, req);
+      await logAction(req.user, 'INVOICE_EDIT', `Updated Invoice ${invoice.invoiceNo}`, req);
     }
 
     res.send(invoice);
@@ -326,6 +357,8 @@ router.get('/:id/pdf', auth, async (req, res) => {
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=invoice-${invoice.invoiceNo}.pdf`);
+
+    await logAction(req.user, 'REPORT_EXPORTED', `Exported PDF for Invoice ${invoice.invoiceNo}`, req);
 
     generateInvoicePDF(invoice, customer, vehicle, res);
   } catch (error) {
@@ -349,9 +382,210 @@ router.get('/:id/gatepass/pdf', auth, async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=gatepass-${invoice.invoiceNo}.pdf`);
 
+    await logAction(req.user, 'REPORT_EXPORTED', `Exported Gate Pass PDF for Invoice ${invoice.invoiceNo}`, req);
+
     generateGatePassPDF(invoice, customer, vehicle, res);
   } catch (error) {
     res.status(500).send({ error: 'Failed to generate Gate Pass PDF: ' + error.message });
+  }
+});
+
+// DELETE: Remove an invoice record permanently (Admin only)
+router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).send({ error: 'Invoice not found.' });
+
+    await Invoice.findByIdAndDelete(req.params.id);
+
+    // Create deletion notification entry
+    try {
+      const mongoose = require('mongoose');
+      const Customer = require('../models/Customer');
+      const Notification = require('../models/Notification');
+      const customer = await Customer.findById(invoice.customerId);
+
+      const notification = new Notification({
+        type: 'invoice',
+        title: 'Invoice Deleted',
+        message: `Invoice ${invoice.invoiceNo} has been deleted.`,
+        vehicleNumber: invoice.vehicleId ? (await mongoose.model('Vehicle').findById(invoice.vehicleId))?.vehicleNumber : undefined,
+        customerName: customer ? customer.name : undefined
+      });
+      await notification.save();
+    } catch (notifErr) {
+      console.error('Failed to create invoice deletion notification:', notifErr);
+    }
+
+    await logAction(req.user, 'INVOICE_DELETE', `Deleted Invoice ${invoice.invoiceNo}`, req);
+    res.send({ message: 'Invoice deleted successfully.' });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to delete invoice: ' + error.message });
+  }
+});
+
+// POST: Log invoice printed
+router.post('/:id/print', auth, async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).send({ error: 'Invoice not found.' });
+
+    await logAction(req.user, 'INVOICE_PRINT', `Printed Invoice ${invoice.invoiceNo}`, req);
+    res.send({ message: 'Print logged successfully.' });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to log print action.' });
+  }
+});
+
+// POST: Send invoice via email (updates status, notifies, logs audit)
+router.post('/:id/send', auth, async (req, res) => {
+  try {
+    const { email } = req.body;
+    const invoice = await Invoice.findById(req.params.id).populate('customerId');
+    if (!invoice) return res.status(404).send({ error: 'Invoice not found.' });
+
+    // Store sent status in MongoDB
+    invoice.isSent = true;
+    invoice.sentStatus = 'Sent';
+    await invoice.save();
+
+    // Create notification entry
+    try {
+      const mongoose = require('mongoose');
+      const Notification = require('../models/Notification');
+      const notification = new Notification({
+        type: 'invoice',
+        title: 'Invoice Sent',
+        message: `Invoice ${invoice.invoiceNo} of amount Rs. ${invoice.totals.grandTotal} has been sent to ${email || invoice.customerId?.email || 'customer'}.`,
+        vehicleNumber: invoice.vehicleId ? (await mongoose.model('Vehicle').findById(invoice.vehicleId))?.vehicleNumber : undefined,
+        customerName: invoice.customerId ? invoice.customerId.name : undefined
+      });
+      await notification.save();
+    } catch (notifErr) {
+      console.error('Failed to create invoice sent notification:', notifErr);
+    }
+
+    // Create audit log entry
+    await logAction(req.user, 'INVOICE_SEND', `Sent Invoice ${invoice.invoiceNo} to ${email || invoice.customerId?.email}`, req);
+
+    res.send({ message: 'Invoice sent successfully.', invoice });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to send invoice: ' + error.message });
+  }
+});
+
+// PUT: Mark invoice as paid (updates payment status and logs audit/notifications)
+router.put('/:id/pay', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
+  try {
+    const { paymentMethod, amountPaid } = req.body;
+    const invoice = await Invoice.findById(req.params.id).populate('customerId');
+    if (!invoice) return res.status(404).send({ error: 'Invoice not found.' });
+
+    invoice.paymentStatus = 'Paid';
+    invoice.status = 'Finalized'; // Finalized when paid
+    if (paymentMethod) invoice.paymentMethod = paymentMethod;
+    invoice.amountPaid = amountPaid || invoice.totals.grandTotal;
+    await invoice.save();
+
+    // Create notification entry
+    try {
+      const mongoose = require('mongoose');
+      const Notification = require('../models/Notification');
+      const notification = new Notification({
+        type: 'invoice',
+        title: 'Invoice Paid',
+        message: `Invoice ${invoice.invoiceNo} of amount Rs. ${invoice.totals.grandTotal} has been marked as Paid.`,
+        vehicleNumber: invoice.vehicleId ? (await mongoose.model('Vehicle').findById(invoice.vehicleId))?.vehicleNumber : undefined,
+        customerName: invoice.customerId ? invoice.customerId.name : undefined
+      });
+      await notification.save();
+    } catch (notifErr) {
+      console.error('Failed to create invoice paid notification:', notifErr);
+    }
+
+    // Create audit log entry
+    await logAction(req.user, 'INVOICE_PAY', `Marked Invoice ${invoice.invoiceNo} as Paid`, req);
+
+    res.send({ message: 'Invoice marked as paid successfully.', invoice });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to mark invoice as paid: ' + error.message });
+  }
+});
+
+// POST: Duplicate Invoice
+router.post('/:id/duplicate', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
+  try {
+    const sourceInvoice = await Invoice.findById(req.params.id);
+    if (!sourceInvoice) return res.status(404).send({ error: 'Source invoice not found.' });
+
+    // Generate new unique invoice number
+    const count = await Invoice.countDocuments();
+    const today = new Date();
+    const dateStr = today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0');
+    const sequence = String(count + 1).padStart(3, '0');
+    const newInvoiceNo = `INV-${dateStr}-${sequence}`;
+
+    // Create duplicate data
+    const duplicateData = sourceInvoice.toObject();
+    delete duplicateData._id;
+    delete duplicateData.createdAt;
+    delete duplicateData.updatedAt;
+    duplicateData.invoiceNo = newInvoiceNo;
+    duplicateData.status = 'Draft';
+    duplicateData.paymentStatus = 'Unpaid';
+    duplicateData.amountPaid = 0;
+
+    const newInvoice = new Invoice(duplicateData);
+    await newInvoice.save();
+
+    // Create audit log entry
+    await logAction(req.user, 'INVOICE_DUPLICATE', `Duplicated Invoice ${sourceInvoice.invoiceNo} as ${newInvoiceNo}`, req);
+
+    res.status(201).send(newInvoice);
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to duplicate invoice: ' + error.message });
+  }
+});
+
+// POST: Log invoice shared
+router.post('/:id/share', auth, async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id).populate('customerId');
+    if (!invoice) return res.status(404).send({ error: 'Invoice not found.' });
+
+    // Create notification entry
+    try {
+      const mongoose = require('mongoose');
+      const Notification = require('../models/Notification');
+      const notification = new Notification({
+        type: 'invoice',
+        title: 'Invoice Shared',
+        message: `Invoice ${invoice.invoiceNo} has been shared.`,
+        vehicleNumber: invoice.vehicleId ? (await mongoose.model('Vehicle').findById(invoice.vehicleId))?.vehicleNumber : undefined,
+        customerName: invoice.customerId ? invoice.customerId.name : undefined
+      });
+      await notification.save();
+    } catch (notifErr) {
+      console.error('Failed to create invoice shared notification:', notifErr);
+    }
+
+    await logAction(req.user, 'INVOICE_SHARE', `Shared Invoice ${invoice.invoiceNo}`, req);
+    res.send({ message: 'Share logged successfully.' });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to log share action: ' + error.message });
+  }
+});
+
+// POST: Log invoice downloaded
+router.post('/:id/download', auth, async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).send({ error: 'Invoice not found.' });
+
+    await logAction(req.user, 'INVOICE_DOWNLOAD', `Downloaded PDF for Invoice ${invoice.invoiceNo}`, req);
+    res.send({ message: 'Download logged successfully.' });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to log download action: ' + error.message });
   }
 });
 

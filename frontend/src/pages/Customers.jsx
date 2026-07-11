@@ -43,6 +43,14 @@ export default function Customers({ token, user }) {
     fetchCustomers();
   }, [search, typeFilter]);
 
+  useEffect(() => {
+    const globalFilter = localStorage.getItem('global_search_filter');
+    if (globalFilter) {
+      setSearch(globalFilter);
+      localStorage.removeItem('global_search_filter');
+    }
+  }, []);
+
   const loadTimeline = async (customer) => {
     setSelectedCustomer(customer);
     setCustomerVehicles([]);

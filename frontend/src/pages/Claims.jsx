@@ -6,6 +6,7 @@ export default function Claims({ token, user }) {
   const [claims, setClaims] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedClaim, setSelectedClaim] = useState(null);
+  const [search, setSearch] = useState('');
   
   // Create Claim Form
   const [showAddModal, setShowAddModal] = useState(false);
@@ -77,6 +78,14 @@ export default function Claims({ token, user }) {
     fetchClaims();
     loadResources();
   }, [statusFilter]);
+
+  useEffect(() => {
+    const globalFilter = localStorage.getItem('global_search_filter');
+    if (globalFilter) {
+      setSearch(globalFilter);
+      localStorage.removeItem('global_search_filter');
+    }
+  }, []);
 
   const handleClaimSelect = async (claim) => {
     try {
@@ -219,6 +228,15 @@ export default function Claims({ token, user }) {
     }
   };
 
+  const filteredClaims = claims.filter(c => {
+    const query = search.toLowerCase();
+    return c.claimNo?.toLowerCase().includes(query) ||
+           c.insuranceCompany?.toLowerCase().includes(query) ||
+           c.policyNumber?.toLowerCase().includes(query) ||
+           c.customerId?.name?.toLowerCase().includes(query) ||
+           c.vehicleId?.vehicleNumber?.toLowerCase().includes(query);
+  });
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full animate-fade-in p-1 select-none text-xs font-semibold">
       
@@ -238,11 +256,21 @@ export default function Claims({ token, user }) {
         </div>
 
         {/* Filters */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 p-3.5 rounded-2xl">
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <input
+              type="text"
+              placeholder="Search claims by number, policy, surveyor..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-350 text-xs font-semibold focus:outline-none"
+            />
+          </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-350 text-xs font-bold focus:outline-none"
+            className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-350 text-xs font-bold focus:outline-none"
           >
             <option value="">All Claim Statuses</option>
             <option value="Pending">Pending</option>
@@ -267,8 +295,8 @@ export default function Claims({ token, user }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                {claims.length > 0 ? (
-                  claims.map(claim => {
+                {filteredClaims.length > 0 ? (
+                  filteredClaims.map(claim => {
                     let statusBg = 'bg-slate-50 text-slate-700';
                     if (claim.status === 'Pending') statusBg = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
                     if (claim.status === 'Submitted') statusBg = 'bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400';

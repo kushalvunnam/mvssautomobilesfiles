@@ -59,4 +59,14 @@ router.get('/users', auth, restrictTo('Admin'), async (req, res) => {
   }
 });
 
+// User Logout
+router.post('/logout', auth, async (req, res) => {
+  try {
+    await logAction(req.user, 'USER_LOGOUT', `User ${req.user.email} logged out`, req);
+    res.send({ message: 'Logged out successfully.' });
+  } catch (error) {
+    res.status(500).send({ error: 'Server error during logout.' });
+  }
+});
+
 module.exports = router;

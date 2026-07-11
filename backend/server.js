@@ -1,3 +1,7 @@
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -39,6 +43,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Database connection health check middleware to prevent 504 gateway timeouts when offline
 app.use('/api', (req, res, next) => {
   if (mongoose.connection.readyState !== 1) {
+    console.warn(`[Database Offline] Request to ${req.originalUrl} failed: mongoose connection state is ${mongoose.connection.readyState}`);
     return res.status(503).send({ error: 'Database is currently offline. Please ensure MongoDB is running and MONGODB_URI is correct.' });
   }
   next();
@@ -55,6 +60,10 @@ app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/claims', require('./routes/claims'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/employees', require('./routes/employees'));
+app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/messages', require('./routes/messages'));
+app.use('/api/gatepasses', require('./routes/gatepasses'));
 
 // Base route
 app.get('/', (req, res) => {
@@ -120,10 +129,10 @@ async function seedDatabase() {
       console.log('Seeded default inventory parts catalog.');
     }
 
-    // 3. Seed Customers, Vehicles, and Job Cards
+    // 3. Seed Customers, Vehicles, and Job Cards (Disabled for real testing mode)
     const JobCard = require('./models/JobCard');
     const jobCardCount = await JobCard.countDocuments();
-    if (jobCardCount === 0) {
+    if (false) {
       console.log('Seeding default customers, vehicles and job cards...');
       
       const Customer = require('./models/Customer');
@@ -348,10 +357,26 @@ async function seedDatabase() {
 }
 
 // Connect to MongoDB & Start Server
+mongoose.connection.on('connected', () => {
+  console.log('Connected to MongoDB');
+});
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB Error:', err);
+});
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB Disconnected');
+});
+mongoose.connection.on('reconnected', () => {
+  console.log('MongoDB Reconnected successfully');
+});
+
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   serverSelectionTimeoutMS: 5000,
+  family: 4, // Force IPv4 to resolve querySrv/DNS issues on Atlas connections
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 10000
 })
 .then(async () => {
   console.log('Connected to MongoDB successfully at', MONGODB_URI);

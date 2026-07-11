@@ -1,60 +1,260 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ArrowRight, Lock, X, CheckCircle, Navigation, Star, Award, Settings, Users, ShieldAlert } from 'lucide-react';
 import Login from './Login';
+import { API_BASE_URL } from '../config';
 
 export default function LandingPage({ onLoginSuccess }) {
   const [showLogin, setShowLogin] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [trackerResult, setTrackerResult] = useState(null);
-  const [searched, setSearched] = useState(false);
   const [heroIdx, setHeroIdx] = useState(0);
   const [activeCategory, setActiveCategory] = useState('All');
 
-  // 8 Servicing Stages list
-  const stages = [
-    { key: 'Created', label: 'Registered', desc: 'Job Card created & vehicle checked in.' },
-    { key: 'Inspect Stage', label: 'Diagnosis', desc: 'Allotted to technician for inspection.' },
-    { key: 'Estimation', label: 'Estimation', desc: 'Preparing spare parts and labor quote.' },
-    { key: 'Customer Approval', label: 'Approval', desc: 'Awaiting customer quote approval.' },
-    { key: 'Work In Progress', label: 'Repairing', desc: 'Actual mechanical/body work in progress.' },
-    { key: 'Quality Check', label: 'QC Check', desc: 'Inspecting work quality & completion.' },
-    { key: 'Ready for Delivery', label: 'Ready', desc: 'Final wash, polishing & bill generation.' },
-    { key: 'Delivered', label: 'Released', desc: 'Payment received & Gate Pass issued.' }
-  ];
+  // Booking Form State & Validation
+  const [customerName, setCustomerName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [vehiclePlate, setVehiclePlate] = useState('');
+  const [preferredStream, setPreferredStream] = useState('');
+  const [errors, setErrors] = useState({});
+  const [formTouched, setFormTouched] = useState(false);
+
+  const validateField = (name, value) => {
+    let errorMsg = '';
+    const trimmed = value.trim();
+
+    if (name === 'customerName') {
+      if (!trimmed) {
+        errorMsg = 'Please enter a valid name using letters only.';
+      } else {
+        const nameRegex = /^[A-Za-z]+( [A-Za-z]+)*$/;
+        if (!nameRegex.test(trimmed)) {
+          errorMsg = 'Please enter a valid name using letters only.';
+        }
+      }
+    } else if (name === 'contactPhone') {
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(value)) {
+        errorMsg = 'Please enter a valid 10-digit mobile number.';
+      }
+    } else if (name === 'vehiclePlate') {
+      const plateRegex = /^[A-Z0-9-]+$/i;
+      if (!trimmed || !plateRegex.test(trimmed)) {
+        errorMsg = 'Please enter a valid vehicle registration number.';
+      }
+    } else if (name === 'preferredStream') {
+      if (!value) {
+        errorMsg = 'Please select a service category.';
+      }
+    }
+    return errorMsg;
+  };
+
+  const handleNameChange = (e) => {
+    let val = e.target.value.replace(/[^A-Za-z ]/g, '').replace(/  +/g, ' ');
+    setCustomerName(val);
+    if (formTouched || errors.customerName) {
+      const err = validateField('customerName', val);
+      setErrors(prev => ({ ...prev, customerName: err }));
+    }
+  };
+
+  const handleNameBlur = () => {
+    const trimmed = customerName.trim();
+    setCustomerName(trimmed);
+    const err = validateField('customerName', trimmed);
+    setErrors(prev => ({ ...prev, customerName: err }));
+  };
+
+  const handlePhoneChange = (e) => {
+    let val = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setContactPhone(val);
+    if (formTouched || errors.contactPhone) {
+      const err = validateField('contactPhone', val);
+      setErrors(prev => ({ ...prev, contactPhone: err }));
+    }
+  };
+
+  const handlePhoneBlur = () => {
+    const err = validateField('contactPhone', contactPhone);
+    setErrors(prev => ({ ...prev, contactPhone: err }));
+  };
+
+  const handlePlateChange = (e) => {
+    let val = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    setVehiclePlate(val);
+    if (formTouched || errors.vehiclePlate) {
+      const err = validateField('vehiclePlate', val);
+      setErrors(prev => ({ ...prev, vehiclePlate: err }));
+    }
+  };
+
+  const handlePlateBlur = () => {
+    const trimmed = vehiclePlate.trim();
+    setVehiclePlate(trimmed);
+    const err = validateField('vehiclePlate', trimmed);
+    setErrors(prev => ({ ...prev, vehiclePlate: err }));
+  };
+
+  const handleStreamChange = (e) => {
+    let val = e.target.value;
+    setPreferredStream(val);
+    if (formTouched || errors.preferredStream) {
+      const err = validateField('preferredStream', val);
+      setErrors(prev => ({ ...prev, preferredStream: err }));
+    }
+  };
+
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+    setFormTouched(true);
+
+    const trimmedName = customerName.trim();
+    const trimmedPhone = contactPhone.trim();
+    const trimmedPlate = vehiclePlate.trim();
+
+    setCustomerName(trimmedName);
+    setContactPhone(trimmedPhone);
+    setVehiclePlate(trimmedPlate);
+
+    const nameErr = validateField('customerName', trimmedName);
+    const phoneErr = validateField('contactPhone', trimmedPhone);
+    const plateErr = validateField('vehiclePlate', trimmedPlate);
+    const streamErr = validateField('preferredStream', preferredStream);
+
+    const newErrors = {
+      customerName: nameErr,
+      contactPhone: phoneErr,
+      vehiclePlate: plateErr,
+      preferredStream: streamErr
+    };
+
+    setErrors(newErrors);
+
+    if (nameErr || phoneErr || plateErr || streamErr) {
+      return;
+    }
+
+    const sanitize = (text) => {
+      if (!text) return '';
+      let clean = text.replace(/<[^>]*>?/g, '');
+      clean = clean.replace(/['";#\*]/g, '');
+      clean = clean.replace(/--/g, '-');
+      return clean;
+    };
+
+    // Sanitize inputs
+    const sanitizedName = sanitize(trimmedName);
+    const sanitizedPhone = sanitize(trimmedPhone);
+    const sanitizedPlate = sanitize(trimmedPlate);
+    const sanitizedStream = sanitize(preferredStream);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: sanitizedName,
+          mobile: sanitizedPhone,
+          vehicleNumber: sanitizedPlate,
+          serviceType: sanitizedStream,
+          bookingDate: new Date().toLocaleDateString('en-IN'),
+          bookingTime: new Date().toLocaleTimeString('en-IN')
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to create booking');
+      }
+
+      alert('Booking request sent successfully. Service team will contact you shortly.');
+
+      setCustomerName('');
+      setContactPhone('');
+      setVehiclePlate('');
+      setPreferredStream('');
+      setErrors({});
+      setFormTouched(false);
+    } catch (err) {
+      console.warn('Booking API offline, falling back to LocalStorage demo:', err);
+
+      // Local storage fallback for offline demo
+      const mockNotifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
+      mockNotifs.push({
+        _id: 'mock_notif_' + Date.now(),
+        type: 'booking',
+        title: 'New Service Booking',
+        message: `${sanitizedName} has requested a service appointment.`,
+        customerName: sanitizedName,
+        mobile: sanitizedPhone,
+        vehicleNumber: sanitizedPlate,
+        serviceType: sanitizedStream,
+        status: 'unread',
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('mock_notifications', JSON.stringify(mockNotifs));
+
+      // Also save message fallback
+      const mockMsgs = JSON.parse(localStorage.getItem('mock_messages') || '[]');
+      mockMsgs.push({
+        _id: 'mock_msg_' + Date.now(),
+        type: 'booking',
+        senderName: sanitizedName,
+        phone: sanitizedPhone,
+        subject: 'Service Booking Message',
+        body: `${sanitizedName} has requested a service slot for vehicle ${sanitizedPlate} (Type: ${sanitizedStream}) on ${new Date().toLocaleDateString('en-IN')}.`,
+        status: 'unread',
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('mock_messages', JSON.stringify(mockMsgs));
+
+      // Trigger standard success alert
+      alert('Booking request sent successfully. Service team will contact you shortly.');
+
+      setCustomerName('');
+      setContactPhone('');
+      setVehiclePlate('');
+      setPreferredStream('');
+      setErrors({});
+      setFormTouched(false);
+
+      // Dispatch storage event so header can update
+      window.dispatchEvent(new Event('storage'));
+    }
+  };
+
+
 
   // Hero slideshow photos (Workshop photos only - NO LOGO)
   const heroSlides = [
-    { src: '/workshop/page_2_img_1.jpeg', label: 'Large Workshop Floor' },
-    { src: '/workshop/page_9_img_1.jpeg', label: 'Technicians at Work' },
-    { src: '/workshop/page_3_img_1.jpeg', label: 'BMW Service Bay' },
-    { src: '/workshop/page_4_img_1.jpeg', label: 'Body Shop Paint Section' },
-    { src: '/workshop/page_8_img_1.jpeg', label: 'Bosch Equipment Area' },
-    { src: '/workshop/page_1_img_1.png', label: 'Customer Vehicle Parking Yard' }
+    { src: '/workshop/page_5_img_1.jpeg', label: 'Workshop Front View' },
+    { src: '/workshop/page_2_img_1.jpeg', label: 'Service Bay' },
+    { src: '/workshop/page_8_img_1.jpeg', label: 'BMW Service Area' },
+    { src: '/workshop/page_10_img_1.jpeg', label: 'Mercedes Service Area' },
+    { src: '/workshop/page_3_img_1.jpeg', label: 'Technician Team' },
+    { src: '/workshop/page_7_img_1.jpeg', label: 'Workshop Interior' }
   ];
 
   // 10 Unique Gallery Photos mapped EXACTLY to client specifications (No duplicates, no Auto4m logo)
   const galleryPhotos = [
     // CATEGORY A: Workshop Infrastructure
-    { src: '/workshop/page_10_img_1.jpeg', category: 'Infrastructure', title: 'Large Workshop Floor', desc: 'Workshop interior photo with multiple vehicles and service bays.' },
-    { src: '/workshop/page_2_img_1.jpeg', category: 'Infrastructure', title: 'Hydraulic Lift Service Bay', desc: 'Vehicle on lift servicing photo.' },
-
+    { src: '/workshop/page_10_img_1.jpeg', category: 'Infrastructure', title: 'Large Workshop Floor', desc: 'Workshop hall image with multiple service bays.' },
+    { src: '/workshop/page_2_img_1.jpeg', category: 'Infrastructure', title: 'Hydraulic Lift Service Bay', desc: 'Vehicle-on-lift image in the hydraulic service bay.' },
+ 
     // CATEGORY B: Live Service Operations
-    { src: '/workshop/page_3_img_1.jpeg', category: 'Operations', title: 'Live Service Operations', desc: 'Technicians actively working on vehicles.' },
-    { src: '/workshop/page_5_img_1.jpeg', category: 'Operations', title: 'Expert Technician Team', desc: 'Technicians performing repairs and maintenance.' },
-
+    { src: '/workshop/page_3_img_1.jpeg', category: 'Operations', title: 'Live Service Operations', desc: 'Technicians actively repairing vehicles.' },
+    { src: '/workshop/page_7_img_1.jpeg', category: 'Operations', title: 'Expert Technician Team', desc: 'Mechanics and team working together on vehicle repairs.' },
+ 
     // CATEGORY C: Body Shop & Paint
-    { src: '/workshop/page_4_img_1.jpeg', category: 'Body Shop', title: 'Body Shop & Paint Center', desc: 'Painting, denting, body repair photos.' },
-
+    { src: '/workshop/paint_booth.png', category: 'Body Shop', title: 'Body Shop & Paint Center', desc: 'Vehicle painting and spray booth room.' },
+ 
     // CATEGORY D: Equipment & Tools
-    { src: '/workshop/page_8_img_1.jpeg', category: 'Equipment', title: 'Advanced Workshop Equipment', desc: 'Bosch NTI 101 machine and workshop equipment photos.' },
-    { src: '/workshop/page_7_img_1.jpeg', category: 'Equipment', title: 'Spare Parts Inventory', desc: 'Spare parts storage and inventory photos.' },
-    { src: '/workshop/page_9_img_1.jpeg', category: 'Equipment', title: 'Tool Station', desc: 'Red workshop toolbox and tools photo.' },
-
+    { src: '/workshop/page_9_img_1.jpeg', category: 'Equipment', title: 'Advanced Workshop Equipment', desc: 'Green Bosch NTI 101 nitrogen inflator machine.' },
+    { src: '/workshop/page_6_img_1.jpeg', category: 'Equipment', title: 'Spare Parts Inventory', desc: 'Spare parts storage shelves and inventory stock.' },
+    { src: '/workshop/red_toolbox_cropped.jpg', category: 'Equipment', title: 'Tool Station', desc: 'Red Wurth toolbox and professional tool chest.' },
+ 
     // CATEGORY E: Customer Vehicle Yard
-    { src: '/workshop/page_1_img_1.png', category: 'Vehicle Yard', title: 'Customer Vehicle Parking Area', desc: 'Parking lot photo with multiple customer vehicles.' },
-
+    { src: '/workshop/page_5_img_1.jpeg', category: 'Vehicle Yard', title: 'Customer Vehicle Parking Area', desc: 'Parking yard image with multiple parked customer vehicles.' },
+ 
     // CATEGORY F: Customer Facilities
-    { src: '/workshop/page_6_img_1.jpeg', category: 'Customer Facilities', title: 'Customer Reception Area', desc: 'Reception/office/waiting area photo.' }
+    { src: '/workshop/page_4_img_1.jpeg', category: 'Customer Facilities', title: 'Customer Reception Area', desc: 'Office and reception desk with chairs and consultation table.' }
   ];
 
   // Testimonials
@@ -71,26 +271,7 @@ export default function LandingPage({ onLoginSuccess }) {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
 
-    setSearched(true);
-    const localJcs = JSON.parse(localStorage.getItem('mock_jobcards') || '[]');
-    const match = localJcs.find(jc => 
-      (jc.vehicleId?.vehicleNumber || '').toLowerCase().replace(/\s+/g, '') === searchQuery.toLowerCase().replace(/\s+/g, '') ||
-      (jc.jobCardNo || '').toLowerCase().replace(/\s+/g, '') === searchQuery.toLowerCase().replace(/\s+/g, '')
-    );
-
-    if (match) {
-      setTrackerResult(match);
-      setTimeout(() => {
-        document.getElementById('tracker-result-block')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-    } else {
-      setTrackerResult(null);
-    }
-  };
 
   const filteredPhotos = activeCategory === 'All' 
     ? galleryPhotos 
@@ -100,45 +281,48 @@ export default function LandingPage({ onLoginSuccess }) {
     <div className="min-h-screen bg-white text-[#111827] font-sans relative overflow-x-hidden">
       
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b border-[#E2E8F0] px-6 py-4 flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto w-full gap-4 md:gap-0 select-none">
-        <a 
-          href="/" 
-          onClick={(e) => { e.preventDefault(); window.location.href = '/'; }} 
-          className="flex items-center gap-2.5 select-none shrink-0 mr-auto md:mr-0 group"
-        >
-          <div className="p-1 bg-white rounded-lg border border-[#E2E8F0] shrink-0 transition-colors group-hover:border-[#C1121F]">
-            <img 
-              src="/workshop/page_1_img_1.png" 
-              alt="MVSS Logo" 
-              className="h-[60px] max-w-[180px] object-contain"
-            />
-          </div>
-          <div className="text-left">
-            <h1 className="text-xs sm:text-sm font-black tracking-wider uppercase text-[#111827] leading-none">
-              MVSS AUTOMOBILES
-            </h1>
-            <p className="text-[8px] text-[#6B7280] font-bold uppercase tracking-widest leading-none mt-0.5">Pvt. Ltd.</p>
-          </div>
-        </a>
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] select-none shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <div className="max-w-7xl mx-auto px-6 py-1 flex flex-col md:flex-row justify-between items-center gap-4 w-full">
+          <a 
+            href="/" 
+            onClick={(e) => { e.preventDefault(); window.location.href = '/'; }} 
+            className="flex items-center gap-1.5 select-none shrink-0 mr-auto md:mr-0 group"
+          >
+            <div className="relative overflow-visible shrink-0 transition-transform duration-350 group-hover:scale-105 p-1.5 flex items-center justify-center bg-transparent">
+              <img 
+                src="/workshop/page_1_img_1.png" 
+                alt="MVSS Logo" 
+                className="h-[72px] md:h-[125px] w-auto object-contain block"
+              />
+            </div>
+            <div className="text-left flex flex-col justify-center select-none ml-1">
+              <h1 className="text-lg md:text-[29px] font-black tracking-tighter uppercase text-[#111827] leading-none">
+                MVSS AUTOMOBILES
+              </h1>
+              <p className="text-[9px] md:text-[11px] text-[#C1121F] font-black uppercase tracking-widest leading-none mt-1">
+                PVT. LTD.
+              </p>
+            </div>
+          </a>
 
-        {/* Center Navigation */}
-        <nav className="flex flex-wrap items-center justify-start md:justify-center gap-x-6 gap-y-2 text-[11px] sm:text-xs font-bold text-[#6B7280] uppercase tracking-wider">
-          <a href="#" className="hover:text-[#C1121F] transition-colors">Home</a>
-          <a href="#services" className="hover:text-[#C1121F] transition-colors">Services</a>
-          <a href="#gallery" className="hover:text-[#C1121F] transition-colors">Gallery</a>
-          <a href="#why-choose" className="hover:text-[#C1121F] transition-colors">Why Choose Us</a>
-          <a href="#tracker" className="hover:text-[#C1121F] transition-colors">Track Vehicle</a>
-          <a href="#contact" className="hover:text-[#C1121F] transition-colors">Contact</a>
-        </nav>
+          {/* Center Navigation */}
+          <nav className="flex flex-wrap items-center justify-start md:justify-center gap-x-6 gap-y-2 text-[11px] sm:text-xs font-bold text-[#6B7280] uppercase tracking-wider w-full md:w-auto">
+            <a href="#" className="hover:text-[#C1121F] transition-colors">Home</a>
+            <a href="#services" className="hover:text-[#C1121F] transition-colors">Services</a>
+            <a href="#gallery" className="hover:text-[#C1121F] transition-colors">Gallery</a>
+            <a href="#why-choose" className="hover:text-[#C1121F] transition-colors">Why Choose Us</a>
+            <a href="#contact" className="hover:text-[#C1121F] transition-colors">Contact</a>
+          </nav>
 
-        {/* Right Action */}
-        <button
-          onClick={() => setShowLogin(true)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#111827] hover:bg-[#C1121F] text-white rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all shrink-0"
-        >
-          <Lock className="w-3 h-3" />
-          Staff Login
-        </button>
+          {/* Right Action */}
+          <button
+            onClick={() => setShowLogin(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#111827] hover:bg-[#C1121F] text-white rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all shrink-0 ml-auto md:ml-0"
+          >
+            <Lock className="w-3 h-3" />
+            Staff Login
+          </button>
+        </div>
       </header>
 
       {/* Hero Section */}
@@ -152,21 +336,15 @@ export default function LandingPage({ onLoginSuccess }) {
                 Premium Multi-Brand Car Service Center
               </h2>
               <p className="text-xs sm:text-sm font-semibold text-[#6B7280] uppercase tracking-wide leading-relaxed">
-                Complete Car Care, Body Shop Repairs, Insurance Claims, Genuine Parts, Vehicle Tracking, and GST Billing under one roof.
+                Complete Car Care, Body Shop Repairs, Insurance Claims, Genuine Parts, and GST Billing under one roof.
               </p>
               <p className="text-xs sm:text-sm text-[#6B7280] font-medium leading-relaxed mt-4">
-                Trusted automobile workshop in Hyderabad delivering professional service, transparent billing and digital vehicle tracking.
+                Trusted automobile workshop in Hyderabad delivering professional service and transparent billing.
               </p>
             </div>
 
             {/* Buttons list incorporating red [Book A Service] button */}
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start pt-2">
-              <a
-                href="#tracker"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#111827] hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold transition-all shadow-sm"
-              >
-                Track Vehicle
-              </a>
               <a
                 href="#contact"
                 className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#C1121F] hover:bg-red-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-[#C1121F]/10 animate-pulse"
@@ -355,7 +533,7 @@ export default function LandingPage({ onLoginSuccess }) {
             {[
               { val: '1000+', label: 'Vehicles Serviced', desc: 'Multi-brand mechanical checkouts.' },
               { val: 'GST Compliant', label: 'Billing', desc: 'Clear spare parts pricing.' },
-              { val: 'Real-Time', label: 'Vehicle Tracking', desc: 'Digital check-in progress.' },
+              { val: 'Genuine', label: 'OEM Parts', desc: 'Quality spare parts sourcing.' },
               { val: 'Multi-Brand', label: 'Expertise', desc: 'BMW, Mercedes, Harrier, Swift.' },
               { val: 'Insurance', label: 'Claim Assistance', desc: 'Coordinated claims survey.' },
               { val: 'Body Shop', label: 'Specialists', desc: 'Professional denting restoration.' }
@@ -367,120 +545,6 @@ export default function LandingPage({ onLoginSuccess }) {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Live Vehicle Tracker */}
-      <section id="tracker" className="py-20 bg-white">
-        <div className="max-w-4xl mx-auto px-6 space-y-8">
-          <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Real-time status</span>
-            <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Live Progress Timeline</h3>
-            <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">Track your vehicle service progress using Vehicle Number or Job Card Number.</p>
-          </div>
-
-          <form onSubmit={handleSearch} className="max-w-md mx-auto flex gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-              <input
-                type="text"
-                required
-                placeholder="e.g. TS-09-EA-1234 or JC-1001"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-[#E2E8F0] rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-[#111827] placeholder-slate-400 transition-all font-mono uppercase"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-5 py-3 bg-[#111827] hover:bg-[#C1121F] text-white rounded-xl text-xs font-bold transition-all shadow-sm shrink-0"
-            >
-              Track Vehicle
-            </button>
-          </form>
-
-          {searched && (
-            <div id="tracker-result-block" className="mt-8 animate-fade-in scroll-mt-24">
-              {trackerResult ? (
-                <div className="bg-white border border-[#E2E8F0] p-6 rounded-3xl space-y-6 shadow-sm">
-                  {/* Result Header */}
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-extrabold uppercase">Vehicle Owner / Details</span>
-                      <h4 className="text-sm font-black text-[#111827] mt-0.5">{trackerResult.customerId?.name || 'Customer'}</h4>
-                      <p className="text-[10px] text-[#6B7280] font-mono mt-0.5">{trackerResult.vehicleId?.make} {trackerResult.vehicleId?.model} ({trackerResult.vehicleId?.vehicleNumber})</p>
-                    </div>
-                    <div className="text-left sm:text-right">
-                      <span className="text-[10px] text-slate-455 font-extrabold uppercase">Job Card ID</span>
-                      <span className="block text-xs font-bold text-blue-600 font-mono mt-0.5">{trackerResult.jobCardNo}</span>
-                      <span className="block text-[10px] text-slate-550 font-semibold mt-0.5">Service: {trackerResult.serviceType}</span>
-                    </div>
-                  </div>
-
-                  {/* Horizontal Timeline */}
-                  <div className="space-y-4 pt-2">
-                    <span className="text-[10px] text-slate-400 font-extrabold uppercase block tracking-wider">Service Timeline Progress</span>
-                    
-                    <div className="relative py-4 overflow-x-auto min-w-[500px]">
-                      {/* Timeline Bar */}
-                      <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-100 -translate-y-1/2 z-0" />
-                      <div 
-                        className="absolute top-1/2 left-0 h-1 bg-blue-600 -translate-y-1/2 z-0 transition-all duration-700" 
-                        style={{
-                          width: `${(getCurrentStageIndex(trackerResult.status) / (stages.length - 1)) * 100}%`
-                        }}
-                      />
-
-                      {/* Timeline Nodes */}
-                      <div className="relative z-10 flex justify-between">
-                        {stages.map((stage, idx) => {
-                          const currentIdx = getCurrentStageIndex(trackerResult.status);
-                          const isCompleted = idx <= currentIdx;
-                          const isActive = idx === currentIdx;
-
-                          return (
-                            <div key={stage.key} className="flex flex-col items-center text-center space-y-2 w-16 group shrink-0">
-                              <div 
-                                className={`w-8 h-8 rounded-full flex items-center justify-center border font-mono text-[10px] font-black transition-all ${
-                                  isActive 
-                                    ? 'bg-blue-600 border-blue-500 text-white scale-110 shadow-lg shadow-blue-600/30' 
-                                    : isCompleted 
-                                      ? 'bg-[#111827] border-[#111827] text-white' 
-                                      : 'bg-white border-[#E2E8F0] text-[#6B7280]'
-                                }`}
-                              >
-                                {idx + 1}
-                              </div>
-                              <span className={`text-[9px] font-extrabold uppercase tracking-wide transition-colors ${
-                                isActive ? 'text-blue-650 font-bold' : isCompleted ? 'text-slate-900 font-bold' : 'text-[#6B7280]'
-                              }`}>
-                                {stage.label}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Active Stage Alert */}
-                  <div className="p-4 bg-blue-50 border border-blue-100/60 rounded-2xl flex items-center gap-3.5 mt-4">
-                    <Clock className="w-5 h-5 text-blue-600 shrink-0" />
-                    <div className="text-left text-xs leading-relaxed">
-                      <span className="font-bold text-[#111827] uppercase tracking-wide">
-                        Current Status: {stages[getCurrentStageIndex(trackerResult.status)].label}
-                      </span>
-                      <p className="text-slate-600 font-semibold">{stages[getCurrentStageIndex(trackerResult.status)].desc}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-red-50 border border-red-100 p-6 rounded-3xl text-center text-xs font-semibold text-[#DC2626] max-w-md mx-auto">
-                  ⚠ No active job card found for "{searchQuery}". Please check the registration number or contact the advisor.
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </section>
 
@@ -575,30 +639,68 @@ export default function LandingPage({ onLoginSuccess }) {
           {/* Interactive Map Embed */}
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-3xl space-y-4 shadow-sm">
             <h4 className="text-sm font-black text-[#111827] uppercase tracking-wide">Request a Service Slot</h4>
-            <form onSubmit={(e) => { e.preventDefault(); alert('Booking request sent successfully. Service team will contact you shortly.'); }} className="space-y-4 text-xs font-semibold">
+            <form onSubmit={handleBookingSubmit} noValidate className="space-y-4 text-xs font-semibold">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Your Name</label>
-                  <input type="text" required placeholder="John Doe" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-[#C1121F]" />
+                  <input 
+                    type="text" 
+                    value={customerName}
+                    onChange={handleNameChange}
+                    onBlur={handleNameBlur}
+                    placeholder="John Doe" 
+                    className={`w-full px-3 py-2 bg-white border rounded-xl text-xs font-medium focus:outline-none ${errors.customerName ? 'border-red-500 focus:border-red-500' : 'border-[#E2E8F0] focus:border-[#C1121F]'}`} 
+                  />
+                  {errors.customerName && (
+                    <span className="block mt-1 text-[10px] text-red-500 font-semibold">{errors.customerName}</span>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Contact Phone</label>
-                  <input type="tel" required placeholder="9988776655" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-[#C1121F]" />
+                  <input 
+                    type="tel" 
+                    value={contactPhone}
+                    onChange={handlePhoneChange}
+                    onBlur={handlePhoneBlur}
+                    placeholder="9988776655" 
+                    className={`w-full px-3 py-2 bg-white border rounded-xl text-xs font-medium focus:outline-none ${errors.contactPhone ? 'border-red-500 focus:border-red-500' : 'border-[#E2E8F0] focus:border-[#C1121F]'}`} 
+                  />
+                  {errors.contactPhone && (
+                    <span className="block mt-1 text-[10px] text-red-500 font-semibold">{errors.contactPhone}</span>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Vehicle Plate No</label>
-                  <input type="text" required placeholder="TS-09-EA-1234" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-medium focus:outline-none focus:border-[#C1121F] uppercase" />
+                  <input 
+                    type="text" 
+                    value={vehiclePlate}
+                    onChange={handlePlateChange}
+                    onBlur={handlePlateBlur}
+                    placeholder="TS-09-EA-1234" 
+                    className={`w-full px-3 py-2 bg-white border rounded-xl text-xs font-medium focus:outline-none uppercase ${errors.vehiclePlate ? 'border-red-500 focus:border-red-500' : 'border-[#E2E8F0] focus:border-[#C1121F]'}`} 
+                  />
+                  {errors.vehiclePlate && (
+                    <span className="block mt-1 text-[10px] text-red-500 font-semibold">{errors.vehiclePlate}</span>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Preferred Stream</label>
-                  <select className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-xs font-bold focus:outline-none focus:border-[#C1121F]">
-                    <option>General Servicing (PMS)</option>
-                    <option>Running Repair (RR)</option>
-                    <option>Body Shop (Dent/Paint)</option>
-                    <option>Insurance Claims</option>
+                  <select 
+                    value={preferredStream}
+                    onChange={handleStreamChange}
+                    className={`w-full px-3 py-2 bg-white border rounded-xl text-xs font-bold focus:outline-none ${errors.preferredStream ? 'border-red-500 focus:border-red-500' : 'border-[#E2E8F0] focus:border-[#C1121F]'}`}
+                  >
+                    <option value="">Select Service Category</option>
+                    <option value="General Servicing (PMS)">General Servicing (PMS)</option>
+                    <option value="Running Repair (RR)">Running Repair (RR)</option>
+                    <option value="Body Shop (Dent/Paint)">Body Shop (Dent/Paint)</option>
+                    <option value="Insurance Claims">Insurance Claims</option>
                   </select>
+                  {errors.preferredStream && (
+                    <span className="block mt-1 text-[10px] text-red-500 font-semibold">{errors.preferredStream}</span>
+                  )}
                 </div>
               </div>
               <button type="submit" className="w-full py-3 px-4 bg-[#C1121F] hover:bg-red-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-red-650/10">
@@ -624,9 +726,9 @@ export default function LandingPage({ onLoginSuccess }) {
               <span className="font-extrabold text-white text-xs uppercase tracking-wider">MVSS AUTOMOBILES</span>
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms & Conditions</a>
-              <a href="#" className="hover:text-white transition-colors">Support Portal</a>
+              <a href="#privacy" onClick={(e) => { e.preventDefault(); alert('Privacy Policy: Customer data is collected solely for workshop check-in, tracking, and GST invoicing purposes, stored securely in MongoDB Atlas.'); }} className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#terms" onClick={(e) => { e.preventDefault(); alert('Terms & Conditions: Service repair completion, vehicle tracking updates, and invoicing follow direct workshop guidelines under authorized advisor supervision.'); }} className="hover:text-white transition-colors">Terms & Conditions</a>
+              <a href="#support" onClick={(e) => { e.preventDefault(); alert('Support Portal: For technical assistance or database connection queries, please reach the IT Service Desk.'); }} className="hover:text-white transition-colors">Support Portal</a>
             </div>
           </div>
           <div className="border-t border-slate-800 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-wider">
@@ -636,23 +738,23 @@ export default function LandingPage({ onLoginSuccess }) {
         </div>
       </footer>
 
-      {/* Staff Login Drawer/Overlay */}
+      {/* Staff Login Modal/Overlay */}
       {showLogin && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/70 backdrop-blur-xs select-none animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 backdrop-blur-sm select-none p-4 md:p-10 animate-fade-in">
           {/* Close Backdrop click */}
           <div className="absolute inset-0 z-0" onClick={() => setShowLogin(false)} />
           
           {/* Login wrapper container */}
-          <div className="relative z-10 w-full max-w-5xl bg-slate-950 border-l border-slate-900 shadow-2xl animate-slide-left flex flex-col">
+          <div className="relative z-10 w-full max-w-[1250px] h-[90vh] max-h-[800px] bg-white rounded-[24px] shadow-2xl overflow-hidden flex flex-col border border-slate-200/50 animate-scale-up">
             <button 
               onClick={() => setShowLogin(false)}
-              className="absolute top-6 right-6 p-2 bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-white rounded-xl border border-slate-800 transition-all z-50 flex items-center justify-center"
+              className="absolute top-5 right-5 p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded-full transition-all z-50 flex items-center justify-center shadow-sm"
               title="Close Staff Portal"
             >
               <X className="w-4 h-4" />
             </button>
             
-            <div className="flex-1 overflow-y-auto bg-slate-950">
+            <div className="flex-1 overflow-y-auto">
               <Login onLoginSuccess={(user, token) => {
                 setShowLogin(false);
                 onLoginSuccess(user, token);
@@ -666,17 +768,3 @@ export default function LandingPage({ onLoginSuccess }) {
   );
 }
 
-function getCurrentStageIndex(status) {
-  const stagesKeys = [
-    'Created',
-    'Inspect Stage',
-    'Estimation',
-    'Customer Approval',
-    'Work In Progress',
-    'Quality Check',
-    'Ready for Delivery',
-    'Delivered'
-  ];
-  const idx = stagesKeys.indexOf(status);
-  return idx === -1 ? 0 : idx;
-}

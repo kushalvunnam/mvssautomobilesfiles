@@ -1,16 +1,29 @@
 const mongoose = require('mongoose');
 
 const auditLogSchema = new mongoose.Schema({
+  timestamp: {
+    type: Date,
+    default: Date.now,
+    required: true
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: false,
   },
   userName: {
     type: String,
     required: true,
   },
-  userRole: {
+  role: {
+    type: String,
+    required: true,
+  },
+  userRole: { // Backward compatibility
+    type: String,
+    required: true,
+  },
+  module: {
     type: String,
     required: true,
   },
@@ -26,6 +39,11 @@ const auditLogSchema = new mongoose.Schema({
   ipAddress: {
     type: String,
     default: '',
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    required: true
   }
 }, {
   timestamps: true,

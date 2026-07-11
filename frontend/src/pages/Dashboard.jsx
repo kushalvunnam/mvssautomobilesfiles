@@ -73,6 +73,8 @@ export default function Dashboard({ token, user, setActiveTab }) {
     };
 
     fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 5000);
+    return () => clearInterval(interval);
   }, [token]);
 
   if (loading) {
@@ -620,20 +622,41 @@ export default function Dashboard({ token, user, setActiveTab }) {
         <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 p-5 rounded-xl shadow-sm lg:col-span-3 flex flex-col justify-between">
           <div>
             <h4 className="text-xs font-bold text-slate-955 dark:text-white uppercase tracking-wider mb-4">Alerts</h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-955 border border-slate-150 dark:border-slate-800 rounded-lg">
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-                  <span>Low Stock ({stats.lowStockItems || 15})</span>
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+              {stats.lowStockItemsList && stats.lowStockItemsList.length > 0 ? (
+                stats.lowStockItemsList.map((item, idx) => (
+                  <div key={idx} className="p-3 bg-red-50 dark:bg-red-955/20 border border-red-200/50 dark:border-red-900/30 rounded-xl space-y-1 text-left">
+                    <div className="flex justify-between items-center">
+                      <span className="font-extrabold text-[#C1121F] dark:text-red-400 uppercase text-[8px] tracking-wider">
+                        {item.severity === 'CRITICAL' ? '⚠️ OUT OF STOCK' : '⚠️ LOW STOCK ALERT'}
+                      </span>
+                      <span className={`px-1 rounded text-[7px] font-black ${item.severity === 'CRITICAL' ? 'bg-red-250 text-red-805' : 'bg-amber-250 text-amber-905'}`}>
+                        {item.severity}
+                      </span>
+                    </div>
+                    <p className="font-black text-slate-900 dark:text-white text-[11px] leading-tight mt-0.5">{item.partName}</p>
+                    <p className="text-slate-400 dark:text-slate-550 font-bold font-mono text-[9px]">Part No: {item.partNumber}</p>
+                    <div className="flex gap-3 text-[9px] font-bold text-slate-600 dark:text-slate-400 pt-0.5">
+                      <span>Stock: <strong className="text-slate-900 dark:text-white font-mono">{item.currentStock}</strong></span>
+                      <span>Min: <strong className="text-slate-900 dark:text-white font-mono">{item.minimumStock}</strong></span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-955 border border-slate-150 dark:border-slate-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                    <span>Low Stock ({stats.lowStockItems || 0})</span>
+                  </div>
+                  <button onClick={() => setActiveTab('inventory')} className="px-2.5 py-0.5 bg-white dark:bg-slate-800 hover:bg-slate-55 text-[9px] font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded transition-colors shadow-2xs border-none outline-none">
+                    View
+                  </button>
                 </div>
-                <button onClick={() => setActiveTab('inventory')} className="px-2.5 py-0.5 bg-white dark:bg-slate-800 hover:bg-slate-55 text-[9px] font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded transition-colors shadow-2xs border-none outline-none">
-                  View
-                </button>
-              </div>
+              )}
               <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-955 border border-slate-150 dark:border-slate-800 rounded-lg">
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
                   <Clock className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Active Jobs ({stats.activeJobCards || 5})</span>
+                  <span>Active Jobs ({stats.activeJobCards || 0})</span>
                 </div>
                 <button onClick={() => setActiveTab('jobcards')} className="px-2.5 py-0.5 bg-white dark:bg-slate-800 hover:bg-slate-55 text-[9px] font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded transition-colors shadow-2xs border-none outline-none">
                   View
@@ -693,6 +716,63 @@ export default function Dashboard({ token, user, setActiveTab }) {
           </div>
         </div>
 
+      </div>
+
+      {/* Row 4: Latest 10 Audit Logs */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-xl shadow-sm">
+        <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+          <h4 className="text-xs font-bold text-slate-950 dark:text-white uppercase tracking-wider">Latest Security Audit Logs</h4>
+          <button 
+            onClick={() => setActiveTab('audit')} 
+            className="text-[10px] text-indigo-600 hover:underline font-bold uppercase tracking-wider border-none outline-none bg-transparent cursor-pointer"
+          >
+            View All Logs
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-[10px] font-semibold text-slate-700 dark:text-slate-300">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-bold border-b border-slate-100 dark:border-slate-800">
+                <th className="p-2 font-mono">Date & Time</th>
+                <th className="p-2">User</th>
+                <th className="p-2">Role</th>
+                <th className="p-2">Module</th>
+                <th className="p-2">Action</th>
+                <th className="p-2">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-150/40 dark:divide-slate-800/50">
+              {stats.latestAuditLogs && stats.latestAuditLogs.length > 0 ? (
+                stats.latestAuditLogs.map(log => {
+                  let actionColor = 'bg-slate-50 text-slate-655';
+                  if (log.action?.includes('CREATE') || log.action?.includes('ADD')) actionColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400';
+                  if (log.action?.includes('DELETE') || log.action?.includes('REJECT') || log.action?.includes('REDUCE')) actionColor = 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400';
+                  if (log.action?.includes('LOGIN') || log.action?.includes('LOGOUT')) actionColor = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400';
+                  if (log.action?.includes('UPDATE') || log.action?.includes('RESTOCK') || log.action?.includes('RETURN')) actionColor = 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400';
+
+                  return (
+                    <tr key={log._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all">
+                      <td className="p-2 font-mono font-medium text-slate-400">{new Date(log.createdAt || log.timestamp).toLocaleString('en-IN')}</td>
+                      <td className="p-2 font-bold text-slate-850 dark:text-slate-200">{log.userName}</td>
+                      <td className="p-2 uppercase text-[8px] font-bold text-indigo-600 dark:text-indigo-400">{log.role || log.userRole}</td>
+                      <td className="p-2 uppercase text-[8px] font-bold text-slate-500 dark:text-slate-400">{log.module || 'System'}</td>
+                      <td className="p-2">
+                        <span className={`px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase ${actionColor}`}>
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="p-2 text-slate-600 dark:text-slate-350 font-medium truncate max-w-xs">{log.details}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="6" className="p-4 text-center text-slate-400 dark:text-slate-500">No recent logs registered.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Footer */}

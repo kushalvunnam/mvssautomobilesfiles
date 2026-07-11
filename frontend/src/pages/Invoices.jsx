@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Search, Plus, Receipt, Download, Share2, Mail, CheckCircle2, Printer, Edit2 } from 'lucide-react';
+import { Search, Plus, Receipt, Download, Share2, Mail, CheckCircle2, Printer, Edit2, Eye, Trash2, Copy, Link, ChevronDown, MessageSquare } from 'lucide-react';
 import InvoiceForm from './InvoiceForm';
 
 export default function Invoices({ token, user, setActiveTab }) {
@@ -9,6 +9,7 @@ export default function Invoices({ token, user, setActiveTab }) {
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'edit'
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
   
   // Modals for Mock sharing
   const [shareModal, setShareModal] = useState({ show: false, type: 'whatsapp', invoice: null });
@@ -38,6 +39,16 @@ export default function Invoices({ token, user, setActiveTab }) {
           );
         });
         setInvoices(filtered);
+
+        // Update selectedInvoice if it exists
+        if (selectedInvoice) {
+          const updated = data.find(inv => inv._id === selectedInvoice._id);
+          if (updated) {
+            setSelectedInvoice(updated);
+          } else {
+            setSelectedInvoice(null);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -87,10 +98,220 @@ export default function Invoices({ token, user, setActiveTab }) {
 
   // Open sharing modal
   const openShare = (inv, type) => {
+    console.log('[Invoice Action: Share/Email/WhatsApp Dialog]', { type, invoice: inv });
     setShareModal({ show: true, type, invoice: inv });
     setSharePhone(inv.customerId?.mobile || '');
     setShareEmail(inv.customerId?.email || '');
     setShareSuccess(false);
+  };
+
+  const handleLogShare = async (inv) => {
+    if (token !== 'mock_jwt_token_for_offline_demo') {
+      try {
+        await fetch(`${API_BASE_URL}/invoices/${inv._id}/share`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (err) {
+        console.error('Failed to log share:', err);
+      }
+    }
+  };
+
+  const handleSendInvoice = async () => {
+    const inv = shareModal.invoice;
+    if (!inv) return;
+
+    if (shareModal.type === 'whatsapp') {
+      console.log('[Invoice Action: WhatsApp Share Redirect]', inv);
+      const text = `Dear ${inv.customerId?.name || 'Customer'},\nYour vehicle ${inv.vehicleId?.vehicleNumber || 'TS09'} is ready! Invoice ${inv.invoiceNo} of amount ₹${inv.totals?.grandTotal?.toLocaleString()} generated. Download: ${API_BASE_URL}/invoices/${inv._id}/pdf\nThanks, MVSS Automobiles.`;
+      
+      const phoneClean = sharePhone.replace(/[^0-9]/g, '');
+      const formattedPhone = phoneClean.length === 10 ? `91${phoneClean}` : phoneClean;
+      
+      const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(text)}`;
+      window.open(whatsappUrl, '_blank');
+      
+      await handleLogShare(inv);
+      
+      setShareSuccess(true);
+      setTimeout(() => {
+        setShareModal({ show: false, type: 'whatsapp', invoice: null });
+        setShareSuccess(false);
+      }, 1500);
+      return;
+    }
+
+    console.log('[Invoice Action: Email Dispatch]', inv);
+    try {
+      if (token === 'mock_jwt_token_for_offline_demo') {
+        setShareSuccess(true);
+        setTimeout(() => {
+          setShareModal({ show: false, type: 'whatsapp', invoice: null });
+          setShareSuccess(false);
+        }, 1500);
+      } else {
+        const payload = {
+          email: shareEmail
+        };
+
+        const res = await fetch(`${API_BASE_URL}/invoices/${inv._id}/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          setShareSuccess(true);
+          setTimeout(() => {
+            setShareModal({ show: false, type: 'whatsapp', invoice: null });
+            setShareSuccess(false);
+            fetchInvoices();
+          }, 1500);
+        } else {
+          const err = await res.json();
+          alert('Failed to send invoice: ' + (err.error || res.statusText));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to send invoice:', err);
+      alert('Network error while sending invoice.');
+    }
+  };
+
+  const handleShareLink = async (inv, e) => {
+    if (e) e.stopPropagation();
+    console.log('[Invoice Action: Share Link]', inv);
+    const link = `${window.location.origin}/api/invoices/${inv._id}/pdf?token=${token}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      alert('Invoice PDF link copied to clipboard successfully!');
+      await handleLogShare(inv);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      alert('Could not copy link to clipboard.');
+    }
+  };
+
+  const handleMarkAsPaid = async (inv, e) => {
+    if (e) e.stopPropagation();
+    console.log('[Invoice Action: Mark as Paid]', inv);
+    if (!confirm(`Are you sure you want to mark Invoice ${inv.invoiceNo} as Paid?`)) return;
+
+    try {
+      if (token === 'mock_jwt_token_for_offline_demo') {
+        const db = JSON.parse(sessionStorage.getItem('mock_invoices') || '[]');
+        const updated = db.map(item => {
+          if (item._id === inv._id) {
+            return { ...item, paymentStatus: 'Paid', status: 'Finalized', amountPaid: item.totals?.grandTotal || 0 };
+          }
+          return item;
+        });
+        sessionStorage.setItem('mock_invoices', JSON.stringify(updated));
+        fetchInvoices();
+      } else {
+        const res = await fetch(`${API_BASE_URL}/invoices/${inv._id}/pay`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          fetchInvoices();
+        } else {
+          const err = await res.json();
+          alert('Failed to mark invoice as paid: ' + (err.error || res.statusText));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDuplicateInvoice = async (inv, e) => {
+    if (e) e.stopPropagation();
+    console.log('[Invoice Action: Duplicate]', inv);
+    if (!confirm(`Are you sure you want to duplicate Invoice ${inv.invoiceNo}?`)) return;
+
+    try {
+      if (token === 'mock_jwt_token_for_offline_demo') {
+        const db = JSON.parse(sessionStorage.getItem('mock_invoices') || '[]');
+        const nextNo = 'INV-' + (db.length + 1001);
+        const dup = {
+          ...inv,
+          _id: 'mock_inv_' + Date.now(),
+          invoiceNo: nextNo,
+          date: new Date().toISOString(),
+          status: 'Draft',
+          paymentStatus: 'Unpaid',
+          amountPaid: 0
+        };
+        db.unshift(dup);
+        sessionStorage.setItem('mock_invoices', JSON.stringify(db));
+        fetchInvoices();
+      } else {
+        const res = await fetch(`${API_BASE_URL}/invoices/${inv._id}/duplicate`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          fetchInvoices();
+        } else {
+          const err = await res.json();
+          alert('Failed to duplicate invoice: ' + (err.error || res.statusText));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleViewInvoice = (inv, e) => {
+    if (e) e.stopPropagation();
+    console.log('[Invoice Action: View]', inv);
+    printInvoice(inv, false);
+  };
+
+  const handlePrintInvoice = (inv, e) => {
+    if (e) e.stopPropagation();
+    console.log('[Invoice Action: Print]', inv);
+    if (token === 'mock_jwt_token_for_offline_demo') {
+      printInvoice(inv, true);
+    } else {
+      window.open(`${API_BASE_URL}/invoices/${inv._id}/pdf?token=${token}`, '_blank');
+    }
+  };
+
+  const handleDeleteInvoice = async (id, e) => {
+    if (e) e.stopPropagation();
+    console.log('[Invoice Action: Delete]', id);
+    if (!confirm('Are you sure you want to delete this invoice permanently? This will remove all associated records.')) return;
+
+    try {
+      if (token === 'mock_jwt_token_for_offline_demo') {
+        const db = JSON.parse(sessionStorage.getItem('mock_invoices') || '[]');
+        const filtered = db.filter(inv => inv._id !== id);
+        sessionStorage.setItem('mock_invoices', JSON.stringify(filtered));
+        fetchInvoices();
+      } else {
+        const res = await fetch(`${API_BASE_URL}/invoices/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          fetchInvoices();
+        } else {
+          const err = await res.json();
+          alert('Failed to delete invoice: ' + (err.error || res.statusText));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const executeMockShare = () => {
@@ -101,7 +322,33 @@ export default function Invoices({ token, user, setActiveTab }) {
     }, 1500);
   };
 
-  const printInvoice = (inv) => {
+  const handleDownload = async (inv, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    console.log('[Invoice Action: Download PDF]', inv);
+    
+    // Log download action in the backend
+    if (token !== 'mock_jwt_token_for_offline_demo') {
+      try {
+        await fetch(`${API_BASE_URL}/invoices/${inv._id}/download`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (err) {
+        console.error('Failed to log invoice download:', err);
+      }
+    }
+    
+    if (token === 'mock_jwt_token_for_offline_demo') {
+      printInvoice(inv);
+    } else {
+      window.open(`${API_BASE_URL}/invoices/${inv._id}/pdf?token=${token}`, '_blank');
+    }
+  };
+
+  const printInvoice = (inv, shouldPrint = true) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       alert('Please allow popups to download/print invoices.');
@@ -150,15 +397,15 @@ export default function Invoices({ token, user, setActiveTab }) {
     let partsRowsHtml = '';
     if (inv.parts && inv.parts.length > 0) {
       inv.parts.forEach((p, idx) => {
-        const taxable = (p.qty || 0) * (p.rate || 0);
-        const taxAmt = taxable * ((p.gstPercent || 0) / 100);
+        const taxable = (Number(p.qty) || 0) * (Number(p.rate) || 0);
+        const taxAmt = taxable * ((Number(p.gstPercent) || 0) / 100);
         const net = taxable + taxAmt;
         
         let taxSplitHtml = '';
         if (isInterstate) {
           taxSplitHtml = `<td>IGST (${p.gstPercent}%)<br/>₹${taxAmt.toFixed(2)}</td>`;
         } else {
-          const halfPct = p.gstPercent / 2;
+          const halfPct = (Number(p.gstPercent) || 0) / 2;
           const halfAmt = taxAmt / 2;
           taxSplitHtml = `<td>CGST (${halfPct}%)<br/>₹${halfAmt.toFixed(2)}</td><td>SGST (${halfPct}%)<br/>₹${halfAmt.toFixed(2)}</td>`;
         }
@@ -169,7 +416,7 @@ export default function Invoices({ token, user, setActiveTab }) {
             <td style="text-align: left;"><strong>${p.name || 'Spare Part'}</strong><br/><span style="font-size: 10px; color: #555;">No: ${p.partNo || 'N/A'}</span></td>
             <td>${p.hsnCode || '8708'}</td>
             <td>${p.qty}</td>
-            <td>₹${p.rate.toFixed(2)}</td>
+            <td>₹${(Number(p.rate) || 0).toFixed(2)}</td>
             <td>₹${taxable.toFixed(2)}</td>
             ${taxSplitHtml}
             <td><strong>₹${net.toFixed(2)}</strong></td>
@@ -183,15 +430,15 @@ export default function Invoices({ token, user, setActiveTab }) {
     let labourRowsHtml = '';
     if (inv.labour && inv.labour.length > 0) {
       inv.labour.forEach((l, idx) => {
-        const taxable = l.rate || 0;
-        const taxAmt = taxable * ((l.gstPercent || 0) / 100);
+        const taxable = Number(l.rate) || 0;
+        const taxAmt = taxable * ((Number(l.gstPercent) || 0) / 100);
         const net = taxable + taxAmt;
         
         let taxSplitHtml = '';
         if (isInterstate) {
           taxSplitHtml = `<td>IGST (${l.gstPercent}%)<br/>₹${taxAmt.toFixed(2)}</td>`;
         } else {
-          const halfPct = l.gstPercent / 2;
+          const halfPct = (Number(l.gstPercent) || 0) / 2;
           const halfAmt = taxAmt / 2;
           taxSplitHtml = `<td>CGST (${halfPct}%)<br/>₹${halfAmt.toFixed(2)}</td><td>SGST (${halfPct}%)<br/>₹${halfAmt.toFixed(2)}</td>`;
         }
@@ -586,17 +833,7 @@ export default function Invoices({ token, user, setActiveTab }) {
   };    
 
 
-  const handleDownload = (inv, e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    if (token === 'mock_jwt_token_for_offline_demo') {
-      printInvoice(inv);
-    } else {
-      window.open(`${API_BASE_URL}/invoices/${inv._id}/pdf?token=${token}`, '_blank');
-    }
-  };
+
 
   const isBillingOrAdmin = user?.role === 'Admin' || user?.role === 'Accounts';
 
@@ -646,126 +883,221 @@ export default function Invoices({ token, user, setActiveTab }) {
       ) : viewMode === 'edit' ? (
         <InvoiceForm token={token} editId={selectedInvoiceId} onSaved={handleSaved} onCancel={handleCancel} />
       ) : (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-bold border-b border-slate-100 dark:border-slate-800">
-                  <th className="p-4">Invoice No</th>
-                  <th className="p-4">Type</th>
-                  <th className="p-4">Date</th>
-                  <th className="p-4">Reg Number</th>
-                  <th className="p-4">Customer Name</th>
-                  <th className="p-4">Grand Total</th>
-                  <th className="p-4">Billing type</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                {invoices.length > 0 ? (
-                  invoices.map(inv => {
-                    let statusBg = 'bg-slate-50 text-slate-600 dark:bg-slate-800';
-                    if (inv.status === 'Finalized') statusBg = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400';
-
-                    return (
-                      <tr
-                        key={inv._id}
-                        onClick={(e) => handleDownload(inv, e)}
-                        className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 cursor-pointer transition-all"
-                      >
-                        <td className="p-4 font-bold text-slate-855 dark:text-slate-200 font-mono">{inv.invoiceNo}</td>
-                        <td className="p-4 font-semibold text-slate-650 dark:text-slate-400">{inv.invoiceType || 'Tax Invoice'}</td>
-                        <td className="p-4 font-semibold text-slate-550 dark:text-slate-400">
-                          {new Date(inv.date).toLocaleDateString('en-IN')}
-                        </td>
-                        <td className="p-4 font-bold text-slate-555 dark:text-slate-400 font-mono tracking-wider">
-                          {inv.vehicleId?.vehicleNumber || 'N/A'}
-                        </td>
-                        <td className="p-4 font-medium text-slate-550 dark:text-slate-400">
-                          {inv.customerId?.name || 'Unknown'}
-                        </td>
-                        <td className="p-4 font-extrabold text-slate-800 dark:text-slate-200">
-                          ₹{inv.totals?.grandTotal?.toLocaleString('en-IN') || 0}
-                        </td>
-                        <td className="p-4 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">
-                          {inv.gstDetails?.isInterstate ? 'IGST Interstate' : 'CGST/SGST Intra'}
-                        </td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded font-extrabold text-[9px] uppercase ${statusBg}`}>
-                            {inv.status}
-                          </span>
-                        </td>
-                        <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex gap-2 justify-end">
-                            {isBillingOrAdmin && inv.status === 'Draft' && (
-                              <>
-                                <button
-                                  onClick={() => finalizeInvoice(inv._id)}
-                                  className="text-emerald-600 hover:text-emerald-700 font-bold px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-950/20"
-                                >
-                                  Finalize
-                                </button>
-                                <button
-                                  onClick={(e) => handleOpenEdit(inv._id, e)}
-                                  className="text-slate-400 hover:text-indigo-650 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-850"
-                                  title="Edit Invoice"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                              </>
-                            )}
-                            {inv.paymentStatus === 'Paid' && (
-                               <button
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   printGatePass(inv);
-                                 }}
-                                 className="text-emerald-500 hover:text-emerald-700 p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
-                                 title="Print Gate Pass"
-                               >
-                                 <Printer className="w-3.5 h-3.5" />
-                               </button>
-                             )}
-
-                             <button
-                               onClick={(e) => handleDownload(inv, e)}
-                               className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-850"
-                               title="Download PDF"
-                             >
-                              <Download className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => openShare(inv, 'whatsapp')}
-                              className="text-slate-400 hover:text-green-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-850"
-                              title="Share on WhatsApp"
-                            >
-                              <Share2 className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => openShare(inv, 'email')}
-                              className="text-slate-400 hover:text-indigo-650 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-850"
-                              title="Share via Email"
-                            >
-                              <Mail className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="8" className="p-8 text-center text-slate-400 dark:text-slate-500 font-semibold">
-                      No GST tax invoices billed.
-                    </td>
+        <div className={`grid grid-cols-1 ${selectedInvoice ? 'lg:grid-cols-3' : ''} gap-6`}>
+          <div className={`${selectedInvoice ? 'lg:col-span-2' : ''} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-bold border-b border-slate-100 dark:border-slate-800">
+                    <th className="p-4">Invoice No</th>
+                    <th className="p-4">Type</th>
+                    <th className="p-4">Date</th>
+                    <th className="p-4">Reg Number</th>
+                    <th className="p-4">Customer Name</th>
+                    <th className="p-4">Grand Total</th>
+                    <th className="p-4">Billing type</th>
+                    <th className="p-4">Status</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                  {invoices.length > 0 ? (
+                    invoices.map(inv => {
+                      let statusBg = 'bg-slate-50 text-slate-600 dark:bg-slate-800';
+                      if (inv.status === 'Finalized') statusBg = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400';
+
+                      return (
+                        <tr
+                          key={inv._id}
+                          onClick={() => setSelectedInvoice(inv)}
+                          className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/30 cursor-pointer transition-all ${
+                            selectedInvoice?._id === inv._id ? 'bg-indigo-50/20 dark:bg-indigo-950/20' : ''
+                          }`}
+                        >
+                          <td className="p-4 font-bold text-slate-855 dark:text-slate-200 font-mono">{inv.invoiceNo}</td>
+                          <td className="p-4 font-semibold text-slate-650 dark:text-slate-400">{inv.invoiceType || 'Tax Invoice'}</td>
+                          <td className="p-4 font-semibold text-slate-550 dark:text-slate-400">
+                            {new Date(inv.date).toLocaleDateString('en-IN')}
+                          </td>
+                          <td className="p-4 font-bold text-slate-555 dark:text-slate-400 font-mono tracking-wider">
+                            {inv.vehicleId?.vehicleNumber || 'N/A'}
+                          </td>
+                          <td className="p-4 font-medium text-slate-550 dark:text-slate-400">
+                            {inv.customerId?.name || 'Unknown'}
+                          </td>
+                          <td className="p-4 font-extrabold text-slate-800 dark:text-slate-200">
+                            ₹{inv.totals?.grandTotal?.toLocaleString('en-IN') || 0}
+                          </td>
+                          <td className="p-4 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">
+                            {inv.gstDetails?.isInterstate ? 'IGST Interstate' : 'CGST/SGST Intra'}
+                          </td>
+                          <td className="p-4">
+                            <span className={`px-2 py-0.5 rounded font-extrabold text-[9px] uppercase ${statusBg}`}>
+                              {inv.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="8" className="p-8 text-center text-slate-400 dark:text-slate-500 font-semibold">
+                        No GST tax invoices billed.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {selectedInvoice && (
+            <div className="lg:col-span-1">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl space-y-5 animate-fade-in text-xs font-semibold h-fit">
+                <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-500">Invoice Workspace</span>
+                    <h3 className="text-lg font-black text-slate-800 dark:text-white font-mono">{selectedInvoice.invoiceNo}</h3>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedInvoice(null)}
+                    className="text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 font-bold p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Details Summary */}
+                <div className="space-y-3.5 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-850">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold">Customer Name:</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-black">{selectedInvoice.customerId?.name || 'Unknown'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold">Registration Number:</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-mono font-black">{selectedInvoice.vehicleId?.vehicleNumber || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold">Billing Date:</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-black">{new Date(selectedInvoice.date).toLocaleDateString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold">Grand Total:</span>
+                    <span className="text-slate-800 dark:text-slate-100 font-black text-sm">₹{selectedInvoice.totals?.grandTotal?.toLocaleString('en-IN') || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400 font-bold">Invoice Status:</span>
+                    <span className={`px-2 py-0.5 rounded font-extrabold text-[9px] uppercase ${
+                      selectedInvoice.status === 'Finalized' 
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400'
+                        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-450'
+                    }`}>
+                      {selectedInvoice.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Operations/Actions panel */}
+                <div className="space-y-2">
+                  <span className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Available Actions</span>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={(e) => handleViewInvoice(selectedInvoice, e)}
+                      className="flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-955/20 dark:hover:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl transition-all border border-indigo-100 dark:border-indigo-900/30 font-bold"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> View PDF
+                    </button>
+
+                    <button
+                      onClick={(e) => handlePrintInvoice(selectedInvoice, e)}
+                      className="flex items-center justify-center gap-2 px-3 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-xl transition-all border border-amber-100 dark:border-amber-900/30 font-bold"
+                    >
+                      <Printer className="w-3.5 h-3.5" /> Print Copy
+                    </button>
+
+                    <button
+                      onClick={(e) => handleDownload(selectedInvoice, e)}
+                      className="flex items-center justify-center gap-2 px-3 py-2 bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/20 dark:hover:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 rounded-xl transition-all border border-cyan-100 dark:border-cyan-900/30 font-bold"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Download PDF
+                    </button>
+
+                    <button
+                      onClick={(e) => openShare(selectedInvoice, 'share')}
+                      className="flex items-center justify-center gap-2 px-3 py-2 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/20 dark:hover:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-xl transition-all border border-teal-100 dark:border-teal-900/30 font-bold"
+                    >
+                      <Share2 className="w-3.5 h-3.5" /> Share Link
+                    </button>
+
+                    <button
+                      onClick={(e) => openShare(selectedInvoice, 'email')}
+                      className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/20 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-xl transition-all border border-purple-100 dark:border-purple-900/30 font-bold"
+                    >
+                      <Mail className="w-3.5 h-3.5" /> Send Email
+                    </button>
+
+                    <button
+                      onClick={(e) => openShare(selectedInvoice, 'whatsapp')}
+                      className="flex items-center justify-center gap-2 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-xl transition-all border border-emerald-100 dark:border-emerald-900/30 font-bold"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" /> WhatsApp
+                    </button>
+
+                    {isBillingOrAdmin && (
+                      <button
+                        onClick={(e) => {
+                          setSelectedInvoiceId(selectedInvoice._id);
+                          setViewMode('edit');
+                        }}
+                        className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-xl transition-all border border-blue-100 dark:border-blue-900/30 font-bold"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" /> Edit Invoice
+                      </button>
+                    )}
+
+                    {isBillingOrAdmin && (
+                      <button
+                        onClick={(e) => handleDuplicateInvoice(selectedInvoice, e)}
+                        className="flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-955/20 dark:hover:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl transition-all border border-indigo-100 dark:border-indigo-900/30 font-bold"
+                      >
+                        <Copy className="w-3.5 h-3.5" /> Duplicate
+                      </button>
+                    )}
+
+                    {isBillingOrAdmin && selectedInvoice.status === 'Draft' && (
+                      <button
+                        onClick={() => finalizeInvoice(selectedInvoice._id)}
+                        className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-955/20 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-xl transition-all border border-emerald-100 dark:border-emerald-900/30 font-bold"
+                      >
+                        Finalize Invoice
+                      </button>
+                    )}
+
+                    {isBillingOrAdmin && selectedInvoice.paymentStatus !== 'Paid' && (
+                      <button
+                        onClick={(e) => handleMarkAsPaid(selectedInvoice, e)}
+                        className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all font-bold"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Mark as Paid
+                      </button>
+                    )}
+
+                    {user?.role === 'Admin' && (
+                      <button
+                        onClick={(e) => {
+                          handleDeleteInvoice(selectedInvoice._id, e);
+                          setSelectedInvoice(null);
+                        }}
+                        className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-955/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl transition-all border border-red-100 dark:border-red-900/30 font-bold"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Delete Invoice
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

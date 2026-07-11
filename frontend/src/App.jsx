@@ -16,6 +16,7 @@ import Employees from './pages/Employees';
 import LandingPage from './pages/LandingPage';
 import BodyShop from './pages/BodyShop';
 import Reports from './pages/Reports';
+import GatePasses from './pages/GatePasses';
 import { 
   ShieldAlert, 
   LayoutDashboard, 
@@ -50,6 +51,7 @@ export default function App() {
   // If a global view jobcard state is needed
   const [viewJcId, setViewJcId] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
 
   // Intercept fetch calls for Offline Demo Mode
   useEffect(() => {
@@ -150,7 +152,8 @@ export default function App() {
         sessionStorage.setItem('mock_estimates', JSON.stringify(mockData.initialEstimates));
         sessionStorage.setItem('mock_invoices', JSON.stringify(mockData.initialInvoices));
         sessionStorage.setItem('mock_claims', JSON.stringify(mockData.initialClaims));
-        sessionStorage.setItem('mock_auditlogs', JSON.stringify(mockData.initialAuditLogs));
+        sessionStorage.setItem('mock_gatepasses', JSON.stringify([]));
+        localStorage.setItem('mock_auditlogs', JSON.stringify(mockData.initialAuditLogs));
         sessionStorage.setItem('mock_employees', JSON.stringify([
           {
             _id: 'emp_1',
@@ -216,16 +219,91 @@ export default function App() {
         }
 
         if (urlStr.includes('/api/dashboard/stats')) {
-          const jobcards = JSON.parse(sessionStorage.getItem('mock_jobcards') || '[]');
-          const claims = JSON.parse(sessionStorage.getItem('mock_claims') || '[]');
           const customers = JSON.parse(sessionStorage.getItem('mock_customers') || '[]');
           const vehicles = JSON.parse(sessionStorage.getItem('mock_vehicles') || '[]');
+          const jobcards = JSON.parse(sessionStorage.getItem('mock_jobcards') || '[]');
+          const invoices = JSON.parse(sessionStorage.getItem('mock_invoices') || '[]');
+          const inventory = JSON.parse(sessionStorage.getItem('mock_inventory') || '[]');
+          const claims = JSON.parse(sessionStorage.getItem('mock_claims') || '[]');
+
+          const activeJobCards = jobcards.filter(jc => jc.status !== 'Delivered').length;
+          const completedJobCards = jobcards.filter(jc => jc.status === 'Delivered').length;
+          const pendingJobCards = jobcards.filter(jc => ['Created', 'Inspect Stage', 'Estimation', 'Customer Approval'].includes(jc.status)).length;
+
+          const now = new Date();
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+          const monthlyInvoices = invoices.filter(inv => 
+            inv.status === 'Finalized' && 
+            new Date(inv.date || inv.createdAt) >= startOfMonth
+          );
+          const revenueThisMonth = monthlyInvoices.reduce((sum, inv) => sum + (inv.totals?.grandTotal || 0), 0);
+
+          const yearlyInvoices = invoices.filter(inv => 
+            inv.status === 'Finalized' && 
+            new Date(inv.date || inv.createdAt) >= startOfYear
+          );
+          const revenueThisYear = yearlyInvoices.reduce((sum, inv) => sum + (inv.totals?.grandTotal || 0), 0);
+
+          const pendingPayments = invoices.filter(inv => 
+            inv.status === 'Finalized' && 
+            inv.paymentStatus !== 'Paid'
+          ).reduce((sum, inv) => sum + (inv.totals?.grandTotal || 0), 0);
+
+          const inventoryValue = inventory.reduce((sum, item) => sum + ((item.stockQuantity || 0) * (item.purchasePrice || 0)), 0);
+          const lowStockItems = inventory.filter(item => (item.stockQuantity || 0) <= (item.lowStockThreshold || 5)).length;
+
+          // Process mock low stock alerts
+          const mockNotifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
+          let changedNotifs = false;
+          inventory.filter(item => (item.stockQuantity || 0) <= (item.lowStockThreshold || 5)).forEach(item => {
+            const alertMsg = `Low Stock Warning: ${item.partName} inventory below threshold.`;
+            const exists = mockNotifs.find(n => n.type === 'low_stock' && n.message === alertMsg && n.status === 'unread');
+            if (!exists) {
+              mockNotifs.unshift({
+                _id: 'mock_notif_' + Date.now() + Math.random(),
+                type: 'low_stock',
+                title: 'Low Stock Warning',
+                message: alertMsg,
+                status: 'unread',
+                createdAt: new Date().toISOString()
+              });
+              changedNotifs = true;
+            }
+          });
+          if (changedNotifs) {
+            localStorage.setItem('mock_notifications', JSON.stringify(mockNotifs));
+            window.dispatchEvent(new Event('storage'));
+          }
+
+          const activeClaims = claims.filter(c => c.status !== 'Approved' && c.status !== 'Rejected').length;
+
+          const gatepasses = JSON.parse(sessionStorage.getItem('mock_gatepasses') || '[]');
+          const totalGatePasses = gatepasses.length;
+          const startOfToday = new Date();
+          startOfToday.setHours(0, 0, 0, 0);
+          const issuedToday = gatepasses.filter(gp => new Date(gp.date || gp.createdAt) >= startOfToday).length;
+          const pendingReturns = gatepasses.filter(gp => gp.status === 'Pending').length;
+          const returnedMaterials = gatepasses.filter(gp => gp.status === 'Returned').length;
+
           return responseJson({
             totalCustomers: customers.length,
             totalVehicles: vehicles.length,
-            openJobCards: jobcards.filter(jc => jc.status !== 'Delivered').length,
-            monthlyRevenue: 15200.75,
-            activeClaims: claims.filter(c => c.status !== 'Approved' && c.status !== 'Rejected').length
+            activeJobCards,
+            completedJobCards,
+            pendingJobCards,
+            revenueThisMonth,
+            revenueThisYear,
+            pendingPayments,
+            inventoryValue,
+            lowStockItems,
+            activeClaims,
+            monthlyRevenue: revenueThisMonth,
+            totalGatePasses,
+            issuedToday,
+            pendingReturns,
+            returnedMaterials
           });
         }
 
@@ -599,6 +677,7 @@ export default function App() {
               };
 
               if (body.status === 'Finalized' && db[idx].status !== 'Finalized') {
+                updatedInvoice.date = new Date().toISOString();
                 const inventoryDb = JSON.parse(sessionStorage.getItem('mock_inventory') || '[]');
                 updatedInvoice.parts.forEach(part => {
                   if (part.partId) {
@@ -620,6 +699,216 @@ export default function App() {
               sessionStorage.setItem('mock_invoices', JSON.stringify(db));
               return responseJson(updatedInvoice);
             }
+          }
+        }
+
+        if (urlStr.includes('/api/gatepasses')) {
+          const db = JSON.parse(sessionStorage.getItem('mock_gatepasses') || '[]');
+          
+          if (method === 'GET') {
+            const parsedUrl = new URL(urlStr, window.location.origin);
+            const searchQuery = parsedUrl.searchParams.get('searchQuery') || '';
+            const status = parsedUrl.searchParams.get('status') || '';
+            
+            let filtered = [...db];
+            if (status) {
+              filtered = filtered.filter(gp => gp.status === status);
+            }
+            if (searchQuery) {
+              const query = searchQuery.toLowerCase();
+              filtered = filtered.filter(gp => 
+                gp.gatePassNo?.toLowerCase().includes(query) ||
+                gp.customerName?.toLowerCase().includes(query) ||
+                gp.customerMobile?.toLowerCase().includes(query) ||
+                gp.vehicleNumber?.toLowerCase().includes(query) ||
+                gp.jobCardNumber?.toLowerCase().includes(query) ||
+                gp.materialName?.toLowerCase().includes(query) ||
+                gp.sentTo?.toLowerCase().includes(query)
+              );
+            }
+            filtered.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+            return responseJson(filtered);
+          }
+
+          if (method === 'POST') {
+            if (urlStr.includes('/print-log')) {
+              const mockAudit = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+              const id = urlStr.split('/').filter(Boolean).slice(-2, -1)[0];
+              const gp = db.find(g => g._id === id);
+              if (gp) {
+                mockAudit.unshift({
+                  _id: 'mock_log_' + Date.now(),
+                  timestamp: new Date().toISOString(),
+                  createdAt: new Date().toISOString(),
+                  userId: user?.id || 'demo_user',
+                  userName: user?.name || 'Guest/System',
+                  role: user?.role || 'Guest',
+                  userRole: user?.role || 'Guest',
+                  module: 'GatePass',
+                  action: 'GATEPASS_PRINT',
+                  details: `Printed Gate Pass ${gp.gatePassNo} PDF`,
+                  ipAddress: '127.0.0.1'
+                });
+                localStorage.setItem('mock_auditlogs', JSON.stringify(mockAudit));
+                window.dispatchEvent(new Event('storage'));
+              }
+              return responseJson({ message: 'Print logged.' });
+            }
+
+            const today = new Date();
+            const year = today.getFullYear().toString().slice(-2);
+            const month = (today.getMonth() + 1).toString().padStart(2, '0');
+            const day = today.getDate().toString().padStart(2, '0');
+            const dateStr = `${year}${month}${day}`;
+            
+            const todayGps = db.filter(gp => gp.gatePassNo?.startsWith(`GP-${dateStr}-`));
+            const sequence = (todayGps.length + 1).toString().padStart(3, '0');
+            const gatePassNo = `GP-${dateStr}-${sequence}`;
+
+            const newItem = {
+              _id: 'gp_' + Date.now(),
+              gatePassNo,
+              date: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              issuedBy: user?.name || 'Staff Member',
+              authorizedBy: user?.role === 'Admin' ? user.name : '',
+              ...body
+            };
+
+            db.push(newItem);
+            sessionStorage.setItem('mock_gatepasses', JSON.stringify(db));
+
+            // Create notification
+            const mockNotifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
+            mockNotifs.unshift({
+              _id: 'mock_notif_' + Date.now(),
+              type: 'gatepass',
+              title: 'Gate Pass Created',
+              message: `Gate Pass ${newItem.gatePassNo} has been issued for ${newItem.materialName} (${newItem.quantity} ${newItem.unit}) to ${newItem.sentTo}.`,
+              vehicleNumber: newItem.vehicleNumber,
+              customerName: newItem.customerName,
+              status: 'unread',
+              createdAt: new Date().toISOString()
+            });
+            localStorage.setItem('mock_notifications', JSON.stringify(mockNotifs));
+
+            // Create audit log
+            const mockAudit = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+            mockAudit.unshift({
+              _id: 'mock_log_' + Date.now(),
+              timestamp: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              userId: user?.id || 'demo_user',
+              userName: user?.name || 'Guest/System',
+              role: user?.role || 'Guest',
+              userRole: user?.role || 'Guest',
+              module: 'GatePass',
+              action: 'GATEPASS_CREATE',
+              details: `Created Gate Pass ${newItem.gatePassNo} for vehicle ${newItem.vehicleNumber}`,
+              ipAddress: '127.0.0.1'
+            });
+            localStorage.setItem('mock_auditlogs', JSON.stringify(mockAudit));
+            window.dispatchEvent(new Event('storage'));
+
+            return responseJson(newItem, 201);
+          }
+
+          if (method === 'PUT') {
+            const id = urlStr.split('/').pop();
+            const idx = db.findIndex(gp => gp._id === id);
+            if (idx !== -1) {
+              const oldStatus = db[idx].status;
+              const updated = {
+                ...db[idx],
+                ...body
+              };
+
+              if (body.status === 'Returned' && oldStatus !== 'Returned') {
+                updated.returnDate = body.returnDate || new Date().toISOString();
+                
+                // Create returned notification
+                const mockNotifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
+                mockNotifs.unshift({
+                  _id: 'mock_notif_' + Date.now(),
+                  type: 'gatepass',
+                  title: 'Material Returned',
+                  message: `Materials on Gate Pass ${updated.gatePassNo} (${updated.materialName}) have been returned.`,
+                  vehicleNumber: updated.vehicleNumber,
+                  customerName: updated.customerName,
+                  status: 'unread',
+                  createdAt: new Date().toISOString()
+                });
+                localStorage.setItem('mock_notifications', JSON.stringify(mockNotifs));
+
+                // Log audit action
+                const mockAudit = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+                mockAudit.unshift({
+                  _id: 'mock_log_' + Date.now(),
+                  timestamp: new Date().toISOString(),
+                  createdAt: new Date().toISOString(),
+                  userId: user?.id || 'demo_user',
+                  userName: user?.name || 'Guest/System',
+                  role: user?.role || 'Guest',
+                  userRole: user?.role || 'Guest',
+                  module: 'GatePass',
+                  action: 'GATEPASS_RETURN',
+                  details: `Logged material return for Gate Pass ${updated.gatePassNo}`,
+                  ipAddress: '127.0.0.1'
+                });
+                localStorage.setItem('mock_auditlogs', JSON.stringify(mockAudit));
+                window.dispatchEvent(new Event('storage'));
+              } else {
+                // Log standard update action
+                const mockAudit = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+                mockAudit.unshift({
+                  _id: 'mock_log_' + Date.now(),
+                  timestamp: new Date().toISOString(),
+                  createdAt: new Date().toISOString(),
+                  userId: user?.id || 'demo_user',
+                  userName: user?.name || 'Guest/System',
+                  role: user?.role || 'Guest',
+                  userRole: user?.role || 'Guest',
+                  module: 'GatePass',
+                  action: 'GATEPASS_UPDATE',
+                  details: `Updated Gate Pass ${updated.gatePassNo} status to ${body.status}`,
+                  ipAddress: '127.0.0.1'
+                });
+                localStorage.setItem('mock_auditlogs', JSON.stringify(mockAudit));
+                window.dispatchEvent(new Event('storage'));
+              }
+
+              db[idx] = updated;
+              sessionStorage.setItem('mock_gatepasses', JSON.stringify(db));
+              return responseJson(updated);
+            }
+          }
+
+          if (method === 'DELETE') {
+            const id = urlStr.split('/').pop();
+            const gp = db.find(g => g._id === id);
+            const filtered = db.filter(g => g._id !== id);
+            sessionStorage.setItem('mock_gatepasses', JSON.stringify(filtered));
+
+            if (gp) {
+              const mockAudit = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+              mockAudit.unshift({
+                _id: 'mock_log_' + Date.now(),
+                timestamp: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                userId: user?.id || 'demo_user',
+                userName: user?.name || 'Guest/System',
+                role: user?.role || 'Guest',
+                userRole: user?.role || 'Guest',
+                module: 'GatePass',
+                action: 'GATEPASS_DELETE',
+                details: `Deleted Gate Pass ${gp.gatePassNo}`,
+                ipAddress: '127.0.0.1'
+              });
+              localStorage.setItem('mock_auditlogs', JSON.stringify(mockAudit));
+              window.dispatchEvent(new Event('storage'));
+            }
+
+            return responseJson({ message: 'Gate pass deleted.' });
           }
         }
 
@@ -973,8 +1262,81 @@ export default function App() {
         }
 
         if (urlStr.includes('/api/dashboard/auditlogs')) {
-          const db = JSON.parse(sessionStorage.getItem('mock_auditlogs') || '[]');
-          return responseJson(db);
+          if (options?.method === 'POST') {
+            const body = JSON.parse(options.body || '{}');
+            const db = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+            const newLog = {
+              _id: 'mock_log_' + Date.now(),
+              timestamp: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              userId: user?.id || 'demo_user',
+              userName: user?.name || 'Guest/System',
+              role: user?.role || 'Guest',
+              userRole: user?.role || 'Guest',
+              module: body.action?.includes('LOGIN') || body.action?.includes('LOGOUT') ? 'Auth' : (body.action?.split('_')[0]?.charAt(0) + body.action?.split('_')[0]?.slice(1)?.toLowerCase() || 'System'),
+              action: body.action,
+              details: body.details,
+              ipAddress: '127.0.0.1'
+            };
+            db.unshift(newLog);
+            localStorage.setItem('mock_auditlogs', JSON.stringify(db));
+            window.dispatchEvent(new Event('storage'));
+            return responseJson({ message: 'Audit log created.' });
+          }
+
+          const db = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+          const parsedUrl = new URL(urlStr, window.location.origin);
+          const userName = parsedUrl.searchParams.get('userName');
+          const role = parsedUrl.searchParams.get('role');
+          const moduleName = parsedUrl.searchParams.get('moduleName');
+          const action = parsedUrl.searchParams.get('action');
+          const startDate = parsedUrl.searchParams.get('startDate');
+          const endDate = parsedUrl.searchParams.get('endDate');
+          const search = parsedUrl.searchParams.get('search');
+          const page = parseInt(parsedUrl.searchParams.get('page'), 10) || 1;
+          const limit = parseInt(parsedUrl.searchParams.get('limit'), 10) || 25;
+
+          let filtered = [...db];
+          if (userName) {
+            filtered = filtered.filter(l => l.userName?.toLowerCase().includes(userName.toLowerCase()));
+          }
+          if (role) {
+            filtered = filtered.filter(l => (l.role || l.userRole)?.toLowerCase() === role.toLowerCase());
+          }
+          if (moduleName) {
+            filtered = filtered.filter(l => l.module?.toLowerCase() === moduleName.toLowerCase());
+          }
+          if (action) {
+            filtered = filtered.filter(l => l.action?.toLowerCase().includes(action.toLowerCase()));
+          }
+          if (startDate) {
+            filtered = filtered.filter(l => new Date(l.createdAt) >= new Date(startDate));
+          }
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            filtered = filtered.filter(l => new Date(l.createdAt) <= end);
+          }
+          if (search) {
+            const query = search.toLowerCase();
+            filtered = filtered.filter(l => 
+              l.userName?.toLowerCase().includes(query) ||
+              l.action?.toLowerCase().includes(query) ||
+              l.module?.toLowerCase().includes(query) ||
+              l.details?.toLowerCase().includes(query) ||
+              l.ipAddress?.toLowerCase().includes(query)
+            );
+          }
+
+          const skip = (page - 1) * limit;
+          const paginated = filtered.slice(skip, skip + limit);
+
+          return responseJson({
+            logs: paginated,
+            totalPages: Math.ceil(filtered.length / limit),
+            currentPage: page,
+            totalCount: filtered.length
+          });
         }
 
         return originalFetch(url, options);
@@ -1070,7 +1432,38 @@ export default function App() {
     setActiveTab(defaultTab);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      if (token && token !== 'mock_jwt_token_for_offline_demo') {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (e) {
+      console.warn('API logout failed:', e);
+    }
+    
+    // Log local mock activity for demo mode
+    if (token === 'mock_jwt_token_for_offline_demo' && user) {
+      const mockLogs = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+      mockLogs.unshift({
+        _id: 'mock_log_' + Date.now(),
+        timestamp: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        userId: user.id || 'demo_user',
+        userName: user.name,
+        role: user.role,
+        userRole: user.role,
+        module: 'Auth',
+        action: 'USER_LOGOUT',
+        details: `User ${user.email} logged out successfully`,
+        ipAddress: '127.0.0.1'
+      });
+      localStorage.setItem('mock_auditlogs', JSON.stringify(mockLogs));
+      window.dispatchEvent(new Event('storage'));
+    }
+
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken('');
@@ -1147,11 +1540,33 @@ export default function App() {
         onLogout={handleLogout} 
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
+        isCollapsed={isCollapsed}
       />
 
       {/* Main content body */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
-        <Header user={user} token={token} currentTab={activeTab} onMenuClick={() => setSidebarOpen(true)} onLogout={handleLogout} />
+        <Header 
+          user={user} 
+          token={token} 
+          currentTab={activeTab} 
+          onMenuClick={() => {
+            if (window.innerWidth >= 768) {
+              setIsCollapsed(prev => {
+                const next = !prev;
+                localStorage.setItem('sidebar_collapsed', next.toString());
+                return next;
+              });
+            } else {
+              setSidebarOpen(prev => !prev);
+            }
+          }} 
+          onLogout={handleLogout} 
+          onNavigate={(tab) => {
+            setActiveTab(tab);
+            setViewJcId(null); // clear sub-state details view
+          }}
+          onNavigateToJobCard={handleNavigateToJobCard}
+        />
         
         <main className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6 bg-[#F8FAFC] dark:bg-slate-950 transition-colors">
           {!hasAccess ? (
@@ -1204,7 +1619,7 @@ export default function App() {
               
               {activeTab === 'customers' && <Customers token={token} user={user} />}
               
-              {activeTab === 'vehicles' && <Vehicles token={token} />}
+              {activeTab === 'vehicles' && <Vehicles token={token} user={user} />}
               
               {activeTab === 'bodyshop' && (
                 <BodyShop 
@@ -1249,6 +1664,8 @@ export default function App() {
               {activeTab === 'reports' && <Reports token={token} user={user} />}
               
               {activeTab === 'auditlogs' && <AuditLogs token={token} />}
+              
+              {activeTab === 'gatepass' && <GatePasses token={token} user={user} />}
             </>
           )}
         </main>

@@ -308,6 +308,8 @@ router.get('/:id/pdf', auth, async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=estimate-${estimate.estimateNo}.pdf`);
 
+    await logAction(req.user, 'REPORT_EXPORTED', `Exported PDF for Estimate ${estimate.estimateNo}`, req);
+
     generateEstimatePDF(estimate, customer, vehicle, res);
   } catch (error) {
     res.status(500).send({ error: 'Failed to generate PDF.' });

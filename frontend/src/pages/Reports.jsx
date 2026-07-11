@@ -451,6 +451,40 @@ export default function Reports({ token, user }) {
     setSelectedVehicle('');
   };
 
+  const logReportExport = (format) => {
+    fetch(`${API_BASE_URL}/dashboard/auditlogs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        action: 'REPORT_EXPORTED',
+        details: `Exported ${selectedReport.toUpperCase()} report in ${format.toUpperCase()} format`
+      })
+    }).catch(err => console.warn('Failed to log report export:', err));
+
+    // Fallback for offline demo mode
+    if (token === 'mock_jwt_token_for_offline_demo' && user) {
+      const mockLogs = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+      mockLogs.unshift({
+        _id: 'mock_log_' + Date.now(),
+        timestamp: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        userId: user.id || 'demo_user',
+        userName: user.name,
+        role: user.role,
+        userRole: user.role,
+        module: 'Report',
+        action: 'REPORT_EXPORTED',
+        details: `Exported ${selectedReport.toUpperCase()} report in ${format.toUpperCase()} format`,
+        ipAddress: '127.0.0.1'
+      });
+      localStorage.setItem('mock_auditlogs', JSON.stringify(mockLogs));
+      window.dispatchEvent(new Event('storage'));
+    }
+  };
+
   // Excel / CSV Exporter
   const handleExportExcel = () => {
     const data = getReportData();
@@ -563,6 +597,8 @@ export default function Reports({ token, user }) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    logReportExport('CSV');
   };
 
   // PDF print Exporter
@@ -846,6 +882,8 @@ export default function Reports({ token, user }) {
       </html>
     `);
     printWindow.document.close();
+
+    logReportExport('PDF');
   };
 
   const filteredData = getReportData();

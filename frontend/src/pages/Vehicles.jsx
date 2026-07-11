@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Search, Plus, Edit2, Calendar, FileText, ClipboardList } from 'lucide-react';
+import { Search, Plus, Edit2, Calendar, FileText, ClipboardList, Trash2 } from 'lucide-react';
 
-export default function Vehicles({ token }) {
+export default function Vehicles({ token, user }) {
   const [vehicles, setVehicles] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState('');
@@ -62,6 +62,14 @@ export default function Vehicles({ token }) {
     fetchCustomers();
   }, [search]);
 
+  useEffect(() => {
+    const globalFilter = localStorage.getItem('global_search_filter');
+    if (globalFilter) {
+      setSearch(globalFilter);
+      localStorage.removeItem('global_search_filter');
+    }
+  }, []);
+
   const loadHistory = async (vehicle) => {
     setSelectedVehicle(vehicle);
     try {
@@ -119,6 +127,30 @@ export default function Vehicles({ token }) {
     setSelectedVehicle(v);
     setModalMode('edit');
     setShowModal(true);
+  };
+
+  const handleDeleteVehicle = async (id, e) => {
+    if (e) e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this vehicle permanently? This action cannot be undone.')) return;
+    
+    try {
+      const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        fetchVehicles();
+        if (selectedVehicle?._id === id) {
+          setSelectedVehicle(null);
+          setHistory([]);
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to delete vehicle.');
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -220,12 +252,23 @@ export default function Vehicles({ token }) {
                       </td>
                       <td className="p-4 font-semibold text-slate-550 dark:text-slate-400">{v.odometerReading.toLocaleString()} km</td>
                       <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={(e) => handleOpenEdit(v, e)}
-                          className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={(e) => handleOpenEdit(v, e)}
+                            className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          {user?.role === 'Admin' && (
+                            <button
+                              onClick={(e) => handleDeleteVehicle(v._id, e)}
+                              className="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-slate-105 dark:hover:bg-slate-800 transition-colors"
+                              title="Delete Vehicle"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))

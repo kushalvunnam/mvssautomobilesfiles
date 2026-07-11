@@ -72,6 +72,22 @@ router.post('/', auth, async (req, res) => {
   try {
     const customer = new Customer(req.body);
     await customer.save();
+    
+    // Automatically create a notification
+    try {
+      const Notification = require('../models/Notification');
+      const notification = new Notification({
+        type: 'customer',
+        title: 'New Customer Registered',
+        message: `New customer ${customer.name} has been registered.`,
+        customerName: customer.name,
+        mobile: customer.phone || customer.mobile
+      });
+      await notification.save();
+    } catch (notifErr) {
+      console.error('Failed to create customer notification:', notifErr);
+    }
+
     await logAction(req.user, 'CUSTOMER_CREATE', `Created customer ${customer.name} (Mobile: ${customer.mobile})`, req);
     res.status(201).send(customer);
   } catch (error) {

@@ -4,9 +4,12 @@ const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
 
+const { checkLowStockAlerts } = require('../utils/alerts');
+
 // List spare parts with search & low stock alerts
 router.get('/', auth, async (req, res) => {
   try {
+    await checkLowStockAlerts();
     const { search, lowStock, category } = req.query;
     let query = {};
 

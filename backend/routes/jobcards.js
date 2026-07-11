@@ -47,6 +47,8 @@ const generateJobCardNo = async () => {
   return `JC-${dateStr}-${sequence}`;
 };
 
+
+
 // List all job cards with search & filters
 router.get('/', auth, async (req, res) => {
   try {
@@ -114,6 +116,27 @@ router.post('/', auth, restrictTo('Admin', 'Service'), async (req, res) => {
 
     const jobCard = new JobCard(jobCardData);
     await jobCard.save();
+
+    // Automatically create a notification
+    try {
+      const Customer = require('../models/Customer');
+      const VehicleModel = require('../models/Vehicle');
+      const Notification = require('../models/Notification');
+      
+      const customer = await Customer.findById(jobCard.customerId);
+      const vehicle = await VehicleModel.findById(jobCard.vehicleId);
+
+      const notification = new Notification({
+        type: 'jobcard',
+        title: 'Job Card Created',
+        message: `Job card ${jobCard.jobCardNo} has been created for vehicle ${vehicle ? vehicle.vehicleNumber : 'N/A'}.`,
+        vehicleNumber: vehicle ? vehicle.vehicleNumber : undefined,
+        customerName: customer ? customer.name : undefined
+      });
+      await notification.save();
+    } catch (notifErr) {
+      console.error('Failed to create job card notification:', notifErr);
+    }
 
     // Update odometer reading on the Vehicle model
     await Vehicle.findByIdAndUpdate(jobCard.vehicleId, { odometerReading: jobCard.odometerReading });
@@ -190,6 +213,8 @@ router.get('/:id/pdf', auth, async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=jobcard-${jobCard.jobCardNo}.pdf`);
 
+    await logAction(req.user, 'REPORT_EXPORTED', `Exported PDF for Job Card ${jobCard.jobCardNo}`, req);
+
     generateJobCardPDF(jobCard, customer, vehicle, res);
   } catch (error) {
     res.status(500).send({ error: 'Failed to generate PDF.' });
@@ -208,9 +233,46 @@ router.get('/:id/gatepass/pdf', auth, async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=gatepass-${jobCard.jobCardNo}.pdf`);
 
+    await logAction(req.user, 'REPORT_EXPORTED', `Exported Gate Pass PDF for Job Card ${jobCard.jobCardNo}`, req);
+
     generateGatePassPDF(jobCard, customer, vehicle, res);
   } catch (error) {
     res.status(500).send({ error: 'Failed to generate Gate Pass PDF: ' + error.message });
+  }
+});
+
+// DELETE: Delete a Job Card (Admin only)
+router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
+  try {
+    const jobCard = await JobCard.findById(req.params.id);
+    if (!jobCard) return res.status(404).send({ error: 'Job Card not found.' });
+
+    await JobCard.findByIdAndDelete(req.params.id);
+
+    // Create database notification trigger
+    try {
+      const Notification = require('../models/Notification');
+      const Customer = require('../models/Customer');
+      const VehicleModel = require('../models/Vehicle');
+      const customer = await Customer.findById(jobCard.customerId);
+      const vehicle = await VehicleModel.findById(jobCard.vehicleId);
+
+      const notification = new Notification({
+        type: 'jobcard',
+        title: 'Job Card Deleted',
+        message: `Job card ${jobCard.jobCardNo} has been deleted.`,
+        vehicleNumber: vehicle ? vehicle.vehicleNumber : undefined,
+        customerName: customer ? customer.name : undefined
+      });
+      await notification.save();
+    } catch (notifErr) {
+      console.error('Failed to create job card deletion notification:', notifErr);
+    }
+
+    await logAction(req.user, 'JOBCARD_DELETE', `Deleted Job Card ${jobCard.jobCardNo}`, req);
+    res.send({ message: 'Job Card deleted successfully.' });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to delete job card: ' + error.message });
   }
 });
 
