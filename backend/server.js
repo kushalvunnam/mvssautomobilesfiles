@@ -112,84 +112,44 @@ app.get('/api/test-smtp', async (req, res) => {
   }
 });
 
-// SMTP & Resend Email Diagnostic Endpoint
+// Resend Email Diagnostic Endpoint
 app.get('/api/test-email', async (req, res) => {
-  const nodemailer = require('nodemailer');
-  const host = req.query.host || 'smtp.zoho.com';
-  const port = parseInt(req.query.port) || 465;
-  const secure = req.query.secure === 'false' ? false : true;
-  const user = req.query.user || process.env.EMAIL_USER || 'accounts@auto4m.in';
-  const pass = req.query.pass || process.env.EMAIL_PASS;
+  const { Resend } = require('resend');
   const recipient = req.query.to || 'accounts@auto4m.in';
-  const resendKey = req.query.resend_key || process.env.RESEND_API_KEY;
+  const resendKey = req.query.resend_key || process.env.RESEND_API_KEY || 're_mock_key';
 
-  if (resendKey) {
-    console.log(`[EMAIL TEST] Sending test email via Resend API to ${recipient}`);
-    try {
-      const resendRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: 'MVSS Automobiles <onboarding@resend.dev>',
-          to: recipient,
-          subject: 'Test Email - MVSS Automobiles Resend Diagnostic',
-          html: '<h3>Test Email</h3><p>This is a test email sent from the MVSS Automobiles Resend Diagnostic Suite.</p>'
-        })
-      });
+  console.log(`[EMAIL TEST] Sending test email via Resend SDK to ${recipient}`);
 
-      const resendData = await resendRes.json();
-      if (!resendRes.ok) {
-        throw new Error(`Resend API Error: ${JSON.stringify(resendData)}`);
-      }
-      res.send({ status: 'success', provider: 'resend', data: resendData });
-    } catch (err) {
-      console.error('[EMAIL TEST] Resend failed:', err);
-      res.status(500).send({
+  try {
+    const resend = new Resend(resendKey);
+    const result = await resend.emails.send({
+      from: 'MVSS Automobiles <onboarding@resend.dev>',
+      to: recipient,
+      subject: 'Test Email - MVSS Automobiles Resend Diagnostic',
+      html: '<h3>Test Email</h3><p>This is a test email sent from the MVSS Automobiles Resend SDK Diagnostic Suite.</p>'
+    });
+
+    if (result.error) {
+      console.error('[EMAIL TEST] Resend SDK Error:', result.error);
+      return res.status(500).send({
         status: 'error',
-        provider: 'resend',
-        message: err.message,
-        stack: err.stack ? err.stack.toString() : ''
+        message: result.error.message,
+        error: result.error
       });
     }
-  } else {
-    console.log(`[EMAIL TEST] Sending test email via SMTP ${host}:${port} to ${recipient} using user: ${user}`);
-    try {
-      const transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure,
-        auth: { user, pass },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000,
-        logger: true,
-        debug: true
-      });
 
-      const info = await transporter.sendMail({
-        from: user,
-        to: recipient,
-        subject: 'Test Email - MVSS Automobiles SMTP Diagnostic',
-        text: 'This is a test email sent from the MVSS Automobiles SMTP Diagnostic Suite.',
-        html: '<h3>Test Email</h3><p>This is a test email sent from the MVSS Automobiles SMTP Diagnostic Suite.</p>'
-      });
-
-      console.log('[EMAIL TEST] SMTP Email sent successfully. Info:', info);
-      res.send({ status: 'success', provider: 'smtp', info });
-    } catch (err) {
-      console.error('[EMAIL TEST] SMTP failed:', err);
-      res.status(500).send({
-        status: 'error',
-        provider: 'smtp',
-        message: err.message,
-        code: err.code,
-        command: err.command,
-        stack: err.stack ? err.stack.toString() : ''
-      });
-    }
+    console.log('[EMAIL TEST] Resend SDK Email sent successfully. Result:', result.data);
+    res.send({
+      status: 'success',
+      data: result.data
+    });
+  } catch (err) {
+    console.error('[EMAIL TEST] Resend SDK Exception:', err);
+    res.status(500).send({
+      status: 'error',
+      message: err.message,
+      stack: err.stack ? err.stack.toString() : ''
+    });
   }
 });
 

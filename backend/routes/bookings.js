@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
 const Message = require('../models/Message');
@@ -63,90 +63,39 @@ router.post('/', async (req, res) => {
     };
     await logAction(guestUser, 'BOOKING_CREATE', `Customer ${customerName} requested service booking for ${vehicleNumber} (Type: ${serviceType})`, req);
 
-    // Send email notification in background (non-blocking)
+    // Send email notification in background using Resend SDK
     const htmlBody = `
       <h3>New Service Booking Received</h3>
       <p><strong>Customer Name:</strong> ${customerName}</p>
       <p><strong>Contact Number:</strong> ${mobile}</p>
       <p><strong>Vehicle Number:</strong> ${vehicleNumber}</p>
       <p><strong>Service Category:</strong> ${serviceType}</p>
-      <p><strong>Date & Time:</strong> ${bDate} at ${bTime}</p>
+      <p><strong>Booking Date:</strong> ${bDate} at ${bTime}</p>
       <p><strong>Remarks:</strong> ${remarks || 'None'}</p>
     `;
 
-    if (process.env.RESEND_API_KEY) {
-      console.log('[EMAIL] Processing notification via Resend HTTP API...');
-      fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: 'MVSS Automobiles <onboarding@resend.dev>',
-          to: 'accounts@auto4m.in',
-          subject: 'New Service Booking - MVSS Automobiles',
-          html: htmlBody
-        })
-      })
-      .then(async (resendRes) => {
-        if (!resendRes.ok) {
-          const errText = await resendRes.text();
-          throw new Error(`Resend HTTP status ${resendRes.status}: ${errText}`);
-        }
-        return resendRes.json();
-      })
-      .then((resendJson) => {
-        console.log('[EMAIL] Dispatched successfully via Resend API. ID:', resendJson.id);
-      })
-      .catch((resendErr) => {
-        console.error('[EMAIL] Failed to dispatch via Resend API:', resendErr);
-      });
-    } else {
-      console.log('[EMAIL] Processing notification via Zoho SMTP server...');
-      try {
-        const transporter = nodemailer.createTransport({
-          host: "smtp.zoho.com",
-          port: 465,
-          secure: true,
-          auth: {
-            user: process.env.EMAIL_USER || 'accounts@auto4m.in',
-            pass: process.env.EMAIL_PASS || 'mockpass123'
-          },
-          connectionTimeout: 10000,
-          greetingTimeout: 10000,
-          socketTimeout: 10000,
-          logger: true, // Output SMTP traffic log
-          debug: true  // Output SMTP traffic debug logs
-        });
+    const resendApiKey = process.env.RESEND_API_KEY || 're_mock_key';
+    const resend = new Resend(resendApiKey);
 
-        transporter.verify((error, success) => {
-          if (error) {
-            console.error("SMTP Verification Failed:", error);
-          } else {
-            console.log("SMTP Ready");
-          }
-        });
-
-        const mailOptions = {
-          from: process.env.EMAIL_USER || 'accounts@auto4m.in',
-          to: 'accounts@auto4m.in',
-          subject: 'New Service Booking - MVSS Automobiles',
-          html: htmlBody
-        };
-
-        // Dispatched in background asynchronously (non-blocking)
-        transporter.sendMail(mailOptions)
-          .then((info) => {
-            console.log("Email sent successfully via Zoho SMTP. Info: " + (info ? info.response : ''));
-          })
-          .catch(err => {
-            console.error("Email failed via Zoho SMTP:", err);
-          });
-      } catch (err) {
-        console.warn('Transporter setup failed in background:', err.message);
+    console.log('[EMAIL] Sending service booking notification email via Resend SDK to accounts@auto4m.in...');
+    
+    // Dispatched in background asynchronously (non-blocking)
+    resend.emails.send({
+      from: 'MVSS Automobiles <onboarding@resend.dev>',
+      to: 'accounts@auto4m.in',
+      subject: 'New Service Booking - MVSS Automobiles',
+      html: htmlBody
+    })
+    .then((data) => {
+      if (data.error) {
+        console.error("[EMAIL] Resend SDK Error Details:", data.error);
+      } else {
+        console.log("[EMAIL] Email sent successfully via Resend SDK. ID:", data.data ? data.data.id : data.id);
       }
-    }
+    })
+    .catch((err) => {
+      console.error("[EMAIL] Resend SDK Failed to send email:", err);
+    });
 
     res.status(201).json({
       success: true,
