@@ -13,6 +13,8 @@ export default function LandingPage({ onLoginSuccess }) {
   const [contactPhone, setContactPhone] = useState('');
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [preferredStream, setPreferredStream] = useState('');
+  const [preferredDate, setPreferredDate] = useState('');
+  const [submittedDate, setSubmittedDate] = useState('');
   const [errors, setErrors] = useState({});
   const [formTouched, setFormTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,7 +23,7 @@ export default function LandingPage({ onLoginSuccess }) {
 
   const validateField = (name, value) => {
     let errorMsg = '';
-    const trimmed = value.trim();
+    const trimmed = typeof value === 'string' ? value.trim() : '';
 
     if (name === 'customerName') {
       if (!trimmed) {
@@ -42,12 +44,50 @@ export default function LandingPage({ onLoginSuccess }) {
       if (!trimmed || !plateRegex.test(trimmed)) {
         errorMsg = 'Please enter a valid vehicle registration number.';
       }
+    } else if (name === 'preferredDate') {
+      if (!value) {
+        errorMsg = 'Please select a preferred service date.';
+      } else {
+        const selectedDate = new Date(value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        selectedDate.setHours(0, 0, 0, 0);
+        if (selectedDate < today) {
+          errorMsg = 'Please select today or a future date.';
+        }
+      }
     } else if (name === 'preferredStream') {
       if (!value) {
         errorMsg = 'Please select a service category.';
       }
     }
     return errorMsg;
+  };
+
+  const handleDateChange = (e) => {
+    let val = e.target.value;
+    setPreferredDate(val);
+    if (formTouched || errors.preferredDate) {
+      const err = validateField('preferredDate', val);
+      setErrors(prev => ({ ...prev, preferredDate: err }));
+    }
+  };
+
+  const getTodayString = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const formatDateToDMY = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
   };
 
   const handleNameChange = (e) => {
@@ -120,18 +160,20 @@ export default function LandingPage({ onLoginSuccess }) {
     const nameErr = validateField('customerName', trimmedName);
     const phoneErr = validateField('contactPhone', trimmedPhone);
     const plateErr = validateField('vehiclePlate', trimmedPlate);
+    const dateErr = validateField('preferredDate', preferredDate);
     const streamErr = validateField('preferredStream', preferredStream);
 
     const newErrors = {
       customerName: nameErr,
       contactPhone: phoneErr,
       vehiclePlate: plateErr,
+      preferredDate: dateErr,
       preferredStream: streamErr
     };
 
     setErrors(newErrors);
 
-    if (nameErr || phoneErr || plateErr || streamErr) {
+    if (nameErr || phoneErr || plateErr || dateErr || streamErr) {
       return;
     }
 
@@ -162,6 +204,7 @@ export default function LandingPage({ onLoginSuccess }) {
           mobile: sanitizedPhone,
           vehicleNumber: sanitizedPlate,
           serviceType: sanitizedStream,
+          preferredDate: formatDateToDMY(preferredDate),
           bookingDate: new Date().toLocaleDateString('en-IN'),
           bookingTime: new Date().toLocaleTimeString('en-IN')
         })
@@ -172,11 +215,13 @@ export default function LandingPage({ onLoginSuccess }) {
         throw new Error(errData.message || errData.error || 'Failed to create booking');
       }
 
+      setSubmittedDate(formatDateToDMY(preferredDate));
       setShowSuccessMsg(true);
       setCustomerName('');
       setContactPhone('');
       setVehiclePlate('');
       setPreferredStream('');
+      setPreferredDate('');
       setErrors({});
       setFormTouched(false);
 
@@ -196,11 +241,12 @@ export default function LandingPage({ onLoginSuccess }) {
           _id: 'mock_notif_' + Date.now(),
           type: 'booking',
           title: 'New Service Booking',
-          message: `${sanitizedName} has requested a service appointment.`,
+          message: `${sanitizedName} has requested a service appointment on ${formatDateToDMY(preferredDate)}.`,
           customerName: sanitizedName,
           mobile: sanitizedPhone,
           vehicleNumber: sanitizedPlate,
           serviceType: sanitizedStream,
+          preferredDate: formatDateToDMY(preferredDate),
           status: 'unread',
           createdAt: new Date().toISOString()
         });
@@ -214,18 +260,20 @@ export default function LandingPage({ onLoginSuccess }) {
           senderName: sanitizedName,
           phone: sanitizedPhone,
           subject: 'Service Booking Message',
-          body: `${sanitizedName} has requested a service slot for vehicle ${sanitizedPlate} (Type: ${sanitizedStream}) on ${new Date().toLocaleDateString('en-IN')}.`,
+          body: `${sanitizedName} has requested a service slot for vehicle ${sanitizedPlate} (Type: ${sanitizedStream}) on ${formatDateToDMY(preferredDate)} (submitted on ${new Date().toLocaleDateString('en-IN')}).`,
           status: 'unread',
           createdAt: new Date().toISOString()
         });
         localStorage.setItem('mock_messages', JSON.stringify(mockMsgs));
 
         // In demo/offline mode, we trigger the success flow for simulation
+        setSubmittedDate(formatDateToDMY(preferredDate));
         setShowSuccessMsg(true);
         setCustomerName('');
         setContactPhone('');
         setVehiclePlate('');
         setPreferredStream('');
+        setPreferredDate('');
         setErrors({});
         setFormTouched(false);
 
@@ -786,23 +834,37 @@ export default function LandingPage({ onLoginSuccess }) {
                   )}
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Preferred Stream</label>
-                  <select 
-                    value={preferredStream}
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Preferred Service Date</label>
+                  <input 
+                    type="date" 
+                    value={preferredDate}
+                    min={getTodayString()}
                     disabled={isSubmitting}
-                    onChange={handleStreamChange}
-                    className={`w-full px-3 py-2.5 bg-white border rounded-xl text-xs font-bold focus:outline-none ${errors.preferredStream ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-[#C1121F]'}`}
-                  >
-                    <option value="">Select Service Category</option>
-                    <option value="General Servicing (PMS)">General Servicing (PMS)</option>
-                    <option value="Running Repair (RR)">Running Repair (RR)</option>
-                    <option value="Body Shop (Dent/Paint)">Body Shop (Dent/Paint)</option>
-                    <option value="Insurance Claims">Insurance Claims</option>
-                  </select>
-                  {errors.preferredStream && (
-                    <span className="block mt-1 text-[10px] text-red-500 font-semibold">{errors.preferredStream}</span>
+                    onChange={handleDateChange}
+                    className={`w-full px-3 py-2.5 bg-white border rounded-xl text-xs font-medium focus:outline-none ${errors.preferredDate ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-[#C1121F]'}`} 
+                  />
+                  {errors.preferredDate && (
+                    <span className="block mt-1 text-[10px] text-red-500 font-semibold">{errors.preferredDate}</span>
                   )}
                 </div>
+              </div>
+              <div>
+                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Preferred Stream</label>
+                <select 
+                  value={preferredStream}
+                  disabled={isSubmitting}
+                  onChange={handleStreamChange}
+                  className={`w-full px-3 py-2.5 bg-white border rounded-xl text-xs font-bold focus:outline-none ${errors.preferredStream ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-[#C1121F]'}`}
+                >
+                  <option value="">Select Service Category</option>
+                  <option value="General Servicing (PMS)">General Servicing (PMS)</option>
+                  <option value="Running Repair (RR)">Running Repair (RR)</option>
+                  <option value="Body Shop (Dent/Paint)">Body Shop (Dent/Paint)</option>
+                  <option value="Insurance Claims">Insurance Claims</option>
+                </select>
+                {errors.preferredStream && (
+                  <span className="block mt-1 text-[10px] text-red-500 font-semibold">{errors.preferredStream}</span>
+                )}
               </div>
               <button 
                 type="submit" 
@@ -817,7 +879,7 @@ export default function LandingPage({ onLoginSuccess }) {
                 <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-semibold flex items-start gap-2 animate-fade-in transition-all">
                   <span className="text-sm font-bold leading-none mt-0.5 text-emerald-600">✓</span>
                   <div>
-                    <p className="font-bold">Booking submitted successfully.</p>
+                    <p className="font-bold">Your service request for {submittedDate} has been submitted successfully.</p>
                     <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">Our team will contact you shortly.</p>
                   </div>
                 </div>

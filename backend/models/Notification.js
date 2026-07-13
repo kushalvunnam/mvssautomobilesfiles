@@ -8,6 +8,7 @@ const NotificationSchema = new mongoose.Schema({
   mobile: { type: String },
   vehicleNumber: { type: String },
   serviceType: { type: String },
+  preferredDate: { type: String },
   status: { type: String, enum: ['unread', 'read'], default: 'unread' },
   createdAt: { type: Date, default: Date.now }
 });

@@ -10,9 +10,9 @@ const { logAction } = require('../utils/logger');
 // Create new booking (Public)
 router.post('/', async (req, res) => {
   try {
-    const { customerName, mobile, vehicleNumber, serviceType, bookingDate, bookingTime, remarks } = req.body;
+    const { customerName, mobile, vehicleNumber, serviceType, preferredDate, bookingDate, bookingTime, remarks } = req.body;
     
-    if (!customerName || !mobile || !vehicleNumber || !serviceType) {
+    if (!customerName || !mobile || !vehicleNumber || !serviceType || !preferredDate) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
@@ -27,6 +27,7 @@ router.post('/', async (req, res) => {
       serviceType,
       bookingDate: bDate,
       bookingTime: bTime,
+      preferredDate,
       remarks: remarks || ''
     });
     await booking.save();
@@ -35,11 +36,12 @@ router.post('/', async (req, res) => {
     const notification = new Notification({
       type: 'booking',
       title: 'New Service Booking',
-      message: `${customerName} has requested a service appointment.`,
+      message: `${customerName} has requested a service appointment on ${preferredDate}.`,
       customerName,
       mobile,
       vehicleNumber,
       serviceType,
+      preferredDate,
       status: 'unread'
     });
     await notification.save();
@@ -50,7 +52,7 @@ router.post('/', async (req, res) => {
       senderName: customerName,
       phone: mobile,
       subject: 'Service Booking Message',
-      body: `${customerName} has requested a service slot for vehicle ${vehicleNumber} (Type: ${serviceType}) on ${bDate} at ${bTime}. Remarks: ${remarks || 'None'}`,
+      body: `${customerName} has requested a service slot for vehicle ${vehicleNumber} (Type: ${serviceType}) on ${preferredDate} (submitted on ${bDate} at ${bTime}). Remarks: ${remarks || 'None'}`,
       status: 'unread'
     });
     await message.save();
@@ -61,7 +63,7 @@ router.post('/', async (req, res) => {
       name: customerName,
       role: 'Guest'
     };
-    await logAction(guestUser, 'BOOKING_CREATE', `Customer ${customerName} requested service booking for ${vehicleNumber} (Type: ${serviceType})`, req);
+    await logAction(guestUser, 'BOOKING_CREATE', `Customer ${customerName} requested service booking for ${vehicleNumber} (Type: ${serviceType}) on ${preferredDate}`, req);
 
     // Send email notification to accounts@auto4m.in using Resend Service
     const htmlBody = `
@@ -70,8 +72,9 @@ router.post('/', async (req, res) => {
       <p><strong>Phone Number:</strong> ${mobile}</p>
       <p><strong>Vehicle Number:</strong> ${vehicleNumber}</p>
       <p><strong>Service Category:</strong> ${serviceType}</p>
-      <p><strong>Date:</strong> ${bDate} at ${bTime}</p>
+      <p><strong>Preferred Service Date:</strong> ${preferredDate}</p>
       <p><strong>Remarks:</strong> ${remarks || 'None'}</p>
+      <p><small>Submitted on ${bDate} at ${bTime}</small></p>
     `;
 
     const emailSent = await sendEmail({

@@ -619,12 +619,13 @@ export default function Header({ user, token, currentTab, onMenuClick, onLogout,
                                 </span>
                               </div>
                               <p className="text-slate-550 dark:text-slate-400 font-semibold text-[10px] leading-snug">{item.message}</p>
-                              {(item.customerName || item.vehicleNumber || item.mobile || item.serviceType) && (
+                              {(item.customerName || item.vehicleNumber || item.mobile || item.serviceType || item.preferredDate) && (
                                 <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] font-bold text-slate-450 border-t border-slate-150 dark:border-slate-800 pt-1.5 mt-1 select-text">
                                   {item.customerName && <div className="truncate"><span className="text-slate-400">Cust:</span> {item.customerName}</div>}
                                   {item.mobile && <div className="truncate"><span className="text-slate-400">Mob:</span> {item.mobile}</div>}
                                   {item.vehicleNumber && <div className="truncate"><span className="text-slate-400">Reg:</span> {item.vehicleNumber}</div>}
                                   {item.serviceType && <div className="truncate"><span className="text-slate-400">Cat:</span> {item.serviceType}</div>}
+                                  {item.preferredDate && <div className="col-span-2 truncate"><span className="text-slate-400">Date:</span> {item.preferredDate}</div>}
                                 </div>
                               )}
                             </div>

@@ -7,6 +7,7 @@ const BookingSchema = new mongoose.Schema({
   serviceType: { type: String, required: true },
   bookingDate: { type: String, required: true },
   bookingTime: { type: String, required: true },
+  preferredDate: { type: String, required: true },
   remarks: { type: String },
   createdAt: { type: Date, default: Date.now }
 });
