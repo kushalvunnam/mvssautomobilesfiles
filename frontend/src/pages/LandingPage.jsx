@@ -320,7 +320,7 @@ export default function LandingPage({ onLoginSuccess }) {
           >
             <div className="shrink-0 transition-transform duration-350 group-hover:scale-105 p-0.5 flex items-center justify-center bg-white rounded border border-slate-100 shadow-sm">
               <img 
-                src="/workshop/page_1_img_1.png" 
+                src="/workshop/auto4m_logo_v1.png" 
                 alt="MVSS Logo" 
                 className="h-[38px] md:h-[48px] w-auto object-contain block"
               />
@@ -844,7 +844,7 @@ export default function LandingPage({ onLoginSuccess }) {
             <div className="flex items-center gap-3">
               <div className="p-0.5 bg-white rounded border border-slate-800 shrink-0">
                 <img 
-                  src="/workshop/page_1_img_1.png" 
+                  src="/workshop/auto4m_logo_v1.png" 
                   alt="MVSS Logo" 
                   className="h-[30px] max-w-[100px] object-contain"
                 />
