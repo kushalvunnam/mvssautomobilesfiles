@@ -817,7 +817,7 @@ export default function LandingPage({ onLoginSuccess }) {
                 <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-semibold flex items-start gap-2 animate-fade-in transition-all">
                   <span className="text-sm font-bold leading-none mt-0.5 text-emerald-600">✓</span>
                   <div>
-                    <p className="font-bold">Service appointment booked successfully.</p>
+                    <p className="font-bold">Booking submitted successfully.</p>
                     <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">Our team will contact you shortly.</p>
                   </div>
                 </div>
