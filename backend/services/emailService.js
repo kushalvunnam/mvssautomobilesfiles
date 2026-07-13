@@ -21,7 +21,7 @@ async function sendEmail({ to, subject, html }) {
   try {
     console.log(`[EMAIL SERVICE] Sending email to ${to} with subject "${subject}"...`);
     const { data, error } = await resend.emails.send({
-      from: 'MVSS Automobiles <onboarding@resend.dev>',
+      from: 'MVSS Automobiles <bookings@mvssautomobiles.com>',
       to,
       subject,
       html

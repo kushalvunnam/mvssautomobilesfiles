@@ -83,7 +83,7 @@ app.get('/api/test-email', async (req, res) => {
   try {
     const resend = new Resend(resendKey);
     const result = await resend.emails.send({
-      from: 'MVSS Automobiles <onboarding@resend.dev>',
+      from: 'MVSS Automobiles <bookings@mvssautomobiles.com>',
       to: recipient,
       subject: 'Test Email - MVSS Automobiles Resend Diagnostic',
       html: '<h3>Test Email</h3><p>This is a test email sent from the MVSS Automobiles Resend SDK Diagnostic Suite.</p>'
