@@ -65,60 +65,20 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/gatepasses', require('./routes/gatepasses'));
 
-// SMTP Diagnostic Endpoint
-app.get('/api/test-smtp', async (req, res) => {
-  const nodemailer = require('nodemailer');
-  const host = req.query.host || 'smtp.zoho.com';
-  const port = parseInt(req.query.port) || 465;
-  const secure = req.query.secure === 'false' ? false : true;
-  const user = req.query.user || process.env.EMAIL_USER || 'accounts@auto4m.in';
-  const pass = req.query.pass || process.env.EMAIL_PASS;
-
-  console.log(`[SMTP TEST] Starting connection test to ${host}:${port} (secure: ${secure}) using user: ${user}`);
-
-  try {
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000
-    });
-
-    const verifyPromise = () => new Promise((resolve, reject) => {
-      transporter.verify((error, success) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(success);
-        }
-      });
-    });
-
-    await verifyPromise();
-    console.log(`[SMTP TEST] Connection verified successfully to ${host}:${port}`);
-    res.send({ status: 'success', message: `Connected and authenticated successfully to ${host}:${port}` });
-  } catch (err) {
-    console.error(`[SMTP TEST] Failed to verify connection to ${host}:${port}:`, err);
-    res.status(500).send({
-      status: 'error',
-      message: err.message,
-      code: err.code,
-      command: err.command,
-      stack: err.stack ? err.stack.toString() : ''
-    });
-  }
-});
-
 // Resend Email Diagnostic Endpoint
 app.get('/api/test-email', async (req, res) => {
   const { Resend } = require('resend');
   const recipient = req.query.to || 'accounts@auto4m.in';
-  const resendKey = req.query.resend_key || process.env.RESEND_API_KEY || 're_mock_key';
+  const resendKey = req.query.resend_key || process.env.RESEND_API_KEY;
 
   console.log(`[EMAIL TEST] Sending test email via Resend SDK to ${recipient}`);
+
+  if (!resendKey) {
+    return res.status(400).send({
+      status: 'error',
+      message: 'RESEND_API_KEY environment variable is not defined and no resend_key parameter was provided.'
+    });
+  }
 
   try {
     const resend = new Resend(resendKey);

@@ -169,7 +169,7 @@ export default function LandingPage({ onLoginSuccess }) {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to create booking');
+        throw new Error(errData.message || errData.error || 'Failed to create booking');
       }
 
       setShowSuccessMsg(true);
