@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from './config';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -34,6 +35,22 @@ import {
 } from 'lucide-react';
 
 import * as mockData from './utils/mockData';
+
+const tabPermissions = {
+  dashboard: ['Admin', 'Accounts'],
+  customers: ['Admin', 'Service', 'Accounts', 'Body Shop'],
+  vehicles: ['Admin', 'Service', 'Accounts', 'Body Shop'],
+  jobcards: ['Admin', 'Service', 'Spares', 'Body Shop'],
+  estimates: ['Admin', 'Service', 'Spares'],
+  invoices: ['Admin', 'Accounts'],
+  inventory: ['Admin', 'Spares'],
+  employees: ['Admin', 'Accounts'],
+  claims: ['Admin', 'Accounts', 'Service', 'Body Shop'],
+  reports: ['Admin', 'Accounts', 'Service', 'Spares'],
+  auditlogs: ['Admin'],
+  bodyshop: ['Admin', 'Body Shop'],
+  gatepass: ['Admin']
+};
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
@@ -1484,20 +1501,105 @@ export default function App() {
     );
   }
 
-  const tabPermissions = {
-    dashboard: ['Admin', 'Accounts'],
-    customers: ['Admin', 'Service', 'Accounts', 'Body Shop'],
-    vehicles: ['Admin', 'Service', 'Accounts', 'Body Shop'],
-    jobcards: ['Admin', 'Service', 'Spares', 'Body Shop'],
-    estimates: ['Admin', 'Service', 'Spares'],
-    invoices: ['Admin', 'Accounts'],
-    inventory: ['Admin', 'Spares'],
-    employees: ['Admin', 'Accounts'],
-    claims: ['Admin', 'Accounts', 'Service', 'Body Shop'],
-    reports: ['Admin', 'Accounts', 'Service', 'Spares'],
-    auditlogs: ['Admin'],
-    bodyshop: ['Admin', 'Body Shop']
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPageWrapper onLoginSuccess={handleLoginSuccess} />} />
+        <Route path="/login" element={<LoginWrapper token={token} user={user} onLoginSuccess={handleLoginSuccess} />} />
+        <Route 
+          path="/*" 
+          element={
+            <ProtectedRoute token={token} user={user}>
+              <ERPShell 
+                user={user}
+                token={token}
+                handleLogout={handleLogout}
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+                isCollapsed={isCollapsed}
+                setIsCollapsed={setIsCollapsed}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                viewJcId={viewJcId}
+                setViewJcId={setViewJcId}
+                handleNavigateToJobCard={handleNavigateToJobCard}
+                tabPermissions={tabPermissions}
+              />
+            </ProtectedRoute>
+          } 
+        />
+      </Routes>
+    </Router>
+  );
+}
+
+// Helper Routing Components
+function ProtectedRoute({ children, token, user }) {
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+function LoginWrapper({ token, user, onLoginSuccess }) {
+  if (token && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-[1250px] bg-white rounded-[24px] shadow-2xl overflow-hidden flex flex-col border border-slate-200/50 animate-scale-up">
+        <Login onLoginSuccess={onLoginSuccess} />
+      </div>
+    </div>
+  );
+}
+
+function LandingPageWrapper({ onLoginSuccess }) {
+  const navigate = useNavigate();
+
+  const handleLandingLoginSuccess = (loginUser, loginToken) => {
+    onLoginSuccess(loginUser, loginToken);
+    navigate('/dashboard');
   };
+
+  return <LandingPage onLoginSuccess={handleLandingLoginSuccess} />;
+}
+
+function ERPShell({ 
+  user, 
+  token, 
+  handleLogout, 
+  sidebarOpen, 
+  setSidebarOpen, 
+  isCollapsed, 
+  setIsCollapsed, 
+  activeTab, 
+  setActiveTab, 
+  viewJcId, 
+  setViewJcId, 
+  handleNavigateToJobCard, 
+  tabPermissions 
+}) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Sync activeTab state based on current URL path
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/dashboard') setActiveTab('dashboard');
+    else if (path === '/customers') setActiveTab('customers');
+    else if (path === '/vehicles') setActiveTab('vehicles');
+    else if (path === '/body-shop') setActiveTab('bodyshop');
+    else if (path === '/job-cards') setActiveTab('jobcards');
+    else if (path === '/estimates') setActiveTab('estimates');
+    else if (path === '/invoices') setActiveTab('invoices');
+    else if (path === '/inventory') setActiveTab('inventory');
+    else if (path === '/employees') setActiveTab('employees');
+    else if (path === '/claims') setActiveTab('claims');
+    else if (path === '/reports') setActiveTab('reports');
+    else if (path === '/audit-logs') setActiveTab('auditlogs');
+    else if (path === '/gate-pass') setActiveTab('gatepass');
+  }, [location, setActiveTab]);
 
   const userRole = user?.role || 'Guest';
   const hasAccess = tabPermissions[activeTab]?.includes(userRole) ?? true;
@@ -1515,6 +1617,7 @@ export default function App() {
     { id: 'claims', name: 'Claims', icon: ShieldCheck, roles: ['Admin', 'Accounts', 'Service', 'Body Shop'] },
     { id: 'reports', name: 'Reports', icon: TrendingUp, roles: ['Admin', 'Accounts', 'Service', 'Spares'] },
     { id: 'auditlogs', name: 'Audit Logs', icon: History, roles: ['Admin'] },
+    { id: 'gatepass', name: 'Gate Pass', icon: FileText, roles: ['Admin'] },
   ];
 
   const filteredNavItems = navigationItems.filter(item => item.roles.includes(userRole));
@@ -1522,19 +1625,18 @@ export default function App() {
   const primaryMobileItems = showMoreButton ? filteredNavItems.slice(0, 4) : filteredNavItems;
   const isMoreActive = showMoreButton && !primaryMobileItems.some(item => item.id === activeTab);
 
-  // If not logged in, render the landing page directly
-  if (!token || !user) {
-    return <LandingPage onLoginSuccess={handleLoginSuccess} />;
-  }
-
   return (
     <div className="flex bg-[#F8FAFC] dark:bg-slate-950 min-h-screen font-sans">
-      {/* Navigation sidebar */}
       <Sidebar 
         currentTab={activeTab} 
         setCurrentTab={(tab) => {
           setActiveTab(tab);
-          setViewJcId(null); // clear sub-state details view
+          setViewJcId(null);
+          if (tab === 'jobcards') navigate('/job-cards');
+          else if (tab === 'bodyshop') navigate('/body-shop');
+          else if (tab === 'gatepass') navigate('/gate-pass');
+          else if (tab === 'auditlogs') navigate('/audit-logs');
+          else navigate(`/${tab}`);
         }} 
         user={user} 
         onLogout={handleLogout} 
@@ -1543,7 +1645,6 @@ export default function App() {
         isCollapsed={isCollapsed}
       />
 
-      {/* Main content body */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         <Header 
           user={user} 
@@ -1563,7 +1664,12 @@ export default function App() {
           onLogout={handleLogout} 
           onNavigate={(tab) => {
             setActiveTab(tab);
-            setViewJcId(null); // clear sub-state details view
+            setViewJcId(null);
+            if (tab === 'jobcards') navigate('/job-cards');
+            else if (tab === 'bodyshop') navigate('/body-shop');
+            else if (tab === 'gatepass') navigate('/gate-pass');
+            else if (tab === 'auditlogs') navigate('/audit-logs');
+            else navigate(`/${tab}`);
           }}
           onNavigateToJobCard={handleNavigateToJobCard}
         />
@@ -1572,11 +1678,10 @@ export default function App() {
           {!hasAccess ? (
             <div className="min-h-[70vh] flex items-center justify-center p-6 animate-fade-in">
               <div className="glassmorphism max-w-md w-full p-8 rounded-3xl border border-red-500/20 text-center relative overflow-hidden space-y-6 shadow-[0_0_50px_rgba(239,68,68,0.05)]">
-                {/* Background Glow */}
                 <div className="absolute -top-24 -left-24 w-48 h-48 bg-red-500/10 rounded-full blur-[60px]" />
                 <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-[60px]" />
 
-                <div className="mx-auto w-16 h-16 bg-red-950/40 border border-red-900/40 rounded-2xl flex items-center justify-center text-red-400 shadow-lg shadow-red-950/30">
+                <div className="mx-auto w-16 h-16 bg-red-955/40 border border-red-900/40 rounded-2xl flex items-center justify-center text-red-400 shadow-lg shadow-red-955/30">
                   <ShieldAlert className="w-8 h-8 animate-pulse" />
                 </div>
 
@@ -1605,68 +1710,30 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <>
-              {activeTab === 'dashboard' && (
-                <Dashboard 
-                  token={token} 
-                  user={user}
-                  setActiveTab={(tab) => {
-                    setActiveTab(tab);
-                    setViewJcId(null);
-                  }} 
-                />
-              )}
-              
-              {activeTab === 'customers' && <Customers token={token} user={user} />}
-              
-              {activeTab === 'vehicles' && <Vehicles token={token} user={user} />}
-              
-              {activeTab === 'bodyshop' && (
-                <BodyShop 
-                  token={token} 
-                  user={user} 
-                  onNavigateToJobCard={handleNavigateToJobCard} 
-                />
-              )}
-              
-              {activeTab === 'jobcards' && (
-                <JobCards 
-                  token={token} 
-                  user={user} 
-                  setActiveTab={setActiveTab} 
-                  viewJcId={viewJcId}
-                  setViewJcId={setViewJcId}
-                />
-              )}
-              
-              {activeTab === 'estimates' && (
-                <Estimates 
-                  token={token} 
-                  user={user} 
-                  setActiveTab={setActiveTab} 
-                />
-              )}
-              
-              {activeTab === 'invoices' && (
-                <Invoices 
-                  token={token} 
-                  user={user} 
-                  setActiveTab={setActiveTab} 
-                />
-              )}
-              
-              {activeTab === 'inventory' && <Inventory token={token} user={user} />}
-              
-              {activeTab === 'employees' && <Employees token={token} user={user} />}
-              
-              {activeTab === 'claims' && <Claims token={token} user={user} />}
-              
-              {activeTab === 'reports' && <Reports token={token} user={user} />}
-              
-              {activeTab === 'auditlogs' && <AuditLogs token={token} />}
-              
-              {activeTab === 'gatepass' && <GatePasses token={token} user={user} />}
-            </>
+            <Routes>
+              <Route path="/dashboard" element={<Dashboard token={token} user={user} setActiveTab={(tab) => {
+                setActiveTab(tab);
+                setViewJcId(null);
+                if (tab === 'jobcards') navigate('/job-cards');
+                else if (tab === 'bodyshop') navigate('/body-shop');
+                else if (tab === 'gatepass') navigate('/gate-pass');
+                else if (tab === 'auditlogs') navigate('/audit-logs');
+                else navigate(`/${tab}`);
+              }} />} />
+              <Route path="/customers" element={<Customers token={token} user={user} />} />
+              <Route path="/vehicles" element={<Vehicles token={token} user={user} />} />
+              <Route path="/body-shop" element={<BodyShop token={token} user={user} onNavigateToJobCard={handleNavigateToJobCard} />} />
+              <Route path="/job-cards" element={<JobCards token={token} user={user} setActiveTab={setActiveTab} viewJcId={viewJcId} setViewJcId={setViewJcId} />} />
+              <Route path="/estimates" element={<Estimates token={token} user={user} setActiveTab={setActiveTab} />} />
+              <Route path="/invoices" element={<Invoices token={token} user={user} setActiveTab={setActiveTab} />} />
+              <Route path="/inventory" element={<Inventory token={token} user={user} />} />
+              <Route path="/employees" element={<Employees token={token} user={user} />} />
+              <Route path="/claims" element={<Claims token={token} user={user} />} />
+              <Route path="/reports" element={<Reports token={token} user={user} />} />
+              <Route path="/audit-logs" element={<AuditLogs token={token} />} />
+              <Route path="/gate-pass" element={<GatePasses token={token} user={user} />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
           )}
         </main>
 
@@ -1681,6 +1748,11 @@ export default function App() {
                 onClick={() => {
                   setActiveTab(item.id);
                   setViewJcId(null);
+                  if (item.id === 'jobcards') navigate('/job-cards');
+                  else if (item.id === 'bodyshop') navigate('/body-shop');
+                  else if (item.id === 'gatepass') navigate('/gate-pass');
+                  else if (item.id === 'auditlogs') navigate('/audit-logs');
+                  else navigate(`/${item.id}`);
                 }}
                 className="flex flex-col items-center justify-center flex-1 h-full py-1 text-center relative transition-all duration-150"
               >
@@ -1705,7 +1777,7 @@ export default function App() {
               <div className={`p-1.5 rounded-xl transition-all duration-200 ${isMoreActive ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 scale-110' : 'text-slate-550 dark:text-slate-450 hover:text-slate-700 dark:hover:text-slate-200'}`}>
                 <MoreHorizontal className="w-5 h-5" />
               </div>
-              <span className={`text-[10px] font-semibold mt-0.5 tracking-tight ${isMoreActive ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>
+              <span className={`text-[10px] font-semibold mt-0.5 tracking-tight ${isMoreActive ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-550 dark:text-slate-400'}`}>
                 More
               </span>
               {isMoreActive && (
