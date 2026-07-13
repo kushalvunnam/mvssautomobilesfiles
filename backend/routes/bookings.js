@@ -63,54 +63,89 @@ router.post('/', async (req, res) => {
     };
     await logAction(guestUser, 'BOOKING_CREATE', `Customer ${customerName} requested service booking for ${vehicleNumber} (Type: ${serviceType})`, req);
 
-    // Send email notification to accounts@auto4m.in (Zoho SMTP Configuration) in background
-    try {
-      const transporter = nodemailer.createTransport({
-        host: "smtp.zoho.com",
-        port: 465,
-        secure: true,
-        auth: {
-          user: process.env.EMAIL_USER || 'accounts@auto4m.in',
-          pass: process.env.EMAIL_PASS || 'mockpass123'
+    // Send email notification in background (non-blocking)
+    const htmlBody = `
+      <h3>New Service Booking Received</h3>
+      <p><strong>Customer Name:</strong> ${customerName}</p>
+      <p><strong>Contact Number:</strong> ${mobile}</p>
+      <p><strong>Vehicle Number:</strong> ${vehicleNumber}</p>
+      <p><strong>Service Category:</strong> ${serviceType}</p>
+      <p><strong>Date & Time:</strong> ${bDate} at ${bTime}</p>
+      <p><strong>Remarks:</strong> ${remarks || 'None'}</p>
+    `;
+
+    if (process.env.RESEND_API_KEY) {
+      console.log('[EMAIL] Processing notification via Resend HTTP API...');
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
         },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000
-      });
-
-      transporter.verify((error, success) => {
-        if (error) {
-          console.error("SMTP Verification Failed:", error);
-        } else {
-          console.log("SMTP Ready");
-        }
-      });
-
-      const mailOptions = {
-        from: process.env.EMAIL_USER || 'accounts@auto4m.in',
-        to: 'accounts@auto4m.in',
-        subject: 'New Service Booking - MVSS Automobiles',
-        html: `
-          <h3>New Service Booking Received</h3>
-          <p><strong>Customer Name:</strong> ${customerName}</p>
-          <p><strong>Contact Number:</strong> ${mobile}</p>
-          <p><strong>Vehicle Number:</strong> ${vehicleNumber}</p>
-          <p><strong>Service Category:</strong> ${serviceType}</p>
-          <p><strong>Date & Time:</strong> ${bDate} at ${bTime}</p>
-          <p><strong>Remarks:</strong> ${remarks || 'None'}</p>
-        `
-      };
-
-      // Dispatched in background asynchronously (non-blocking)
-      transporter.sendMail(mailOptions)
-        .then((info) => {
-          console.log("Email sent. Info: " + (info ? info.response : ''));
+        body: JSON.stringify({
+          from: 'MVSS Automobiles <onboarding@resend.dev>',
+          to: 'accounts@auto4m.in',
+          subject: 'New Service Booking - MVSS Automobiles',
+          html: htmlBody
         })
-        .catch(err => {
-          console.error("Email failed:", err);
+      })
+      .then(async (resendRes) => {
+        if (!resendRes.ok) {
+          const errText = await resendRes.text();
+          throw new Error(`Resend HTTP status ${resendRes.status}: ${errText}`);
+        }
+        return resendRes.json();
+      })
+      .then((resendJson) => {
+        console.log('[EMAIL] Dispatched successfully via Resend API. ID:', resendJson.id);
+      })
+      .catch((resendErr) => {
+        console.error('[EMAIL] Failed to dispatch via Resend API:', resendErr);
+      });
+    } else {
+      console.log('[EMAIL] Processing notification via Zoho SMTP server...');
+      try {
+        const transporter = nodemailer.createTransport({
+          host: "smtp.zoho.com",
+          port: 465,
+          secure: true,
+          auth: {
+            user: process.env.EMAIL_USER || 'accounts@auto4m.in',
+            pass: process.env.EMAIL_PASS || 'mockpass123'
+          },
+          connectionTimeout: 10000,
+          greetingTimeout: 10000,
+          socketTimeout: 10000,
+          logger: true, // Output SMTP traffic log
+          debug: true  // Output SMTP traffic debug logs
         });
-    } catch (err) {
-      console.warn('Transporter setup failed in background:', err.message);
+
+        transporter.verify((error, success) => {
+          if (error) {
+            console.error("SMTP Verification Failed:", error);
+          } else {
+            console.log("SMTP Ready");
+          }
+        });
+
+        const mailOptions = {
+          from: process.env.EMAIL_USER || 'accounts@auto4m.in',
+          to: 'accounts@auto4m.in',
+          subject: 'New Service Booking - MVSS Automobiles',
+          html: htmlBody
+        };
+
+        // Dispatched in background asynchronously (non-blocking)
+        transporter.sendMail(mailOptions)
+          .then((info) => {
+            console.log("Email sent successfully via Zoho SMTP. Info: " + (info ? info.response : ''));
+          })
+          .catch(err => {
+            console.error("Email failed via Zoho SMTP:", err);
+          });
+      } catch (err) {
+        console.warn('Transporter setup failed in background:', err.message);
+      }
     }
 
     res.status(201).json({
