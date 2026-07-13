@@ -43,9 +43,8 @@
 - [x] Add audit log triggers (`INVOICE_SHARE`, `INVOICE_DOWNLOAD`)
 - [x] Create database notification trigger for `Invoice Shared`
 - [x] Add unified share dialog modal supporting Copy Link, WhatsApp redirect, and Email client mailto link
-- [x] Compile and deploy updated layout to Vercel production
-
-
-
-
-
+- [x] Redesign LandingPage.jsx with a premium full-width slideshow hero section and a floating WhatsApp contact bubble
+- [x] Create separate Google Maps navigation links for Gundlapochampally and Petbasheerabad outlets
+- [x] Embed dynamic trust and workshop achievements statistics panels
+- [x] Add nodemailer package and booking email notifier to accounts@auto4m.in on the backend
+- [x] Compile and deploy production frontend to Vercel

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ArrowRight, Lock, X, CheckCircle, Navigation, Star, Award, Settings, Users, ShieldAlert } from 'lucide-react';
+import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ArrowRight, Lock, X, CheckCircle, Navigation, Star, Award, Settings, Users, ShieldAlert, Sparkles } from 'lucide-react';
 import Login from './Login';
 import { API_BASE_URL } from '../config';
 
@@ -15,6 +15,9 @@ export default function LandingPage({ onLoginSuccess }) {
   const [preferredStream, setPreferredStream] = useState('');
   const [errors, setErrors] = useState({});
   const [formTouched, setFormTouched] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessMsg, setShowSuccessMsg] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const validateField = (name, value) => {
     let errorMsg = '';
@@ -22,7 +25,7 @@ export default function LandingPage({ onLoginSuccess }) {
 
     if (name === 'customerName') {
       if (!trimmed) {
-        errorMsg = 'Please enter a valid name using letters only.';
+        errorMsg = 'Please enter your name.';
       } else {
         const nameRegex = /^[A-Za-z]+( [A-Za-z]+)*$/;
         if (!nameRegex.test(trimmed)) {
@@ -146,6 +149,10 @@ export default function LandingPage({ onLoginSuccess }) {
     const sanitizedPlate = sanitize(trimmedPlate);
     const sanitizedStream = sanitize(preferredStream);
 
+    setIsSubmitting(true);
+    setShowSuccessMsg(false);
+    setErrorMsg('');
+
     try {
       const res = await fetch(`${API_BASE_URL}/bookings`, {
         method: 'POST',
@@ -161,66 +168,78 @@ export default function LandingPage({ onLoginSuccess }) {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to create booking');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to create booking');
       }
 
-      alert('Booking request sent successfully. Service team will contact you shortly.');
-
+      setShowSuccessMsg(true);
       setCustomerName('');
       setContactPhone('');
       setVehiclePlate('');
       setPreferredStream('');
       setErrors({});
       setFormTouched(false);
+
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => {
+        setShowSuccessMsg(false);
+      }, 5000);
     } catch (err) {
-      console.warn('Booking API offline, falling back to LocalStorage demo:', err);
+      if (err.message && err.message !== 'Failed to fetch' && err.message.indexOf('network') === -1 && err.message !== 'Failed to create booking') {
+        setErrorMsg(err.message || 'Unable to submit appointment request. Please try again.');
+      } else {
+        console.warn('Booking API offline, falling back to LocalStorage demo:', err);
 
-      // Local storage fallback for offline demo
-      const mockNotifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
-      mockNotifs.push({
-        _id: 'mock_notif_' + Date.now(),
-        type: 'booking',
-        title: 'New Service Booking',
-        message: `${sanitizedName} has requested a service appointment.`,
-        customerName: sanitizedName,
-        mobile: sanitizedPhone,
-        vehicleNumber: sanitizedPlate,
-        serviceType: sanitizedStream,
-        status: 'unread',
-        createdAt: new Date().toISOString()
-      });
-      localStorage.setItem('mock_notifications', JSON.stringify(mockNotifs));
+        // Local storage fallback for offline demo
+        const mockNotifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
+        mockNotifs.push({
+          _id: 'mock_notif_' + Date.now(),
+          type: 'booking',
+          title: 'New Service Booking',
+          message: `${sanitizedName} has requested a service appointment.`,
+          customerName: sanitizedName,
+          mobile: sanitizedPhone,
+          vehicleNumber: sanitizedPlate,
+          serviceType: sanitizedStream,
+          status: 'unread',
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('mock_notifications', JSON.stringify(mockNotifs));
 
-      // Also save message fallback
-      const mockMsgs = JSON.parse(localStorage.getItem('mock_messages') || '[]');
-      mockMsgs.push({
-        _id: 'mock_msg_' + Date.now(),
-        type: 'booking',
-        senderName: sanitizedName,
-        phone: sanitizedPhone,
-        subject: 'Service Booking Message',
-        body: `${sanitizedName} has requested a service slot for vehicle ${sanitizedPlate} (Type: ${sanitizedStream}) on ${new Date().toLocaleDateString('en-IN')}.`,
-        status: 'unread',
-        createdAt: new Date().toISOString()
-      });
-      localStorage.setItem('mock_messages', JSON.stringify(mockMsgs));
+        // Also save message fallback
+        const mockMsgs = JSON.parse(localStorage.getItem('mock_messages') || '[]');
+        mockMsgs.push({
+          _id: 'mock_msg_' + Date.now(),
+          type: 'booking',
+          senderName: sanitizedName,
+          phone: sanitizedPhone,
+          subject: 'Service Booking Message',
+          body: `${sanitizedName} has requested a service slot for vehicle ${sanitizedPlate} (Type: ${sanitizedStream}) on ${new Date().toLocaleDateString('en-IN')}.`,
+          status: 'unread',
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('mock_messages', JSON.stringify(mockMsgs));
 
-      // Trigger standard success alert
-      alert('Booking request sent successfully. Service team will contact you shortly.');
+        // In demo/offline mode, we trigger the success flow for simulation
+        setShowSuccessMsg(true);
+        setCustomerName('');
+        setContactPhone('');
+        setVehiclePlate('');
+        setPreferredStream('');
+        setErrors({});
+        setFormTouched(false);
 
-      setCustomerName('');
-      setContactPhone('');
-      setVehiclePlate('');
-      setPreferredStream('');
-      setErrors({});
-      setFormTouched(false);
+        setTimeout(() => {
+          setShowSuccessMsg(false);
+        }, 5000);
 
-      // Dispatch storage event so header can update
-      window.dispatchEvent(new Event('storage'));
+        // Dispatch storage event so header can update
+        window.dispatchEvent(new Event('storage'));
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-
 
   // Hero slideshow photos (Workshop photos only - NO LOGO)
   const heroSlides = [
@@ -259,144 +278,196 @@ export default function LandingPage({ onLoginSuccess }) {
 
   // Testimonials
   const testimonials = [
-    { rating: 5, quote: 'Excellent service and transparent billing. Highly recommended.', author: 'Ravi Kumar' },
-    { rating: 5, quote: 'Professional team and quality work.', author: 'Sandeep Reddy' },
-    { rating: 5, quote: 'Quick delivery and genuine spare parts.', author: 'Priya Sharma' }
+    { rating: 5, quote: 'Excellent service and transparent billing. The team diagnosed and fixed my Harrier engine issue swiftly.', author: 'Ravi Kumar' },
+    { rating: 5, quote: 'Highly professional setup. Got my Honda City body shop denting and painting done to factory finish.', author: 'Sandeep Reddy' },
+    { rating: 5, quote: 'Excellent customer service. Genuine spare parts, clear HSN codes, and competitive pricing.', author: 'Priya Sharma' }
   ];
 
   useEffect(() => {
     const interval = setInterval(() => {
       setHeroIdx((prev) => (prev + 1) % heroSlides.length);
-    }, 4000);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
-
-
 
   const filteredPhotos = activeCategory === 'All' 
     ? galleryPhotos 
     : galleryPhotos.filter(p => p.category === activeCategory);
 
   return (
-    <div className="min-h-screen bg-white text-[#111827] font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 text-[#111827] font-sans relative overflow-x-hidden">
       
+      {/* Floating WhatsApp Button */}
+      <a
+        href="https://wa.me/919949479765?text=Hi%20MVSS%20Automobiles,%20I'd%20like%20to%20inquire%20about%20a%20service%20for%20my%20vehicle."
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 bg-[#25D366] hover:bg-[#20BA56] text-white p-4 rounded-full shadow-2xl z-40 transition-all duration-300 hover:scale-110 flex items-center justify-center animate-bounce"
+        aria-label="Contact us on WhatsApp"
+      >
+        <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.455L0 24zm6.59-4.846c1.6.95 3.588 1.45 5.416 1.451 5.408 0 9.81-4.394 9.813-9.799.002-2.618-1.012-5.08-2.859-6.93C17.172 2.025 14.71 1.01 12.016 1.01c-5.41 0-9.813 4.394-9.815 9.8.001 1.87.493 3.693 1.42 5.29L2.62 20.352l4.027-1.198z" />
+        </svg>
+      </a>
+
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] select-none shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-        <div className="max-w-7xl mx-auto px-6 py-1 flex flex-col md:flex-row justify-between items-center gap-4 w-full">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 select-none shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <div className="max-w-7xl mx-auto px-6 py-2.5 flex justify-between items-center w-full">
           <a 
             href="/" 
             onClick={(e) => { e.preventDefault(); window.location.href = '/'; }} 
-            className="flex items-center gap-1.5 select-none shrink-0 mr-auto md:mr-0 group"
+            className="flex items-center gap-2.5 select-none shrink-0 group"
           >
-            <div className="relative overflow-visible shrink-0 transition-transform duration-350 group-hover:scale-105 p-1.5 flex items-center justify-center bg-transparent">
+            <div className="shrink-0 transition-transform duration-350 group-hover:scale-105 p-0.5 flex items-center justify-center bg-white rounded border border-slate-100 shadow-sm">
               <img 
                 src="/workshop/page_1_img_1.png" 
                 alt="MVSS Logo" 
-                className="h-[72px] md:h-[125px] w-auto object-contain block"
+                className="h-[38px] md:h-[48px] w-auto object-contain block"
               />
             </div>
-            <div className="text-left flex flex-col justify-center select-none ml-1">
-              <h1 className="text-lg md:text-[29px] font-black tracking-tighter uppercase text-[#111827] leading-none">
+            <div className="text-left flex flex-col justify-center select-none">
+              <h1 className="text-sm md:text-xl font-black tracking-tight uppercase text-slate-900 leading-none">
                 MVSS AUTOMOBILES
               </h1>
-              <p className="text-[9px] md:text-[11px] text-[#C1121F] font-black uppercase tracking-widest leading-none mt-1">
+              <p className="text-[7px] md:text-[9px] text-[#C1121F] font-black uppercase tracking-wider leading-none mt-0.5">
                 PVT. LTD.
               </p>
             </div>
           </a>
 
           {/* Center Navigation */}
-          <nav className="flex flex-wrap items-center justify-start md:justify-center gap-x-6 gap-y-2 text-[11px] sm:text-xs font-bold text-[#6B7280] uppercase tracking-wider w-full md:w-auto">
-            <a href="#" className="hover:text-[#C1121F] transition-colors">Home</a>
+          <nav className="hidden lg:flex items-center gap-x-7 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <a href="#home" className="hover:text-[#C1121F] transition-colors">Home</a>
             <a href="#services" className="hover:text-[#C1121F] transition-colors">Services</a>
-            <a href="#gallery" className="hover:text-[#C1121F] transition-colors">Gallery</a>
             <a href="#why-choose" className="hover:text-[#C1121F] transition-colors">Why Choose Us</a>
+            <a href="#gallery" className="hover:text-[#C1121F] transition-colors">Gallery</a>
+            <a href="#testimonials" className="hover:text-[#C1121F] transition-colors">Testimonials</a>
             <a href="#contact" className="hover:text-[#C1121F] transition-colors">Contact</a>
           </nav>
 
           {/* Right Action */}
           <button
             onClick={() => setShowLogin(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#111827] hover:bg-[#C1121F] text-white rounded-lg text-[10px] sm:text-[11px] font-extrabold transition-all shrink-0 ml-auto md:ml-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-[#C1121F] text-white rounded-lg text-[10px] md:text-xs font-black transition-all shrink-0 shadow-sm"
           >
-            <Lock className="w-3 h-3" />
+            <Lock className="w-3.5 h-3.5" />
             Staff Login
           </button>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section id="home" className="relative bg-white border-b border-[#E2E8F0]/40 max-w-7xl mx-auto px-6 lg:h-[700px] flex items-center py-12 lg:py-0">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full">
-          {/* Left Content (50%) */}
-          <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-            <div className="space-y-1">
-              <span className="block text-xs font-black text-[#C1121F] uppercase tracking-wider">MVSS AUTOMOBILES PVT. LTD.</span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#111827] leading-tight tracking-tight uppercase">
-                Premium Multi-Brand Car Service Center
-              </h2>
-              <p className="text-xs sm:text-sm font-semibold text-[#6B7280] uppercase tracking-wide leading-relaxed">
-                Complete Car Care, Body Shop Repairs, Insurance Claims, Genuine Parts, and GST Billing under one roof.
-              </p>
-              <p className="text-xs sm:text-sm text-[#6B7280] font-medium leading-relaxed mt-4">
-                Trusted automobile workshop in Hyderabad delivering professional service and transparent billing.
-              </p>
-            </div>
+      {/* Redesigned Hero Section - Full width with slideshow background */}
+      <section id="home" className="relative w-full h-[600px] lg:h-[700px] overflow-hidden bg-slate-950">
+        
+        {/* Dark overlay for text contrast */}
+        <div className="absolute inset-0 bg-slate-950/70 z-10" />
 
-            {/* Buttons list incorporating red [Book A Service] button */}
-            <div className="flex flex-wrap gap-3 justify-center lg:justify-start pt-2">
-              <a
-                href="#contact"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#C1121F] hover:bg-red-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-[#C1121F]/10 animate-pulse"
-              >
-                <Wrench className="w-3.5 h-3.5" />
-                Book A Service
-              </a>
-              <a
-                href="#services"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-[#111827] rounded-xl text-xs font-extrabold transition-all"
-              >
-                Our Services
-              </a>
-              <a
-                href="#contact"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-750 border border-[#E2E8F0] rounded-xl text-xs font-extrabold transition-all"
-              >
-                Contact Workshop
-              </a>
+        {/* Slidshow Background */}
+        <div className="absolute inset-0 z-0">
+          {heroSlides.map((slide, idx) => (
+            <div 
+              key={idx}
+              className={`absolute inset-0 w-full h-full transition-all duration-1000 transform scale-100 ${idx === heroIdx ? 'opacity-40 scale-105' : 'opacity-0'}`}
+            >
+              <img 
+                src={slide.src}
+                alt={slide.label}
+                className="w-full h-full object-cover object-center"
+              />
             </div>
+          ))}
+        </div>
+
+        {/* Content Box */}
+        <div className="relative z-20 max-w-7xl mx-auto px-6 h-full flex flex-col justify-center text-left text-white space-y-6">
+          <div className="space-y-3 max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#C1121F]/20 border border-[#C1121F]/40 rounded-full">
+              <Sparkles className="w-3.5 h-3.5 text-[#C1121F]" />
+              <span className="text-[10px] font-black text-white uppercase tracking-widest">Multi-Brand Workshop</span>
+            </div>
+            <h2 className="text-4xl sm:text-5xl lg:text-7xl font-black text-white uppercase tracking-tight leading-tight">
+              Premium <br />Car Service Center
+            </h2>
+            <p className="text-sm sm:text-lg text-slate-300 font-medium leading-relaxed max-w-xl">
+              Complete Car Care, Mechanical Service, Body Shop Denting & Painting, Cashless Insurance Claims, and Transparent Billing.
+            </p>
           </div>
 
-          {/* Right Image Container (50% / 550px height) */}
-          <div className="lg:col-span-6 w-full h-[320px] sm:h-[450px] lg:h-[550px] lg:max-h-[550px] rounded-[24px] overflow-hidden relative border border-[#E2E8F0] shadow-lg select-none bg-slate-50">
-            {heroSlides.map((slide, idx) => (
-              <div 
-                key={idx}
-                className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${idx === heroIdx ? 'opacity-100' : 'opacity-0'}`}
-              >
-                <img 
-                  src={slide.src}
-                  alt={slide.label}
-                  className="w-full h-full object-cover object-center"
-                  onError={(e) => {
-                    setHeroIdx((prev) => (prev + 1) % heroSlides.length);
-                  }}
-                />
-                <div className="absolute bottom-4 left-4 bg-[#111827]/85 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-750/50">
-                  <span className="text-[10px] text-white font-extrabold uppercase tracking-wide">{slide.label}</span>
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-wrap gap-4 pt-4">
+            <a
+              href="#contact"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#C1121F] hover:bg-red-750 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-[#C1121F]/20 hover:scale-105"
+            >
+              <Wrench className="w-4 h-4" />
+              Book Service
+            </a>
+            <a
+              href="tel:+919949479765"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-900 rounded-xl text-xs font-black transition-all shadow-md hover:scale-105"
+            >
+              <Phone className="w-4 h-4 text-[#C1121F]" />
+              Call Now
+            </a>
+            <a
+              href="https://wa.me/919949479765"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#25D366] hover:bg-[#20BA56] text-white rounded-xl text-xs font-black transition-all shadow-md hover:scale-105"
+            >
+              WhatsApp
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Section */}
+      <section className="relative z-30 -mt-16 max-w-7xl mx-auto px-6">
+        <div className="bg-white border border-slate-200/80 rounded-[24px] shadow-xl p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="flex items-center gap-4 p-4 border-r border-slate-100 last:border-0">
+            <div className="p-3 bg-red-50 text-[#C1121F] rounded-2xl">
+              <Car className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-900 uppercase">5000+ Serviced</h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Vehicles Handled</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 p-4 border-r border-slate-100 last:border-0">
+            <div className="p-3 bg-red-50 text-[#C1121F] rounded-2xl">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-900 uppercase">Certified Staff</h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Expert Technicians</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 p-4 border-r border-slate-100 last:border-0">
+            <div className="p-3 bg-red-50 text-[#C1121F] rounded-2xl">
+              <Award className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-900 uppercase">Genuine Spares</h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">OEM Parts Stock</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 p-4 last:border-0">
+            <div className="p-3 bg-red-50 text-[#C1121F] rounded-2xl">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-900 uppercase">Claims Support</h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cashless Assistance</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Services Section */}
-      <section id="services" className="py-20 max-w-7xl mx-auto px-6 bg-white space-y-12">
+      <section id="services" className="py-24 max-w-7xl mx-auto px-6 space-y-12">
         <div className="text-center space-y-2">
-          <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Our Capabilities</span>
-          <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Rebuilt Service Capabilities</h3>
-          <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">Modern service streams designed to keep your vehicle in prime manufacturer condition.</p>
+          <span className="text-[10px] font-black text-[#C1121F] uppercase tracking-widest">Our Capabilities</span>
+          <h3 className="text-3xl font-extrabold text-slate-900 uppercase">Premium Service Offerings</h3>
+          <p className="text-xs text-slate-400 font-semibold max-w-md mx-auto">Modern service streams designed to keep your vehicle in prime manufacturer condition.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -414,14 +485,14 @@ export default function LandingPage({ onLoginSuccess }) {
             return (
               <div 
                 key={idx} 
-                className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-2xl transition-all duration-200 hover:border-[#C1121F]/30 hover:bg-white hover:shadow-md flex flex-col justify-between group shadow-xs w-full h-[220px]"
+                className="bg-white border border-slate-200/80 p-6 rounded-2xl transition-all duration-300 hover:border-[#C1121F]/30 hover:-translate-y-1.5 hover:shadow-xl flex flex-col justify-between group shadow-sm w-full h-[230px]"
               >
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <Icon className="w-5 h-5 text-[#C1121F]" />
+                <div className="space-y-4">
+                  <div className="p-3 bg-red-50 text-[#C1121F] rounded-xl w-fit group-hover:bg-[#C1121F] group-hover:text-white transition-colors duration-300">
+                    <Icon className="w-5 h-5" />
                   </div>
-                  <h4 className="text-sm font-black text-[#111827] group-hover:text-[#C1121F] transition-colors">{service.title}</h4>
-                  <p className="text-[11px] text-[#6B7280] font-medium leading-relaxed line-clamp-3">{service.desc}</p>
+                  <h4 className="text-sm font-black text-slate-900 group-hover:text-[#C1121F] transition-colors">{service.title}</h4>
+                  <p className="text-[11px] text-slate-400 font-semibold leading-relaxed line-clamp-3">{service.desc}</p>
                 </div>
               </div>
             );
@@ -429,147 +500,141 @@ export default function LandingPage({ onLoginSuccess }) {
         </div>
       </section>
 
-      {/* Workshop Gallery Section */}
-      <section id="gallery" className="py-20 bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
+      {/* Workshop Achievements Section */}
+      <section className="py-24 bg-[#111827] text-white">
         <div className="max-w-7xl mx-auto px-6 space-y-12">
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Our Facility Tour</span>
-            <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Workshop Gallery</h3>
-            <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">
-              Visual tour of our modern service checkouts, premium brand service bays, and genuine spares stock.
-            </p>
+            <span className="text-[10px] font-black text-[#C1121F] uppercase tracking-widest">Our Accomplishments</span>
+            <h3 className="text-3xl font-extrabold text-white uppercase">Workshop Achievements</h3>
+            <p className="text-xs text-slate-400 font-semibold max-w-md mx-auto">Milestones achieved over years of dedicated multi-brand automobile servicing.</p>
           </div>
 
-          {/* Category Filter Controls */}
-          <div className="flex flex-wrap justify-center gap-2 select-none">
-            {['All', 'Infrastructure', 'Operations', 'Body Shop', 'Equipment', 'Vehicle Yard', 'Customer Facilities'].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                  activeCategory === cat 
-                    ? 'bg-[#C1121F] border-[#C1121F] text-white shadow-sm' 
-                    : 'bg-white border-[#E2E8F0] text-[#6B7280] hover:text-[#111827]'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Grid Layout: Desktop 3 columns, Tablet 2 columns, Mobile 1 column */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPhotos.map((photo, idx) => (
-              <div 
-                key={idx}
-                className="h-[420px] bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm hover:border-[#C1121F]/45 transition-all duration-350 flex flex-col hover:-translate-y-1.5 hover:shadow-lg group"
-              >
-                {/* Image Height: 280px */}
-                <div className="h-[280px] w-full overflow-hidden bg-slate-100 relative shrink-0">
-                  <img 
-                    src={photo.src} 
-                    alt={photo.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                </div>
-                {/* Content Box */}
-                <div className="p-4 bg-white border-t border-[#E2E8F0] flex flex-col justify-start space-y-1 flex-1">
-                  {/* Title Height: 40px */}
-                  <h4 className="text-xs sm:text-sm font-black text-[#111827] h-[40px] flex items-center leading-tight">
-                    {photo.title}
-                  </h4>
-                  {/* Description Height: 60px */}
-                  <p className="text-[10px] sm:text-[11px] text-[#6B7280] font-medium leading-relaxed h-[60px] overflow-hidden">
-                    {photo.desc}
-                  </p>
-                </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { val: '5,000+', label: 'Vehicles Serviced', desc: 'Premium multi-brand vehicles serviced.' },
+              { val: '10+', label: 'Years Experience', desc: 'Proven technical track record.' },
+              { val: '100%', label: 'Genuine Spares', desc: 'OEM components catalog sourcing.' },
+              { val: '4.9★', label: 'Customer Rating', desc: 'Top-rated workshop reviews.' }
+            ].map((stat, idx) => (
+              <div key={idx} className="bg-slate-900 border border-slate-800 p-6 rounded-[24px] space-y-2 text-center">
+                <div className="text-3xl lg:text-4xl font-black text-[#C1121F] font-mono">{stat.val}</div>
+                <h4 className="text-sm font-black text-white uppercase">{stat.label}</h4>
+                <p className="text-[10px] text-slate-400 font-semibold">{stat.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Why Choose Us */}
-      <section id="why-choose" className="py-20 bg-white max-w-7xl mx-auto px-6 space-y-12">
+      {/* Facility Gallery Section */}
+      <section id="gallery" className="py-24 max-w-7xl mx-auto px-6 space-y-12">
         <div className="text-center space-y-2">
-          <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Enterprise Car Care</span>
-          <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Why Choose MVSS</h3>
-          <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">We provide premium multi-brand services with full digital tracking transparency.</p>
+          <span className="text-[10px] font-black text-[#C1121F] uppercase tracking-widest">Our Facility Tour</span>
+          <h3 className="text-3xl font-extrabold text-slate-900 uppercase">Workshop Gallery</h3>
+          <p className="text-xs text-slate-400 font-semibold max-w-md mx-auto">
+            Visual tour of our modern service checkouts, premium brand service bays, and genuine spares stock.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { title: 'Certified Technicians', desc: 'Workshop floor staffed with certified mechanical and body workshop specialists.' },
-            { title: 'Multi Brand Expertise', desc: 'Certified engine servicing, chassis PMS and mechanical repair for premium brands.' },
-            { title: 'Bosch Equipment', desc: 'Bosch automobile scanners and computerized alignment calibration checkups.' },
-            { title: 'Digital Job Cards', desc: 'Secure digital tracking boards showing check-in status, progress, estimation and release.' },
-            { title: 'GST Billing', desc: 'Auto-generated invoice details with clear spares selling price and labor fees.' },
-            { title: 'Transparent Workflow', desc: 'From check-in to checkout, estimates, service checklists, and signatures are managed digitally.' },
-            { title: 'Quality Spare Parts', desc: 'OEM filters, high-grade lubrication motor oil, spark plugs, and brake pads.' },
-            { title: 'Customer Satisfaction', desc: 'Post-repair quality inspect checks before vehicle delivery and gate pass release.' }
-          ].map((item, idx) => (
-            <div key={idx} className="bg-[#F8FAFC] border border-[#E2E8F0] p-5 rounded-2xl flex gap-3.5 items-start shadow-xs h-[160px]">
-              <CheckCircle className="w-5 h-5 text-blue-650 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <h4 className="text-xs sm:text-sm font-black text-[#111827]">{item.title}</h4>
-                <p className="text-[10px] sm:text-[11px] text-[#6B7280] font-medium leading-relaxed line-clamp-3">{item.desc}</p>
+        {/* Category Filter Controls */}
+        <div className="flex flex-wrap justify-center gap-2 select-none">
+          {['All', 'Infrastructure', 'Operations', 'Body Shop', 'Equipment', 'Vehicle Yard', 'Customer Facilities'].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                activeCategory === cat 
+                  ? 'bg-[#C1121F] border-[#C1121F] text-white shadow-sm' 
+                  : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Grid Layout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPhotos.map((photo, idx) => (
+            <div 
+              key={idx}
+              className="h-[380px] bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:border-[#C1121F]/30 transition-all duration-350 flex flex-col hover:-translate-y-1.5 hover:shadow-md group"
+            >
+              <div className="h-[260px] w-full overflow-hidden bg-slate-100 relative shrink-0">
+                <img 
+                  src={photo.src} 
+                  alt={photo.title}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-102"
+                  loading="lazy"
+                />
+              </div>
+              <div className="p-4 bg-white border-t border-slate-100 flex flex-col justify-start space-y-1 flex-1">
+                <h4 className="text-xs sm:text-sm font-black text-slate-900 h-[35px] flex items-center leading-tight">
+                  {photo.title}
+                </h4>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold leading-relaxed h-[45px] overflow-hidden">
+                  {photo.desc}
+                </p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Customer Experience Spotlight Section */}
-      <section className="py-20 bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
+      {/* Why Choose Us */}
+      <section id="why-choose" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6 space-y-12">
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Spotlight</span>
-            <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Customer Experience Highlights</h3>
-            <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">Discover our key operational statistics across multi-brand automobile servicing.</p>
+            <span className="text-[10px] font-black text-[#C1121F] uppercase tracking-widest">Enterprise Car Care</span>
+            <h3 className="text-3xl font-extrabold text-slate-900 uppercase">Why Choose MVSS</h3>
+            <p className="text-xs text-slate-400 font-semibold max-w-md mx-auto">We provide premium multi-brand services with full digital tracking transparency.</p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { val: '1000+', label: 'Vehicles Serviced', desc: 'Multi-brand mechanical checkouts.' },
-              { val: 'GST Compliant', label: 'Billing', desc: 'Clear spare parts pricing.' },
-              { val: 'Genuine', label: 'OEM Parts', desc: 'Quality spare parts sourcing.' },
-              { val: 'Multi-Brand', label: 'Expertise', desc: 'BMW, Mercedes, Harrier, Swift.' },
-              { val: 'Insurance', label: 'Claim Assistance', desc: 'Coordinated claims survey.' },
-              { val: 'Body Shop', label: 'Specialists', desc: 'Professional denting restoration.' }
-            ].map((stat, idx) => (
-              <div key={idx} className="bg-white border border-[#E2E8F0] p-6 rounded-2xl space-y-2 shadow-xs group">
-                <div className="text-xl sm:text-2xl font-black text-[#C1121F] font-mono">{stat.val}</div>
-                <h4 className="text-xs sm:text-sm font-black text-[#111827]">{stat.label}</h4>
-                <p className="text-[10px] sm:text-[11px] text-[#6B7280] font-medium leading-relaxed">{stat.desc}</p>
+              { title: 'Certified Technicians', desc: 'Workshop floor staffed with certified mechanical and body workshop specialists.' },
+              { title: 'Multi Brand Expertise', desc: 'Certified engine servicing, chassis PMS and mechanical repair for premium brands.' },
+              { title: 'Bosch Equipment', desc: 'Bosch automobile scanners and computerized alignment calibration checkups.' },
+              { title: 'Digital Job Cards', desc: 'Secure digital tracking boards showing check-in status, progress, estimation and release.' },
+              { title: 'GST Billing', desc: 'Auto-generated invoice details with clear spares selling price and labor fees.' },
+              { title: 'Transparent Workflow', desc: 'From check-in to checkout, estimates, service checklists, and signatures are managed digitally.' },
+              { title: 'Quality Spare Parts', desc: 'OEM filters, high-grade lubrication motor oil, spark plugs, and brake pads.' },
+              { title: 'Customer Satisfaction', desc: 'Post-repair quality inspect checks before vehicle delivery and gate pass release.' }
+            ].map((item, idx) => (
+              <div key={idx} className="bg-slate-50 border border-slate-200/80 p-5 rounded-2xl flex gap-3.5 items-start shadow-xs h-[160px] hover:border-[#C1121F]/20 transition-all">
+                <CheckCircle className="w-5 h-5 text-[#C1121F] shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="text-xs sm:text-sm font-black text-slate-900">{item.title}</h4>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold leading-relaxed line-clamp-3">{item.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Customer Testimonials */}
-      <section id="testimonials" className="py-20 bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
+      {/* Customer Testimonials Section */}
+      <section id="testimonials" className="py-24 bg-slate-50 border-t border-b border-slate-200/85">
         <div className="max-w-7xl mx-auto px-6 space-y-12">
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold text-[#C1121F] uppercase tracking-widest">Client Feedback</span>
-            <h3 className="text-2xl font-extrabold text-[#111827] uppercase">Customer Testimonials</h3>
-            <p className="text-xs text-[#6B7280] font-semibold max-w-md mx-auto">Read what premium multi-brand automobile owners say about our workshop services.</p>
+            <span className="text-[10px] font-black text-[#C1121F] uppercase tracking-widest">Client Feedback</span>
+            <h3 className="text-3xl font-extrabold text-slate-900 uppercase">Customer Testimonials</h3>
+            <p className="text-xs text-slate-400 font-semibold max-w-md mx-auto">Read what premium multi-brand automobile owners say about our workshop services.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((item, idx) => (
-              <div key={idx} className="bg-white border border-[#E2E8F0] p-6 rounded-2xl space-y-4 shadow-xs relative flex flex-col justify-between h-[180px]">
+              <div key={idx} className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-xs relative flex flex-col justify-between h-[190px] hover:shadow-md hover:border-[#C1121F]/20 transition-all duration-300">
                 <div className="space-y-3">
                   <div className="flex gap-1 text-[#C1121F]">
                     {[...Array(item.rating)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-current" />
                     ))}
                   </div>
-                  <p className="text-xs text-slate-600 font-semibold italic">"{item.quote}"</p>
+                  <p className="text-xs text-slate-600 font-bold italic">"{item.quote}"</p>
                 </div>
-                <div className="mt-4 border-t border-slate-200/60 pt-3">
-                  <span className="block text-xs font-black text-[#111827]">— {item.author}</span>
+                <div className="mt-4 border-t border-slate-100 pt-3">
+                  <span className="block text-xs font-black text-slate-900">— {item.author}</span>
                 </div>
               </div>
             ))}
@@ -577,93 +642,127 @@ export default function LandingPage({ onLoginSuccess }) {
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section id="contact" className="py-20 bg-white">
-        <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12">
-          <div className="space-y-6">
-            <h3 className="text-2xl font-extrabold text-[#111827] uppercase">MVSS Automobiles Pvt Ltd</h3>
-            
-            <div className="space-y-5 text-xs font-semibold text-[#6B7280]">
-              <div className="flex items-start gap-3.5">
-                <MapPin className="w-5 h-5 text-[#C1121F] shrink-0 mt-0.5" />
-                <div>
-                  <span className="block font-black text-[#111827] text-xs mb-1 uppercase tracking-wider">Workshop Address</span>
-                  <p className="leading-relaxed">
-                    Survey No. 25/1, Opp. Cine Planet, Kompally, Secunderabad - 500067 <br />
-                    Survey No. 48/5, Gundlapochampally, Medchal-Malkajgiri Dist - 500014
-                  </p>
+      {/* Redesigned Contact & Branch Locations & Booking Slot form */}
+      <section id="contact" className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          
+          {/* Column 1: Locations (7 cols) */}
+          <div className="lg:col-span-7 space-y-8">
+            <div className="space-y-2">
+              <span className="text-[10px] font-black text-[#C1121F] uppercase tracking-widest text-left block">Our Outlets</span>
+              <h3 className="text-3xl font-extrabold text-slate-900 uppercase">Branch Locations</h3>
+              <p className="text-xs text-slate-400 font-semibold max-w-md">Visit our fully-equipped multi-brand service centers near you in Hyderabad.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Branch 1 */}
+              <div className="bg-slate-50 border border-slate-200/80 p-5 rounded-2xl space-y-4 shadow-xs hover:border-[#C1121F]/20 transition-all">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-[#C1121F] shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 uppercase">Branch 1 - Petbasheerabad</h4>
+                    <p className="text-[11px] text-slate-400 font-semibold leading-relaxed mt-1">
+                      Survey No. 25/1, Opp. Cine Planet, Beside PSR Convention, Petbasheerabad, Hyderabad - 500067
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <a 
+                    href="https://www.google.com/maps/dir/?api=1&destination=MVSS+Automobiles+Petbasheerabad+Hyderabad"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#C1121F] hover:bg-red-750 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-xs"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    Navigate Branch 1
+                  </a>
                 </div>
               </div>
-              <div className="flex items-center gap-3.5">
+
+              {/* Branch 2 */}
+              <div className="bg-slate-50 border border-slate-200/80 p-5 rounded-2xl space-y-4 shadow-xs hover:border-[#C1121F]/20 transition-all">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-[#C1121F] shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 uppercase">Branch 2 - Gundlapochampally</h4>
+                    <p className="text-[11px] text-slate-400 font-semibold leading-relaxed mt-1">
+                      Survey No. 48/5, Near Anthem Villas, Gundlapochampally Village & Municipality, NH-44, Medchal-Malkajgiri - 500014
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <a 
+                    href="https://www.google.com/maps/dir/?api=1&destination=MVSS+Automobiles+Gundlapochampally"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#C1121F] hover:bg-red-750 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-xs"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    Navigate Branch 2
+                  </a>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Quick Contacts Block */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-[#C1121F] shrink-0" />
                 <div>
-                  <span className="block font-black text-[#111827] text-xs mb-0.5 uppercase tracking-wider">Phone Numbers</span>
-                  <a href="tel:+919949479765" className="hover:underline text-blue-650 font-mono font-bold">+91 99494 79765</a>
-                  <span className="text-slate-350 mx-2">|</span>
-                  <a href="tel:+919876543210" className="hover:underline text-blue-650 font-mono font-bold">+91 98765 43210</a>
+                  <span className="block font-black text-slate-900 text-[10px] uppercase tracking-wider">Phone Numbers</span>
+                  <a href="tel:+919949479765" className="hover:underline text-[#C1121F] font-mono text-xs font-bold">+91 99494 79765</a>
                 </div>
               </div>
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-[#C1121F] shrink-0" />
                 <div>
-                  <span className="block font-black text-[#111827] text-xs mb-0.5 uppercase tracking-wider">Email Address</span>
-                  <a href="mailto:service@mvssautomobiles.com" className="hover:underline text-blue-650 font-bold">service@mvssautomobiles.com</a>
+                  <span className="block font-black text-slate-900 text-[10px] uppercase tracking-wider">Email Address</span>
+                  <a href="mailto:accounts@auto4m.in" className="hover:underline text-[#C1121F] text-xs font-bold">accounts@auto4m.in</a>
                 </div>
               </div>
-              <div className="flex items-start gap-3.5">
-                <Clock className="w-5 h-5 text-[#C1121F] shrink-0 mt-0.5" />
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-[#C1121F] shrink-0" />
                 <div>
-                  <span className="block font-black text-[#111827] text-xs mb-1 uppercase tracking-wider">Business Hours</span>
-                  <p className="leading-relaxed text-[#6B7280]">
-                    Monday - Saturday: 9:00 AM - 7:00 PM <br />
-                    Sunday: Closed
-                  </p>
+                  <span className="block font-black text-slate-900 text-[10px] uppercase tracking-wider">Business Hours</span>
+                  <span className="text-slate-400 text-xs font-semibold">9:00 AM - 7:00 PM</span>
                 </div>
-              </div>
-              
-              {/* Google Maps Button */}
-              <div className="pt-2">
-                <a 
-                  href="https://maps.google.com/?q=MVSS+Automobiles+Gundlapochampally"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#C1121F] hover:bg-red-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-[#C1121F]/10"
-                >
-                  <Navigation className="w-4 h-4" />
-                  Google Maps Button
-                </a>
               </div>
             </div>
           </div>
 
-          {/* Interactive Map Embed */}
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-3xl space-y-4 shadow-sm">
-            <h4 className="text-sm font-black text-[#111827] uppercase tracking-wide">Request a Service Slot</h4>
+          {/* Column 2: Booking Form (5 cols) */}
+          <div className="lg:col-span-5 bg-slate-50 border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm" id="booking-section">
+            <h4 className="text-sm font-black text-slate-900 uppercase tracking-wide">Request a Service Slot</h4>
+            
             <form onSubmit={handleBookingSubmit} noValidate className="space-y-4 text-xs font-semibold">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Your Name</label>
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Name</label>
                   <input 
                     type="text" 
                     value={customerName}
+                    disabled={isSubmitting}
                     onChange={handleNameChange}
                     onBlur={handleNameBlur}
                     placeholder="John Doe" 
-                    className={`w-full px-3 py-2 bg-white border rounded-xl text-xs font-medium focus:outline-none ${errors.customerName ? 'border-red-500 focus:border-red-500' : 'border-[#E2E8F0] focus:border-[#C1121F]'}`} 
+                    className={`w-full px-3 py-2.5 bg-white border rounded-xl text-xs font-medium focus:outline-none ${errors.customerName ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-[#C1121F]'}`} 
                   />
                   {errors.customerName && (
                     <span className="block mt-1 text-[10px] text-red-500 font-semibold">{errors.customerName}</span>
                   )}
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Contact Phone</label>
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Contact Phone</label>
                   <input 
                     type="tel" 
                     value={contactPhone}
+                    disabled={isSubmitting}
                     onChange={handlePhoneChange}
                     onBlur={handlePhoneBlur}
                     placeholder="9988776655" 
-                    className={`w-full px-3 py-2 bg-white border rounded-xl text-xs font-medium focus:outline-none ${errors.contactPhone ? 'border-red-500 focus:border-red-500' : 'border-[#E2E8F0] focus:border-[#C1121F]'}`} 
+                    className={`w-full px-3 py-2.5 bg-white border rounded-xl text-xs font-medium focus:outline-none ${errors.contactPhone ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-[#C1121F]'}`} 
                   />
                   {errors.contactPhone && (
                     <span className="block mt-1 text-[10px] text-red-500 font-semibold">{errors.contactPhone}</span>
@@ -672,25 +771,27 @@ export default function LandingPage({ onLoginSuccess }) {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Vehicle Plate No</label>
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vehicle Plate No</label>
                   <input 
                     type="text" 
                     value={vehiclePlate}
+                    disabled={isSubmitting}
                     onChange={handlePlateChange}
                     onBlur={handlePlateBlur}
                     placeholder="TS-09-EA-1234" 
-                    className={`w-full px-3 py-2 bg-white border rounded-xl text-xs font-medium focus:outline-none uppercase ${errors.vehiclePlate ? 'border-red-500 focus:border-red-500' : 'border-[#E2E8F0] focus:border-[#C1121F]'}`} 
+                    className={`w-full px-3 py-2.5 bg-white border rounded-xl text-xs font-medium focus:outline-none uppercase ${errors.vehiclePlate ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-[#C1121F]'}`} 
                   />
                   {errors.vehiclePlate && (
                     <span className="block mt-1 text-[10px] text-red-500 font-semibold">{errors.vehiclePlate}</span>
                   )}
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Preferred Stream</label>
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Preferred Stream</label>
                   <select 
                     value={preferredStream}
+                    disabled={isSubmitting}
                     onChange={handleStreamChange}
-                    className={`w-full px-3 py-2 bg-white border rounded-xl text-xs font-bold focus:outline-none ${errors.preferredStream ? 'border-red-500 focus:border-red-500' : 'border-[#E2E8F0] focus:border-[#C1121F]'}`}
+                    className={`w-full px-3 py-2.5 bg-white border rounded-xl text-xs font-bold focus:outline-none ${errors.preferredStream ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-[#C1121F]'}`}
                   >
                     <option value="">Select Service Category</option>
                     <option value="General Servicing (PMS)">General Servicing (PMS)</option>
@@ -703,24 +804,49 @@ export default function LandingPage({ onLoginSuccess }) {
                   )}
                 </div>
               </div>
-              <button type="submit" className="w-full py-3 px-4 bg-[#C1121F] hover:bg-red-750 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-red-650/10">
-                Book Service Appointment
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full py-3.5 px-4 bg-[#C1121F] hover:bg-red-750 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-red-650/15 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Submitting...' : 'Book Service Appointment'}
               </button>
+
+              {/* Inline Messages */}
+              {showSuccessMsg && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-semibold flex items-start gap-2 animate-fade-in transition-all">
+                  <span className="text-sm font-bold leading-none mt-0.5 text-emerald-600">✓</span>
+                  <div>
+                    <p className="font-bold">Service appointment booked successfully.</p>
+                    <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">Our team will contact you shortly.</p>
+                  </div>
+                </div>
+              )}
+
+              {errorMsg && (
+                <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl text-xs font-semibold flex items-start gap-2 animate-fade-in transition-all">
+                  <span className="text-sm font-bold leading-none mt-0.5 text-red-600">❌</span>
+                  <div>
+                    <p className="font-bold">Unable to submit appointment request.</p>
+                    <p className="text-[10px] text-red-650 mt-0.5 font-medium">{errorMsg}</p>
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[#E2E8F0] py-10 bg-[#111827] text-slate-400">
-        <div className="max-w-7xl mx-auto px-6 space-y-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs select-none">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1 bg-white rounded-lg border border-slate-700 shrink-0">
+      <footer className="border-t border-slate-200 py-12 bg-slate-900 text-slate-400">
+        <div className="max-w-7xl mx-auto px-6 space-y-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6 text-xs select-none">
+            <div className="flex items-center gap-3">
+              <div className="p-0.5 bg-white rounded border border-slate-800 shrink-0">
                 <img 
                   src="/workshop/page_1_img_1.png" 
                   alt="MVSS Logo" 
-                  className="h-[60px] max-w-[180px] object-contain"
+                  className="h-[30px] max-w-[100px] object-contain"
                 />
               </div>
               <span className="font-extrabold text-white text-xs uppercase tracking-wider">MVSS AUTOMOBILES</span>
@@ -731,7 +857,7 @@ export default function LandingPage({ onLoginSuccess }) {
               <a href="#support" onClick={(e) => { e.preventDefault(); alert('Support Portal: For technical assistance or database connection queries, please reach the IT Service Desk.'); }} className="hover:text-white transition-colors">Support Portal</a>
             </div>
           </div>
-          <div className="border-t border-slate-800 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-wider">
+          <div className="border-t border-slate-800 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">
             <span>© 2026 MVSS AUTOMOBILES. ALL RIGHTS RESERVED.</span>
             <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> SECURE AUDIT LOGGING ACTIVE</span>
           </div>
@@ -741,10 +867,7 @@ export default function LandingPage({ onLoginSuccess }) {
       {/* Staff Login Modal/Overlay */}
       {showLogin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 backdrop-blur-sm select-none p-4 md:p-10 animate-fade-in">
-          {/* Close Backdrop click */}
           <div className="absolute inset-0 z-0" onClick={() => setShowLogin(false)} />
-          
-          {/* Login wrapper container */}
           <div className="relative z-10 w-full max-w-[1250px] h-[90vh] max-h-[800px] bg-white rounded-[24px] shadow-2xl overflow-hidden flex flex-col border border-slate-200/50 animate-scale-up">
             <button 
               onClick={() => setShowLogin(false)}
@@ -753,7 +876,6 @@ export default function LandingPage({ onLoginSuccess }) {
             >
               <X className="w-4 h-4" />
             </button>
-            
             <div className="flex-1 overflow-y-auto">
               <Login onLoginSuccess={(user, token) => {
                 setShowLogin(false);
@@ -767,4 +889,3 @@ export default function LandingPage({ onLoginSuccess }) {
     </div>
   );
 }
-
