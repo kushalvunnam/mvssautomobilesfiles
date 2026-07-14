@@ -494,7 +494,26 @@ export default function Estimates({ token, user, setActiveTab }) {
     if (token === 'mock_jwt_token_for_offline_demo') {
       printEstimate(est);
     } else {
-      window.open(`${API_BASE_URL}/estimates/${est._id}/pdf?token=${token}`, '_blank');
+      (async () => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/estimates/${est._id}/pdf`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error('Failed to retrieve PDF from server');
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `estimate-${est.estimateNo || 'latest'}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error('PDF download failed:', err);
+          alert('Error downloading PDF: ' + err.message);
+        }
+      })();
     }
   };
 

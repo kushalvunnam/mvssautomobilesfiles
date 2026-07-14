@@ -282,7 +282,20 @@ export default function Invoices({ token, user, setActiveTab }) {
     if (token === 'mock_jwt_token_for_offline_demo') {
       printInvoice(inv, true);
     } else {
-      window.open(`${API_BASE_URL}/invoices/${inv._id}/pdf?token=${token}`, '_blank');
+      (async () => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/invoices/${inv._id}/pdf`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error('Failed to retrieve PDF from server');
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          window.open(url, '_blank');
+        } catch (err) {
+          console.error(err);
+          alert('Error viewing PDF: ' + err.message);
+        }
+      })();
     }
   };
 
@@ -344,7 +357,26 @@ export default function Invoices({ token, user, setActiveTab }) {
     if (token === 'mock_jwt_token_for_offline_demo') {
       printInvoice(inv);
     } else {
-      window.open(`${API_BASE_URL}/invoices/${inv._id}/pdf?token=${token}`, '_blank');
+      (async () => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/invoices/${inv._id}/pdf`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error('Failed to retrieve PDF from server');
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `invoice-${inv.invoiceNo || 'latest'}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error(err);
+          alert('Error downloading PDF: ' + err.message);
+        }
+      })();
     }
   };
 
@@ -820,16 +852,20 @@ export default function Invoices({ token, user, setActiveTab }) {
     printWindow.document.close();
   };
   const printGatePass = (inv) => {
-    const hostname = window.location.hostname;
-    const isCloud = hostname.includes('vercel.app') || 
-                    hostname.includes('surge.sh') || 
-                    hostname.includes('github.io') || 
-                    hostname.includes('loca.lt') || 
-                    hostname.includes('pinggy') || 
-                    hostname.includes('lhr.life') || 
-                    hostname.includes('ngrok');
-    // const apiHost = '';
-    window.open(`${API_BASE_URL}/invoices/${inv._id}/gatepass/pdf`, '_blank');
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/invoices/${inv._id}/gatepass/pdf`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to retrieve Gate Pass PDF from server');
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } catch (err) {
+        console.error(err);
+        alert('Error viewing Gate Pass PDF: ' + err.message);
+      }
+    })();
   };    
 
 

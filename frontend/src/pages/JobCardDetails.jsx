@@ -182,16 +182,20 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
 
   const printGatePass = () => {
     if (!jc) return;
-    const hostname = window.location.hostname;
-    const isCloud = hostname.includes('vercel.app') || 
-                    hostname.includes('surge.sh') || 
-                    hostname.includes('github.io') || 
-                    hostname.includes('loca.lt') || 
-                    hostname.includes('pinggy') || 
-                    hostname.includes('lhr.life') || 
-                    hostname.includes('ngrok');
-    // const apiHost = '';
-    window.open(`${API_BASE_URL}/jobcards/${jc._id}/gatepass/pdf`, '_blank');
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/jobcards/${jc._id}/gatepass/pdf`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to retrieve Gate Pass PDF from server');
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } catch (err) {
+        console.error(err);
+        alert('Error viewing Gate Pass PDF: ' + err.message);
+      }
+    })();
   };
 
   if (loading) {
@@ -203,9 +207,6 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
   }
 
   const formatKey = (str) => str.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
-
-  // PDF download URL
-  const pdfUrl = `${API_BASE_URL}/jobcards/${jc._id}/pdf?token=${token}`;
 
   return (
     <div className="space-y-6 animate-fade-in p-1">
@@ -331,20 +332,37 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
           )}
 
           {/* PDF & print operations */}
-          <a
-            href={pdfUrl}
+          <button
             onClick={(e) => {
               if (token === 'mock_jwt_token_for_offline_demo') {
-                e.preventDefault();
                 window.print();
+              } else {
+                (async () => {
+                  try {
+                    const res = await fetch(`${API_BASE_URL}/jobcards/${jc._id}/pdf`, {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!res.ok) throw new Error('Failed to retrieve PDF from server');
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `jobcard-${jc.jobCardNo || 'latest'}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error(err);
+                    alert('Error downloading PDF: ' + err.message);
+                  }
+                })();
               }
             }}
-            target="_blank"
-            rel="noreferrer"
             className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 text-slate-700 dark:text-slate-350 rounded-xl text-xs font-bold transition-all border border-slate-205/20"
           >
             <Download className="w-4 h-4" /> Download PDF
-          </a>
+          </button>
           {['Work In Progress', 'Body Shop', 'Quality Check'].includes(jc.status) && (
             <button
               onClick={() => setShowUpdateModal(true)}
