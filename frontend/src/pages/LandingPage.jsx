@@ -415,7 +415,7 @@ export default function LandingPage({ onLoginSuccess }) {
               className="flex items-center gap-2 px-4 py-2 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-xs font-black transition-all shrink-0 shadow-md shadow-slate-900/10 active:scale-95 select-none"
             >
               <Lock className="w-3.5 h-3.5" />
-              <span>Admin Login</span>
+              <span>Staff Login</span>
             </Link>
             {/* Mobile Menu Toggle */}
             <button
