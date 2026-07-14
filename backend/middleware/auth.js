@@ -18,6 +18,21 @@ const auth = async (req, res, next) => {
     }
 
     if (!token) {
+      try {
+        const AuditLog = require('../models/AuditLog');
+        await AuditLog.create({
+          userName: 'Guest/AuthFailed',
+          role: 'Guest',
+          userRole: 'Guest',
+          module: 'Auth',
+          action: 'AUTH_FAILED',
+          details: `Auth failure: Missing token. URL=${req.originalUrl}, HeadersAuth=${req.header('Authorization') ? 'present' : 'none'}`,
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || '',
+          timestamp: new Date(),
+          createdAt: new Date()
+        });
+      } catch (logErr) {}
+
       return res.status(401).send({ error: 'Please authenticate.' });
     }
 
@@ -25,13 +40,32 @@ const auth = async (req, res, next) => {
     const user = await User.findOne({ _id: decoded._id, active: true });
 
     if (!user) {
-      throw new Error();
+      throw new Error('User not found or inactive');
     }
 
     req.token = token;
     req.user = user;
     next();
   } catch (e) {
+    console.error('[Auth Middleware] Error verifying token:', e);
+
+    try {
+      const AuditLog = require('../models/AuditLog');
+      await AuditLog.create({
+        userName: 'Guest/AuthFailed',
+        role: 'Guest',
+        userRole: 'Guest',
+        module: 'Auth',
+        action: 'AUTH_FAILED',
+        details: `Auth failure: URL=${req.originalUrl}, QueryToken=${req.query.token ? req.query.token.substring(0, 10) + '...' : 'none'}, Error=${e.message || e.toString()}`,
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || '',
+        timestamp: new Date(),
+        createdAt: new Date()
+      });
+    } catch (logErr) {
+      console.error('[Auth Middleware] Failed to log failure to AuditLog:', logErr);
+    }
+
     res.status(401).send({ error: 'Please authenticate.' });
   }
 };
