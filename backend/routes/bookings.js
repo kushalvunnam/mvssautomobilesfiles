@@ -11,9 +11,7 @@ const Message = require('../models/Message');
 const { logAction } = require('../utils/logger');
 
 // n8n PRODUCTION webhook URL
-const BOOKING_WEBHOOK_URL =
-  process.env.BOOKING_WEBHOOK_URL ||
-  'https://srinidhibusiness.app.n8n.cloud/webhook/58aaad25-0dfc-422a-88b9-d12c2d4a0b00';
+const DEFAULT_BOOKING_WEBHOOK_URL = 'https://srinidhibusiness.app.n8n.cloud/webhook/58aaad25-0dfc-422a-88b9-d12c2d4a0b00';
 
 /**
  * Send booking data to n8n webhook
@@ -21,7 +19,8 @@ const BOOKING_WEBHOOK_URL =
 function postToBookingWebhook(payload) {
   return new Promise((resolve, reject) => {
     try {
-      const url = new URL(BOOKING_WEBHOOK_URL);
+      const webhookUrl = process.env.BOOKING_WEBHOOK_URL || DEFAULT_BOOKING_WEBHOOK_URL;
+      const url = new URL(webhookUrl);
       const transport = url.protocol === 'https:' ? https : http;
       const body = JSON.stringify(payload);
 
@@ -78,6 +77,7 @@ function postToBookingWebhook(payload) {
 // Create new booking (Public)
 router.post('/', async (req, res) => {
   try {
+    console.log('BOOKING ROUTE HIT');
     const {
       customerName,
       mobile,
@@ -129,21 +129,18 @@ router.post('/', async (req, res) => {
     let webhookError = null;
 
     try {
-      console.log('Sending booking to n8n...');
-      console.log('Webhook URL:', BOOKING_WEBHOOK_URL);
-      console.log('Payload:', bookingPayload);
-
+      console.log('Sending booking to n8n');
       const webhookResult = await postToBookingWebhook(bookingPayload);
 
       webhookTriggered = true;
 
-      console.log('N8N WEBHOOK SUCCESS');
+      console.log('Webhook Success');
       console.log('Status:', webhookResult.statusCode);
       console.log('Response:', webhookResult.body);
     } catch (webhookErr) {
       webhookError = webhookErr.message;
 
-      console.error('N8N WEBHOOK FAILED');
+      console.log('Webhook Failed');
       console.error('Error:', webhookErr.message);
     }
 
