@@ -367,7 +367,7 @@ export default function LandingPage({ onLoginSuccess }) {
         href="https://wa.me/919949479765?text=Hi%20MVSS%20Automobiles,%20I'd%20like%20to%20inquire%20about%20a%20service%20for%20my%20vehicle."
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 bg-[#25D366] hover:bg-[#20BA56] text-white p-4 rounded-full shadow-2xl z-40 transition-all duration-300 hover:scale-110 flex items-center justify-center animate-bounce"
+        className="fixed bottom-4 right-4 md:bottom-8 md:right-8 bg-[#25D366] hover:bg-[#20BA56] text-white p-3 md:p-4 rounded-full shadow-2xl z-40 transition-all duration-300 hover:scale-110 flex items-center justify-center animate-bounce"
         aria-label="Contact us on WhatsApp"
       >
         <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
@@ -413,10 +413,10 @@ export default function LandingPage({ onLoginSuccess }) {
           <div className="flex items-center gap-3">
             <Link
               to="/login"
-              className="flex items-center gap-2 px-4 py-2 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-xs font-black transition-all shrink-0 shadow-md shadow-slate-900/10 active:scale-95 select-none"
+              className="flex items-center gap-2 px-2.5 py-2 sm:px-4 sm:py-2 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-xs font-black transition-all shrink-0 shadow-md shadow-slate-900/10 active:scale-95 select-none"
             >
               <Lock className="w-3.5 h-3.5" />
-              <span>Staff Login</span>
+              <span className="hidden sm:inline">Staff Login</span>
             </Link>
             {/* Mobile Menu Toggle */}
             <button
@@ -474,26 +474,26 @@ export default function LandingPage({ onLoginSuccess }) {
               <Sparkles className="w-3.5 h-3.5 text-[#C1121F]" />
               <span className="text-[10px] font-black text-white uppercase tracking-widest">Multi-Brand Workshop</span>
             </div>
-            <h2 className="text-4xl sm:text-5xl lg:text-7xl font-black text-white uppercase tracking-tight leading-tight">
+            <h2 className="text-[clamp(1.85rem,5.5vw,4.5rem)] font-black text-white uppercase tracking-tight leading-tight">
               Quality Service <br />
               <span className="text-[#C1121F]">With Passion</span>
             </h2>
-            <p className="text-sm sm:text-lg text-slate-300 font-medium leading-relaxed max-w-xl">
+            <p className="text-[clamp(0.8rem,1.8vw,1.1rem)] text-slate-300 font-medium leading-relaxed max-w-xl">
               Complete Multi-Brand Car Care, Advanced Mechanical Service, Panel Paint Booth Refinishing, Cashless Insurance Claims, and Transparent Billing.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3.5 pt-4">
             <a
               href="#booking-section"
-              className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-[#C1121F] hover:bg-red-700 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-[#C1121F]/20 hover:scale-105 active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-4 bg-[#C1121F] hover:bg-red-700 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-[#C1121F]/20 hover:scale-105 active:scale-95 w-full sm:w-auto"
             >
               <Wrench className="w-4 h-4" />
               Book Appointment
             </a>
             <a
               href="tel:+919949479765"
-              className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-black transition-all border border-white/20 hover:scale-105 active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-4 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-black transition-all border border-white/20 hover:scale-105 active:scale-95 w-full sm:w-auto"
             >
               <Phone className="w-4 h-4 text-[#C1121F]" />
               Call Workshop
@@ -502,7 +502,7 @@ export default function LandingPage({ onLoginSuccess }) {
               href="https://wa.me/919949479765"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-[#25D366] hover:bg-[#20BA56] text-white rounded-xl text-xs font-black transition-all shadow-md hover:scale-105 active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-4 bg-[#25D366] hover:bg-[#20BA56] text-white rounded-xl text-xs font-black transition-all shadow-md hover:scale-105 active:scale-95 w-full sm:w-auto"
             >
               WhatsApp Support
             </a>
@@ -511,42 +511,42 @@ export default function LandingPage({ onLoginSuccess }) {
       </section>
 
       {/* Trust Section */}
-      <section className="relative z-30 -mt-6 max-w-7xl mx-auto px-6">
-        <div className="bg-white border border-slate-200/80 rounded-[24px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] py-4 px-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="flex items-center gap-4 py-2 px-3 border-r border-slate-100 last:border-0">
-            <div className="p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
-              <Car className="w-5 h-5" />
+      <section className="relative z-30 mt-8 lg:-mt-10 max-w-7xl mx-auto px-6">
+        <div className="bg-white border border-slate-200/80 rounded-[24px] shadow-sm lg:shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+          <div className="flex items-center gap-4 p-4 bg-slate-50/50 lg:bg-transparent rounded-2xl border border-slate-100/70 lg:border-0 lg:border-r lg:border-slate-100 lg:p-0 last:border-0 last:border-r-0">
+            <div className="p-3 lg:p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
+              <Car className="w-6 h-6 lg:w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-xs font-black text-slate-900 uppercase">5000+ Serviced</h4>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Vehicles Handled</p>
+              <h4 className="text-sm lg:text-xs font-black text-slate-900 uppercase">5000+ Serviced</h4>
+              <p className="text-[10px] lg:text-[9px] text-slate-400 font-bold uppercase tracking-wider">Vehicles Handled</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 py-2 px-3 border-r border-slate-100 last:border-0">
-            <div className="p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
-              <Users className="w-5 h-5" />
+          <div className="flex items-center gap-4 p-4 bg-slate-50/50 lg:bg-transparent rounded-2xl border border-slate-100/70 lg:border-0 lg:border-r lg:border-slate-100 lg:p-0 last:border-0 last:border-r-0">
+            <div className="p-3 lg:p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
+              <Users className="w-6 h-6 lg:w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-xs font-black text-slate-900 uppercase">Certified Staff</h4>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Expert Technicians</p>
+              <h4 className="text-sm lg:text-xs font-black text-slate-900 uppercase">Certified Staff</h4>
+              <p className="text-[10px] lg:text-[9px] text-slate-400 font-bold uppercase tracking-wider">Expert Technicians</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 py-2 px-3 border-r border-slate-100 last:border-0">
-            <div className="p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
-              <Award className="w-5 h-5" />
+          <div className="flex items-center gap-4 p-4 bg-slate-50/50 lg:bg-transparent rounded-2xl border border-slate-100/70 lg:border-0 lg:border-r lg:border-slate-100 lg:p-0 last:border-0 last:border-r-0">
+            <div className="p-3 lg:p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
+              <Award className="w-6 h-6 lg:w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-xs font-black text-slate-900 uppercase">Genuine Spares</h4>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">OEM Sourced Parts</p>
+              <h4 className="text-sm lg:text-xs font-black text-slate-900 uppercase">Genuine Spares</h4>
+              <p className="text-[10px] lg:text-[9px] text-slate-400 font-bold uppercase tracking-wider">OEM Sourced Parts</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 py-2 px-3 last:border-0">
-            <div className="p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
-              <ShieldCheck className="w-5 h-5" />
+          <div className="flex items-center gap-4 p-4 bg-slate-50/50 lg:bg-transparent rounded-2xl border border-slate-100/70 lg:border-0 lg:p-0 last:border-0">
+            <div className="p-3 lg:p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
+              <ShieldCheck className="w-6 h-6 lg:w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-xs font-black text-slate-900 uppercase">Claims Support</h4>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Cashless Assistance</p>
+              <h4 className="text-sm lg:text-xs font-black text-slate-900 uppercase">Claims Support</h4>
+              <p className="text-[10px] lg:text-[9px] text-slate-400 font-bold uppercase tracking-wider">Cashless Assistance</p>
             </div>
           </div>
         </div>
@@ -631,7 +631,7 @@ export default function LandingPage({ onLoginSuccess }) {
             return (
               <div 
                 key={idx} 
-                className="bg-white border border-slate-200/70 rounded-2xl overflow-hidden transition-all duration-300 hover:border-[#C1121F]/20 hover:-translate-y-1.5 hover:shadow-lg flex flex-col justify-between group shadow-sm w-full h-[330px]"
+                className="bg-white border border-slate-200/70 rounded-2xl overflow-hidden transition-all duration-300 hover:border-[#C1121F]/20 hover:-translate-y-1.5 hover:shadow-lg flex flex-col justify-between group shadow-sm w-full h-full min-h-[330px]"
               >
                 <div className="relative h-[150px] w-full overflow-hidden bg-slate-100 shrink-0">
                   <img 
@@ -671,7 +671,7 @@ export default function LandingPage({ onLoginSuccess }) {
             <p className="text-xs text-slate-450 font-semibold max-w-md mx-auto">Milestones achieved over years of dedicated multi-brand automobile servicing.</p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {[
               { val: '5,000+', label: 'Vehicles Serviced', desc: 'Premium multi-brand vehicles serviced.' },
               { val: '10+', label: 'Years Experience', desc: 'Proven technical track record.' },
@@ -763,7 +763,7 @@ export default function LandingPage({ onLoginSuccess }) {
               { title: 'Quality Spare Parts', desc: 'OEM filters, high-grade lubrication motor oil, spark plugs, and brake pads.' },
               { title: 'Customer Satisfaction', desc: 'Post-repair quality inspect checks before vehicle delivery and gate pass release.' }
             ].map((item, idx) => (
-              <div key={idx} className="bg-slate-50 border border-slate-200/80 p-5 rounded-2xl flex gap-3.5 items-start h-[160px] hover:border-[#C1121F]/20 hover:bg-white hover:shadow-md transition-all duration-300">
+              <div key={idx} className="bg-slate-50 border border-slate-200/80 p-5 rounded-2xl flex gap-3.5 items-start h-full min-h-[160px] hover:border-[#C1121F]/20 hover:bg-white hover:shadow-md transition-all duration-300">
                 <CheckCircle className="w-5 h-5 text-[#C1121F] shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide">{item.title}</h4>
