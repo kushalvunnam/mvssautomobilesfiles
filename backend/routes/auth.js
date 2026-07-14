@@ -5,6 +5,11 @@ const { auth, restrictTo, JWT_SECRET } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
 
+// Version Check
+router.get('/version', (req, res) => {
+  res.send({ version: '1.0.3-pdf-auth-fix-v2' });
+});
+
 // User Login
 router.post('/login', async (req, res) => {
   try {
