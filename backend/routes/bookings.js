@@ -65,6 +65,11 @@ function postToBookingWebhook(payload) {
         reject(error);
       });
 
+      request.setTimeout(10000);
+      request.on('timeout', () => {
+        request.destroy(new Error('Webhook request timed out (10s)'));
+      });
+
       request.write(body);
       request.end();
     } catch (error) {
@@ -78,6 +83,8 @@ function postToBookingWebhook(payload) {
 router.post('/', async (req, res) => {
   try {
     console.log('BOOKING ROUTE HIT');
+    console.log('REQUEST BODY:', req.body);
+
     const {
       customerName,
       mobile,
@@ -120,6 +127,10 @@ router.post('/', async (req, res) => {
       source: 'backend_booking_route',
     };
 
+    const BOOKING_WEBHOOK_URL = process.env.BOOKING_WEBHOOK_URL || DEFAULT_BOOKING_WEBHOOK_URL;
+    console.log('WEBHOOK URL:', BOOKING_WEBHOOK_URL);
+    console.log('WEBHOOK PAYLOAD:', bookingPayload);
+
 
     // ==========================================
     // 2. SEND DATA TO N8N WEBHOOK
@@ -129,19 +140,18 @@ router.post('/', async (req, res) => {
     let webhookError = null;
 
     try {
-      console.log('Sending booking to n8n');
+      console.log('CALLING WEBHOOK...');
       const webhookResult = await postToBookingWebhook(bookingPayload);
 
       webhookTriggered = true;
 
-      console.log('Webhook Success');
+      console.log('WEBHOOK SUCCESS');
       console.log('Status:', webhookResult.statusCode);
       console.log('Response:', webhookResult.body);
-    } catch (webhookErr) {
-      webhookError = webhookErr.message;
+    } catch (error) {
+      webhookError = error.message;
 
-      console.log('Webhook Failed');
-      console.error('Error:', webhookErr.message);
+      console.log('WEBHOOK FAILURE:', error);
     }
 
 
