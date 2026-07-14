@@ -232,7 +232,7 @@ export default function App() {
         };
 
         if (urlStr.includes('/api/auth/profile')) {
-          return responseJson(user || { id: 'demo_user_id', name: 'Demo Admin', email: 'admin@autoworkshop.com', role: 'Admin' });
+          return responseJson(user || { id: 'demo_user_id', name: 'System Admin', email: 'admin@mvssautomobiles.com', role: 'Admin' });
         }
 
         if (urlStr.includes('/api/dashboard/stats')) {
@@ -1541,9 +1541,17 @@ function ProtectedRoute({ children, token, user }) {
   return children;
 }
 
+function getRedirectPath(role) {
+  if (role === 'Service') return '/job-cards';
+  if (role === 'Spares') return '/inventory';
+  if (role === 'Accounts') return '/invoices';
+  if (role === 'Body Shop') return '/body-shop';
+  return '/dashboard'; // Default to dashboard for Admin
+}
+
 function LoginWrapper({ token, user, onLoginSuccess }) {
   if (token && user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={getRedirectPath(user.role)} replace />;
   }
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
@@ -1559,7 +1567,7 @@ function LandingPageWrapper({ onLoginSuccess }) {
 
   const handleLandingLoginSuccess = (loginUser, loginToken) => {
     onLoginSuccess(loginUser, loginToken);
-    navigate('/dashboard');
+    navigate(getRedirectPath(loginUser.role));
   };
 
   return <LandingPage onLoginSuccess={handleLandingLoginSuccess} />;

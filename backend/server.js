@@ -127,11 +127,11 @@ async function seedDatabase() {
     // 1. Seed Users
     console.log('Configuring default user accounts...');
     const defaultUsers = [
-      { name: 'System Admin', email: 'admin@autoworkshop.com', password: 'admin123', role: 'Admin' },
-      { name: 'Sarah Accountant', email: 'accounts@autoworkshop.com', password: 'accounts123', role: 'Accounts' },
-      { name: 'John Service Incharge', email: 'service@autoworkshop.com', password: 'service123', role: 'Service' },
-      { name: 'Mike Spares Manager', email: 'spares@autoworkshop.com', password: 'spares123', role: 'Spares' },
-      { name: 'Body Shop Manager', email: 'bodyshop@autoworkshop.com', password: 'bodyshop123', role: 'Body Shop' }
+      { name: 'System Admin', email: 'admin@mvssautomobiles.com', password: 'admin_mvss@2026', role: 'Admin' },
+      { name: 'Accounts Executive', email: 'accounts@mvssautomobiles.com', password: 'accounts_mvss@2026', role: 'Accounts' },
+      { name: 'Service Advisor', email: 'service@mvssautomobiles.com', password: 'service_mvss@2026', role: 'Service' },
+      { name: 'Store Manager', email: 'store@mvssautomobiles.com', password: 'store_mvss@2026', role: 'Spares' },
+      { name: 'Body Shop Manager', email: 'bodyshop@mvssautomobiles.com', password: 'bodyshop_mvss@2026', role: 'Body Shop' }
     ];
     for (const u of defaultUsers) {
       const existing = await User.findOne({ email: u.email });
