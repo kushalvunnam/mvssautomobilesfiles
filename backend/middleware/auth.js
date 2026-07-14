@@ -5,12 +5,22 @@ const JWT_SECRET = process.env.JWT_SECRET || 'autoworkshop_secret_key_123';
 
 const auth = async (req, res, next) => {
   try {
-    const authHeader = req.header('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('[Auth Middleware] Headers Authorization:', req.header('Authorization'));
+    console.log('[Auth Middleware] Query Token:', req.query.token);
+
+    let token = req.query.token;
+
+    if (!token) {
+      const authHeader = req.header('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.replace('Bearer ', '');
+      }
+    }
+
+    if (!token) {
       return res.status(401).send({ error: 'Please authenticate.' });
     }
 
-    const token = authHeader.replace('Bearer ', '');
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findOne({ _id: decoded._id, active: true });
 
