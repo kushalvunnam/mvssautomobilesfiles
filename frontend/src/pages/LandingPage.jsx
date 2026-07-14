@@ -445,7 +445,7 @@ export default function LandingPage({ onLoginSuccess }) {
       </header>
 
       {/* Hero Section */}
-      <section id="home" className="relative w-full h-[600px] lg:h-[750px] overflow-hidden bg-slate-950 flex items-center">
+      <section id="home" className="relative w-full h-[600px] lg:h-[750px] overflow-hidden bg-slate-950 flex items-center pb-12 lg:pb-16">
         
         {/* Subtle Dark Overlay Gradient */}
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-slate-950/40 z-10" />
@@ -511,42 +511,42 @@ export default function LandingPage({ onLoginSuccess }) {
       </section>
 
       {/* Trust Section */}
-      <section className="relative z-30 -mt-16 max-w-7xl mx-auto px-6">
-        <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xl p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="flex items-center gap-4 p-4 border-r border-slate-100 last:border-0">
-            <div className="p-3 bg-red-50 text-[#C1121F] rounded-2xl shrink-0">
-              <Car className="w-6 h-6" />
+      <section className="relative z-30 -mt-6 max-w-7xl mx-auto px-6">
+        <div className="bg-white border border-slate-200/80 rounded-[24px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] py-4 px-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="flex items-center gap-4 py-2 px-3 border-r border-slate-100 last:border-0">
+            <div className="p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
+              <Car className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-black text-slate-900 uppercase">5000+ Serviced</h4>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Vehicles Handled</p>
+              <h4 className="text-xs font-black text-slate-900 uppercase">5000+ Serviced</h4>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Vehicles Handled</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-4 border-r border-slate-100 last:border-0">
-            <div className="p-3 bg-red-50 text-[#C1121F] rounded-2xl shrink-0">
-              <Users className="w-6 h-6" />
+          <div className="flex items-center gap-4 py-2 px-3 border-r border-slate-100 last:border-0">
+            <div className="p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
+              <Users className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-black text-slate-900 uppercase">Certified Staff</h4>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Expert Technicians</p>
+              <h4 className="text-xs font-black text-slate-900 uppercase">Certified Staff</h4>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Expert Technicians</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-4 border-r border-slate-100 last:border-0">
-            <div className="p-3 bg-red-50 text-[#C1121F] rounded-2xl shrink-0">
-              <Award className="w-6 h-6" />
+          <div className="flex items-center gap-4 py-2 px-3 border-r border-slate-100 last:border-0">
+            <div className="p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
+              <Award className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-black text-slate-900 uppercase">Genuine Spares</h4>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">OEM Sourced Parts</p>
+              <h4 className="text-xs font-black text-slate-900 uppercase">Genuine Spares</h4>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">OEM Sourced Parts</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-4 last:border-0">
-            <div className="p-3 bg-red-50 text-[#C1121F] rounded-2xl shrink-0">
-              <ShieldCheck className="w-6 h-6" />
+          <div className="flex items-center gap-4 py-2 px-3 last:border-0">
+            <div className="p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
+              <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-black text-slate-900 uppercase">Claims Support</h4>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cashless Assistance</p>
+              <h4 className="text-xs font-black text-slate-900 uppercase">Claims Support</h4>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Cashless Assistance</p>
             </div>
           </div>
         </div>
