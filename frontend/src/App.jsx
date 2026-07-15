@@ -1372,7 +1372,7 @@ export default function App() {
       return;
     }
     try {
-      const res = await fetch('https://mvssautomobiles.com/api/auth/profile', {
+      const res = await fetch(`${API_BASE_URL}/auth/profile`, {
         headers: { Authorization: `Bearer ${sessionToken}` }
       });
       if (res.ok) {
@@ -1381,10 +1381,13 @@ export default function App() {
         localStorage.setItem('user', JSON.stringify(data));
       } else {
         // Token expired/invalid, clear session
-        handleLogout();
+        console.warn('Session token invalid, logging out.');
+        await handleLogout('/login');
       }
     } catch (err) {
       console.error('Failed to authenticate session:', err);
+      // Clear session on connection/authentication failure for safety
+      await handleLogout('/login');
     } finally {
       setLoading(false);
     }
@@ -1449,7 +1452,7 @@ export default function App() {
     setActiveTab(defaultTab);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async (redirectTo = '/') => {
     try {
       if (token && token !== 'mock_jwt_token_for_offline_demo') {
         await fetch(`${API_BASE_URL}/auth/logout`, {
@@ -1485,7 +1488,7 @@ export default function App() {
     localStorage.removeItem('user');
     setToken('');
     setUser(null);
-    window.location.replace('/');
+    window.location.replace(redirectTo);
   };
 
   const handleNavigateToJobCard = (jcId) => {
