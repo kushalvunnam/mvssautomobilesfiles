@@ -37,9 +37,9 @@ const employeeSchema = new mongoose.Schema({
     trim: true,
     validate: {
       validator: function(v) {
-        return /^[6-9]\d{9}$/.test(v);
+        return /^\+?\d{7,15}$/.test(v);
       },
-      message: props => `${props.value} is not a valid 10-digit Indian mobile number!`
+      message: props => `${props.value} is not a valid phone number!`
     }
   },
   dateOfJoining: { type: Date, required: true },

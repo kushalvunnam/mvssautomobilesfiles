@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import { Search, Plus, Edit2, Calendar, FileText, Receipt, ShieldAlert, Trash2 } from 'lucide-react';
 
 export default function Customers({ token, user }) {
@@ -129,34 +131,17 @@ export default function Customers({ token, user }) {
     });
   };
 
-  const handleMobileChange = (e) => {
-    const input = e.target;
-    const originalValue = input.value;
-    let processedValue = originalValue.replace(/[^0-9]/g, '');
-    if (processedValue.length > 0 && !/^[6-9]/.test(processedValue)) {
-      processedValue = processedValue.substring(1);
-    }
-    processedValue = processedValue.slice(0, 10);
-    
-    const selectionStart = input.selectionStart;
-    setFormData(prev => ({ ...prev, mobile: processedValue }));
-
-    requestAnimationFrame(() => {
-      if (input && input.setSelectionRange) {
-        const beforeCursor = originalValue.slice(0, selectionStart);
-        const cleanBeforeCursor = beforeCursor.replace(/[^0-9]/g, '');
-        const newCursorPos = cleanBeforeCursor.length;
-        input.setSelectionRange(newCursorPos, newCursorPos);
-      }
-    });
+  const handleMobileChange = (val) => {
+    const cleanPhone = val ? val.replace(/\D/g, '') : '';
+    setFormData(prev => ({ ...prev, mobile: cleanPhone }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const mobileRegex = /^[6-9]\d{9}$/;
-    if (!mobileRegex.test(formData.mobile)) {
-      alert('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
+    const mobileDigits = formData.mobile ? formData.mobile.replace(/\D/g, '') : '';
+    if (!mobileDigits || mobileDigits.length < 7 || mobileDigits.length > 15) {
+      alert('Please enter a valid phone number.');
       return;
     }
 
@@ -458,28 +443,90 @@ export default function Customers({ token, user }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wide">Mobile Number</label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.mobile}
-                    onChange={handleMobileChange}
-                    placeholder="9949479765"
-                    className="mt-1 block w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
-                  />
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wide mb-1">Mobile Number</label>
+                  <div className="relative flex items-center international-phone-wrapper">
+                    <PhoneInput
+                      country={'in'}
+                      value={formData.mobile}
+                      onChange={handleMobileChange}
+                      enableSearch={true}
+                      searchPlaceholder="Search country..."
+                      inputProps={{
+                        name: 'mobile',
+                        required: true,
+                      }}
+                      inputStyle={{
+                        width: '100%',
+                        height: '38px',
+                        paddingLeft: '48px',
+                        paddingRight: '14px',
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        fontFamily: 'inherit',
+                      }}
+                      buttonStyle={{
+                        border: 'none',
+                        background: 'transparent',
+                        paddingLeft: '8px',
+                      }}
+                      dropdownStyle={{
+                        backgroundColor: '#ffffff',
+                        color: '#334155',
+                        fontSize: '0.75rem',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                      }}
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wide">Alternate Phone</label>
-                  <input
-                    type="tel"
-                    value={formData.alternateNumber}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
-                      setFormData({ ...formData, alternateNumber: val });
-                    }}
-                    placeholder="e.g. 9949479766"
-                    className="mt-1 block w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
-                  />
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wide mb-1">Alternate Phone</label>
+                  <div className="relative flex items-center international-phone-wrapper">
+                    <PhoneInput
+                      country={'in'}
+                      value={formData.alternateNumber}
+                      onChange={(val) => {
+                        const cleanPhone = val ? val.replace(/\D/g, '') : '';
+                        setFormData({ ...formData, alternateNumber: cleanPhone });
+                      }}
+                      enableSearch={true}
+                      searchPlaceholder="Search country..."
+                      inputProps={{
+                        name: 'alternateNumber',
+                      }}
+                      inputStyle={{
+                        width: '100%',
+                        height: '38px',
+                        paddingLeft: '48px',
+                        paddingRight: '14px',
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        fontFamily: 'inherit',
+                      }}
+                      buttonStyle={{
+                        border: 'none',
+                        background: 'transparent',
+                        paddingLeft: '8px',
+                      }}
+                      dropdownStyle={{
+                        backgroundColor: '#ffffff',
+                        color: '#334155',
+                        fontSize: '0.75rem',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 

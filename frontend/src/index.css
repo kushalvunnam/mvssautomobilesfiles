@@ -76,3 +76,59 @@ input:focus, select:focus, textarea:focus {
 .animate-scale-up {
   animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* React Phone Input styles and dark mode support */
+.international-phone-wrapper .react-tel-input .form-control {
+  border: 1px solid #e2e8f0 !important;
+  color: #1e293b !important;
+  background-color: #f8fafc !important;
+}
+
+.dark .international-phone-wrapper .react-tel-input .form-control {
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+  background-color: #020617 !important;
+}
+
+.international-phone-wrapper .react-tel-input .flag-dropdown {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.international-phone-wrapper .react-tel-input .selected-flag {
+  background-color: transparent !important;
+}
+
+.international-phone-wrapper .react-tel-input .selected-flag:hover {
+  background-color: transparent !important;
+}
+
+.international-phone-wrapper .react-tel-input .country-list {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.dark .international-phone-wrapper .react-tel-input .country-list {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+
+.international-phone-wrapper .react-tel-input .country-list .country:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.dark .international-phone-wrapper .react-tel-input .country-list .country:hover {
+  background-color: #1e293b !important;
+}
+
+.international-phone-wrapper .react-tel-input .country-list .country.highlight {
+  background-color: #e2e8f0 !important;
+}
+
+.dark .international-phone-wrapper .react-tel-input .country-list .country.highlight {
+  background-color: #334155 !important;
+}
+
