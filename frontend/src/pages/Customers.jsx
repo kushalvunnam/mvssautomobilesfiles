@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css';
+import InternationalPhoneInput from '../components/InternationalPhoneInput';
 import { Search, Plus, Edit2, Calendar, FileText, Receipt, ShieldAlert, Trash2 } from 'lucide-react';
 
 export default function Customers({ token, user }) {
@@ -132,16 +131,17 @@ export default function Customers({ token, user }) {
   };
 
   const handleMobileChange = (val) => {
-    const cleanPhone = val ? val.replace(/\D/g, '') : '';
-    setFormData(prev => ({ ...prev, mobile: cleanPhone }));
+    setFormData(prev => ({ ...prev, mobile: val }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const mobileDigits = formData.mobile ? formData.mobile.replace(/\D/g, '') : '';
-    if (!mobileDigits || mobileDigits.length < 7 || mobileDigits.length > 15) {
-      alert('Please enter a valid phone number.');
+    if (!formData.mobile || formData.mobile.length < 8) {
+      alert('Please enter a valid phone number with country code.');
+      return;
+    } else if (!formData.mobile.startsWith('+')) {
+      alert('Phone number must include country code (e.g., +91).');
       return;
     }
 
@@ -444,89 +444,30 @@ export default function Customers({ token, user }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wide mb-1">Mobile Number</label>
-                  <div className="relative flex items-center international-phone-wrapper">
-                    <PhoneInput
-                      country={'in'}
-                      value={formData.mobile}
-                      onChange={handleMobileChange}
-                      enableSearch={true}
-                      searchPlaceholder="Search country..."
-                      inputProps={{
-                        name: 'mobile',
-                        required: true,
-                      }}
-                      inputStyle={{
-                        width: '100%',
-                        height: '38px',
-                        paddingLeft: '48px',
-                        paddingRight: '14px',
-                        paddingTop: '8px',
-                        paddingBottom: '8px',
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        fontFamily: 'inherit',
-                      }}
-                      buttonStyle={{
-                        border: 'none',
-                        background: 'transparent',
-                        paddingLeft: '8px',
-                      }}
-                      dropdownStyle={{
-                        backgroundColor: '#ffffff',
-                        color: '#334155',
-                        fontSize: '0.75rem',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                      }}
-                    />
-                  </div>
+                  <InternationalPhoneInput
+                    value={formData.mobile}
+                    onChange={handleMobileChange}
+                    country="in"
+                    enableSearch={true}
+                    searchPlaceholder="Search country..."
+                    variant="compact"
+                    name="mobile"
+                    required={true}
+                    ariaLabel="Mobile number"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wide mb-1">Alternate Phone</label>
-                  <div className="relative flex items-center international-phone-wrapper">
-                    <PhoneInput
-                      country={'in'}
-                      value={formData.alternateNumber}
-                      onChange={(val) => {
-                        const cleanPhone = val ? val.replace(/\D/g, '') : '';
-                        setFormData({ ...formData, alternateNumber: cleanPhone });
-                      }}
-                      enableSearch={true}
-                      searchPlaceholder="Search country..."
-                      inputProps={{
-                        name: 'alternateNumber',
-                      }}
-                      inputStyle={{
-                        width: '100%',
-                        height: '38px',
-                        paddingLeft: '48px',
-                        paddingRight: '14px',
-                        paddingTop: '8px',
-                        paddingBottom: '8px',
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        fontFamily: 'inherit',
-                      }}
-                      buttonStyle={{
-                        border: 'none',
-                        background: 'transparent',
-                        paddingLeft: '8px',
-                      }}
-                      dropdownStyle={{
-                        backgroundColor: '#ffffff',
-                        color: '#334155',
-                        fontSize: '0.75rem',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                      }}
-                    />
-                  </div>
+                  <InternationalPhoneInput
+                    value={formData.alternateNumber}
+                    onChange={(val) => setFormData({ ...formData, alternateNumber: val })}
+                    country="in"
+                    enableSearch={true}
+                    searchPlaceholder="Search country..."
+                    variant="compact"
+                    name="alternateNumber"
+                    ariaLabel="Alternate phone number"
+                  />
                 </div>
               </div>
 

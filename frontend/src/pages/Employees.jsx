@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css';
+import InternationalPhoneInput from '../components/InternationalPhoneInput';
 import { Search, Plus, Calendar, Receipt, Download, FileText, CheckCircle2, XCircle, AlertCircle, Save, Edit2, Trash2, Eye } from 'lucide-react';
 
 export default function Employees({ token, user }) {
@@ -104,8 +103,7 @@ export default function Employees({ token, user }) {
   };
 
   const handlePhoneChange = (val, form, setter) => {
-    const cleanPhone = val ? val.replace(/\D/g, '') : '';
-    setter({ ...form, phone: cleanPhone });
+    setter({ ...form, phone: val });
   };
 
   const handleAadharChange = (e, form, setter) => {
@@ -252,9 +250,11 @@ export default function Employees({ token, user }) {
     setErrorMsg('');
     setSuccessMsg('');
 
-    const phoneDigits = addForm.phone ? addForm.phone.replace(/\D/g, '') : '';
-    if (!phoneDigits || phoneDigits.length < 7 || phoneDigits.length > 15) {
-      setErrorMsg('Please enter a valid phone number.');
+    if (!addForm.phone || addForm.phone.length < 8) {
+      setErrorMsg('Please enter a valid phone number with country code.');
+      return;
+    } else if (!addForm.phone.startsWith('+')) {
+      setErrorMsg('Phone number must include country code (e.g., +91).');
       return;
     }
 
@@ -348,9 +348,11 @@ export default function Employees({ token, user }) {
     setErrorMsg('');
     setSuccessMsg('');
 
-    const phoneDigits = editForm.phone ? editForm.phone.replace(/\D/g, '') : '';
-    if (!phoneDigits || phoneDigits.length < 7 || phoneDigits.length > 15) {
-      setErrorMsg('Please enter a valid phone number.');
+    if (!editForm.phone || editForm.phone.length < 8) {
+      setErrorMsg('Please enter a valid phone number with country code.');
+      return;
+    } else if (!editForm.phone.startsWith('+')) {
+      setErrorMsg('Phone number must include country code (e.g., +91).');
       return;
     }
 
@@ -1389,45 +1391,17 @@ export default function Employees({ token, user }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
-                  <div className="relative flex items-center international-phone-wrapper">
-                    <PhoneInput
-                      country={'in'}
-                      value={addForm.phone}
-                      onChange={(val) => handlePhoneChange(val, addForm, setAddForm)}
-                      enableSearch={true}
-                      searchPlaceholder="Search country..."
-                      inputProps={{
-                        name: 'phone',
-                        required: true,
-                      }}
-                      inputStyle={{
-                        width: '100%',
-                        height: '38px',
-                        paddingLeft: '48px',
-                        paddingRight: '14px',
-                        paddingTop: '8px',
-                        paddingBottom: '8px',
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        fontFamily: 'inherit',
-                      }}
-                      buttonStyle={{
-                        border: 'none',
-                        background: 'transparent',
-                        paddingLeft: '8px',
-                      }}
-                      dropdownStyle={{
-                        backgroundColor: '#ffffff',
-                        color: '#334155',
-                        fontSize: '0.75rem',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                      }}
-                    />
-                  </div>
+                  <InternationalPhoneInput
+                    value={addForm.phone}
+                    onChange={(val) => handlePhoneChange(val, addForm, setAddForm)}
+                    country="in"
+                    enableSearch={true}
+                    searchPlaceholder="Search country..."
+                    variant="compact"
+                    name="phone"
+                    required={true}
+                    ariaLabel="Phone number"
+                  />
                 </div>
 
                 <div>
@@ -1681,45 +1655,17 @@ export default function Employees({ token, user }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
-                  <div className="relative flex items-center international-phone-wrapper">
-                    <PhoneInput
-                      country={'in'}
-                      value={editForm.phone}
-                      onChange={(val) => handlePhoneChange(val, editForm, setEditForm)}
-                      enableSearch={true}
-                      searchPlaceholder="Search country..."
-                      inputProps={{
-                        name: 'phone',
-                        required: true,
-                      }}
-                      inputStyle={{
-                        width: '100%',
-                        height: '38px',
-                        paddingLeft: '48px',
-                        paddingRight: '14px',
-                        paddingTop: '8px',
-                        paddingBottom: '8px',
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        fontFamily: 'inherit',
-                      }}
-                      buttonStyle={{
-                        border: 'none',
-                        background: 'transparent',
-                        paddingLeft: '8px',
-                      }}
-                      dropdownStyle={{
-                        backgroundColor: '#ffffff',
-                        color: '#334155',
-                        fontSize: '0.75rem',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                      }}
-                    />
-                  </div>
+                  <InternationalPhoneInput
+                    value={editForm.phone}
+                    onChange={(val) => handlePhoneChange(val, editForm, setEditForm)}
+                    country="in"
+                    enableSearch={true}
+                    searchPlaceholder="Search country..."
+                    variant="compact"
+                    name="phone"
+                    required={true}
+                    ariaLabel="Phone number"
+                  />
                 </div>
 
                 <div>

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ChevronLeft, ArrowRight, Lock, X, CheckCircle, Navigation, Star, Award, Settings, Users, ShieldAlert, Sparkles, Menu, User, Calendar, Hash, Mail } from 'lucide-react';
 import Login from './Login';
-import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css';
+import InternationalPhoneInput from '../components/InternationalPhoneInput';
 import { API_BASE_URL } from '../config';
 
 export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
@@ -41,9 +40,10 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
         }
       }
     } else if (name === 'contactPhone') {
-      const phoneDigits = value ? value.replace(/\D/g, '') : '';
-      if (!phoneDigits || phoneDigits.length < 7 || phoneDigits.length > 15) {
-        errorMsg = 'Please enter a valid phone number.';
+      if (!value || value.length < 8) {
+        errorMsg = 'Please enter a valid phone number with country code.';
+      } else if (!value.startsWith('+')) {
+        errorMsg = 'Phone number must include country code (e.g., +91).';
       }
     } else if (name === 'vehiclePlate') {
       const plateRegex = /^[A-Z0-9-]+$/i;
@@ -113,10 +113,9 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
   };
 
   const handlePhoneChange = (val) => {
-    const cleanPhone = val ? val.replace(/\D/g, '') : '';
-    setContactPhone(cleanPhone);
+    setContactPhone(val);
     if (formTouched || errors.contactPhone) {
-      const err = validateField('contactPhone', cleanPhone);
+      const err = validateField('contactPhone', val);
       setErrors(prev => ({ ...prev, contactPhone: err }));
     }
   };
@@ -963,50 +962,22 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
               {/* Phone Field */}
               <div className="space-y-1">
                 <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Contact Phone</label>
-                <div className="relative flex items-center international-phone-wrapper">
-                  <PhoneInput
-                    country={'in'}
-                    value={contactPhone}
-                    disabled={isSubmitting}
-                    onChange={handlePhoneChange}
-                    onBlur={handlePhoneBlur}
-                    enableSearch={true}
-                    searchPlaceholder="Search country..."
-                    inputProps={{
-                      name: 'contactPhone',
-                      required: true,
-                    }}
-                    inputStyle={{
-                      width: '100%',
-                      height: '42px',
-                      paddingLeft: '48px',
-                      paddingRight: '16px',
-                      paddingTop: '12px',
-                      paddingBottom: '12px',
-                      backgroundColor: '#f8fafc',
-                      border: errors.contactPhone ? '1px solid #ef4444' : '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      fontSize: '0.75rem',
-                      fontWeight: '500',
-                      fontFamily: 'inherit',
-                      transition: 'all 0.2s',
-                    }}
-                    buttonStyle={{
-                      border: 'none',
-                      background: 'transparent',
-                      paddingLeft: '8px',
-                    }}
-                    dropdownStyle={{
-                      backgroundColor: '#ffffff',
-                      color: '#334155',
-                      fontSize: '0.75rem',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                    }}
-                  />
-                </div>
+                <InternationalPhoneInput
+                  value={contactPhone}
+                  onChange={handlePhoneChange}
+                  onBlur={handlePhoneBlur}
+                  disabled={isSubmitting}
+                  error={!!errors.contactPhone}
+                  name="contactPhone"
+                  required={true}
+                  country="in"
+                  enableSearch={true}
+                  searchPlaceholder="Search country..."
+                  ariaLabel="Contact phone number"
+                  ariaDescribedby={errors.contactPhone ? 'contactPhone-error' : undefined}
+                />
                 {errors.contactPhone && (
-                  <span className="block mt-0.5 text-[9px] text-red-500 font-semibold">{errors.contactPhone}</span>
+                  <span id="contactPhone-error" className="block mt-0.5 text-[9px] text-red-500 font-semibold">{errors.contactPhone}</span>
                 )}
               </div>
 

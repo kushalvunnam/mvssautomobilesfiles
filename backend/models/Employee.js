@@ -51,6 +51,20 @@ const employeeSchema = new mongoose.Schema({
   salaries: [salarySchema]
 }, { timestamps: true });
 
+// Pre-save hook to normalize phone numbers to E.164 format
+employeeSchema.pre('save', function(next) {
+  if (this.phone && typeof this.phone === 'string') {
+    // Remove all non-digit characters except +
+    let cleanPhone = this.phone.replace(/[^\d+]/g, '');
+    // Ensure it starts with +
+    if (cleanPhone && !cleanPhone.startsWith('+')) {
+      cleanPhone = '+' + cleanPhone;
+    }
+    this.phone = cleanPhone;
+  }
+  next();
+});
+
 // Sequential employeeId auto-generation
 employeeSchema.pre('save', async function(next) {
   if (this.isNew && !this.employeeId) {
