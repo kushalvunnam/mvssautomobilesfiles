@@ -39,9 +39,9 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
         }
       }
     } else if (name === 'contactPhone') {
-     const phoneRegex = /^\d{12}$/;
+     const phoneRegex = /^\d{10}$/;
        if (!phoneRegex.test(value)) {
-        errorMsg = 'Please enter a valid 12-digit mobile number.';
+        errorMsg = 'Please enter a valid 10-digit mobile number.';
       }
 
 
