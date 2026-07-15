@@ -280,6 +280,7 @@ router.post('/', async (req, res) => {
       bookingSaved: true,
       webhookTriggered,
       webhookError,
+      webhookUrl: BOOKING_WEBHOOK_URL,
       emailSent,
       booking,
     });
