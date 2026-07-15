@@ -1,8 +1,8 @@
-import React, { forwardRef } from 'react';
+import React from 'react';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 
-const InternationalPhoneInput = forwardRef(({
+const InternationalPhoneInput = ({
   value,
   onChange,
   onBlur,
@@ -18,14 +18,10 @@ const InternationalPhoneInput = forwardRef(({
   ariaInvalid,
   ariaDescribedby,
   ...props
-}, ref) => {
-  const inputStyleClass = variant === 'compact' ? 'phone-input-compact' : 'phone-input-standard';
-  const errorClass = error ? 'error' : '';
-
+}) => {
   return (
     <div className="relative flex items-center international-phone-wrapper">
       <PhoneInput
-        ref={ref}
         country={country}
         value={value}
         onChange={onChange}
@@ -71,8 +67,6 @@ const InternationalPhoneInput = forwardRef(({
       />
     </div>
   );
-});
-
-InternationalPhoneInput.displayName = 'InternationalPhoneInput';
+};
 
 export default InternationalPhoneInput;
