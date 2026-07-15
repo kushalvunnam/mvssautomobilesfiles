@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ChevronLeft, ArrowRight, Lock, X, CheckCircle, Navigation, Star, Award, Settings, Users, ShieldAlert, Sparkles, Menu, User, Calendar, Hash, Mail } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 import Login from './Login';
 import InternationalPhoneInput from '../components/InternationalPhoneInput';
 import { API_BASE_URL } from '../config';
@@ -1222,6 +1223,17 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
           </div>
         </div>
       )}
+
+      {/* WhatsApp Floating Button */}
+      <a
+        href="https://wa.me/919949479765"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
+        aria-label="Chat on WhatsApp"
+      >
+        <FaWhatsapp className="w-6 h-6 sm:w-7 sm:h-7" />
+      </a>
 
     </div>
   );
