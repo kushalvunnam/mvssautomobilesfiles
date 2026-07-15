@@ -137,11 +137,14 @@ export default function Customers({ token, user }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.mobile || formData.mobile.length < 8) {
-      alert('Please enter a valid phone number with country code.');
+    if (!formData.mobile) {
+      alert('Please enter a valid phone number.');
       return;
-    } else if (!formData.mobile.startsWith('+')) {
-      alert('Phone number must include country code (e.g., +91).');
+    } else if (formData.mobile.length < 8) {
+      alert('Phone number is too short.');
+      return;
+    } else if (formData.mobile.length > 16) {
+      alert('Phone number is too long.');
       return;
     }
 
@@ -447,9 +450,7 @@ export default function Customers({ token, user }) {
                   <InternationalPhoneInput
                     value={formData.mobile}
                     onChange={handleMobileChange}
-                    country="in"
-                    enableSearch={true}
-                    searchPlaceholder="Search country..."
+                    country="IN"
                     variant="compact"
                     name="mobile"
                     required={true}
@@ -461,9 +462,7 @@ export default function Customers({ token, user }) {
                   <InternationalPhoneInput
                     value={formData.alternateNumber}
                     onChange={(val) => setFormData({ ...formData, alternateNumber: val })}
-                    country="in"
-                    enableSearch={true}
-                    searchPlaceholder="Search country..."
+                    country="IN"
                     variant="compact"
                     name="alternateNumber"
                     ariaLabel="Alternate phone number"

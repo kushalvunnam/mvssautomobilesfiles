@@ -250,11 +250,14 @@ export default function Employees({ token, user }) {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!addForm.phone || addForm.phone.length < 8) {
-      setErrorMsg('Please enter a valid phone number with country code.');
+    if (!addForm.phone) {
+      setErrorMsg('Please enter a valid phone number.');
       return;
-    } else if (!addForm.phone.startsWith('+')) {
-      setErrorMsg('Phone number must include country code (e.g., +91).');
+    } else if (addForm.phone.length < 8) {
+      setErrorMsg('Phone number is too short.');
+      return;
+    } else if (addForm.phone.length > 16) {
+      setErrorMsg('Phone number is too long.');
       return;
     }
 
@@ -348,11 +351,14 @@ export default function Employees({ token, user }) {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!editForm.phone || editForm.phone.length < 8) {
-      setErrorMsg('Please enter a valid phone number with country code.');
+    if (!editForm.phone) {
+      setErrorMsg('Please enter a valid phone number.');
       return;
-    } else if (!editForm.phone.startsWith('+')) {
-      setErrorMsg('Phone number must include country code (e.g., +91).');
+    } else if (editForm.phone.length < 8) {
+      setErrorMsg('Phone number is too short.');
+      return;
+    } else if (editForm.phone.length > 16) {
+      setErrorMsg('Phone number is too long.');
       return;
     }
 
@@ -1394,9 +1400,7 @@ export default function Employees({ token, user }) {
                   <InternationalPhoneInput
                     value={addForm.phone}
                     onChange={(val) => handlePhoneChange(val, addForm, setAddForm)}
-                    country="in"
-                    enableSearch={true}
-                    searchPlaceholder="Search country..."
+                    country="IN"
                     variant="compact"
                     name="phone"
                     required={true}
@@ -1658,9 +1662,7 @@ export default function Employees({ token, user }) {
                   <InternationalPhoneInput
                     value={editForm.phone}
                     onChange={(val) => handlePhoneChange(val, editForm, setEditForm)}
-                    country="in"
-                    enableSearch={true}
-                    searchPlaceholder="Search country..."
+                    country="IN"
                     variant="compact"
                     name="phone"
                     required={true}

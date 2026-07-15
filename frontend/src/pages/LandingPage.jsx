@@ -40,10 +40,12 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
         }
       }
     } else if (name === 'contactPhone') {
-      if (!value || value.length < 8) {
-        errorMsg = 'Please enter a valid phone number with country code.';
-      } else if (!value.startsWith('+')) {
-        errorMsg = 'Phone number must include country code (e.g., +91).';
+      if (!value) {
+        errorMsg = 'Please enter a valid phone number.';
+      } else if (value.length < 8) {
+        errorMsg = 'Phone number is too short.';
+      } else if (value.length > 16) {
+        errorMsg = 'Phone number is too long.';
       }
     } else if (name === 'vehiclePlate') {
       const plateRegex = /^[A-Z0-9-]+$/i;
@@ -970,9 +972,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                   error={!!errors.contactPhone}
                   name="contactPhone"
                   required={true}
-                  country="in"
-                  enableSearch={true}
-                  searchPlaceholder="Search country..."
+                  country="IN"
                   ariaLabel="Contact phone number"
                   ariaDescribedby={errors.contactPhone ? 'contactPhone-error' : undefined}
                 />

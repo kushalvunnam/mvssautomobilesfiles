@@ -132,67 +132,56 @@ input:focus, select:focus, textarea:focus {
   background-color: #334155 !important;
 }
 
-/* Common phone input styles */
-.phone-input-standard {
-  width: 100%;
-  height: 42px;
-  padding-left: 48px;
-  padding-right: 16px;
-  padding-top: 12px;
-  padding-bottom: 12px;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  font-family: inherit;
-  transition: all 0.2s;
+/* React Phone Number Input styles */
+.international-phone-wrapper input {
+  width: 100% !important;
+  height: 42px !important;
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  font-family: inherit !important;
+  transition: all 0.2s !important;
 }
 
-.phone-input-standard:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+.international-phone-wrapper input:focus {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
+  outline: none !important;
 }
 
-.phone-input-standard.error {
-  border-color: #ef4444;
+.international-phone-wrapper input.error {
+  border-color: #ef4444 !important;
 }
 
-.phone-input-compact {
-  width: 100%;
-  height: 38px;
-  padding-left: 48px;
-  padding-right: 14px;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  font-family: inherit;
+.international-phone-wrapper .phone-input-compact {
+  height: 38px !important;
+  font-weight: 600 !important;
 }
 
-.phone-input-compact.error {
-  border-color: #ef4444;
+.international-phone-wrapper .PhoneInputCountry {
+  margin-right: 8px !important;
 }
 
-.phone-dropdown-button {
-  border: none;
-  background: transparent;
-  padding-left: 8px;
+.international-phone-wrapper .PhoneInputCountrySelect {
+  border: none !important;
+  background: transparent !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  padding: 0 !important;
 }
 
-.phone-dropdown {
-  background-color: #ffffff;
-  color: #334155;
-  font-size: 0.75rem;
-  border-radius: 12px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+.international-phone-wrapper .PhoneInputCountrySelectArrow {
+  margin-left: 4px !important;
 }
 
-.dark .phone-dropdown {
-  background-color: #0f172a;
-  color: #f8fafc;
-  border: 1px solid #334155;
+.dark .international-phone-wrapper input {
+  background-color: #020617 !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark .international-phone-wrapper .PhoneInputCountrySelect {
+  color: #f8fafc !important;
 }
