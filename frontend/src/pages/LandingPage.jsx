@@ -39,10 +39,13 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
         }
       }
     } else if (name === 'contactPhone') {
-      const phoneRegex = /^\d{10}$/;
-      if (!phoneRegex.test(value)) {
-        errorMsg = 'Please enter a valid 10-digit mobile number.';
+     const phoneRegex = /^\d{12}$/;
+       if (!phoneRegex.test(value)) {
+        errorMsg = 'Please enter a valid 12-digit mobile number.';
       }
+
+
+      
     } else if (name === 'vehiclePlate') {
       const plateRegex = /^[A-Z0-9-]+$/i;
       if (!trimmed || !plateRegex.test(trimmed)) {
