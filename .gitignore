@@ -5,6 +5,7 @@ node_modules/
 
 # Production builds
 /frontend/dist/
+/dist/
 
 # Environment files
 .env

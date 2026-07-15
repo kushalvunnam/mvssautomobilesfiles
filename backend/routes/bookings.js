@@ -11,7 +11,7 @@ const Message = require('../models/Message');
 const { logAction } = require('../utils/logger');
 
 // n8n PRODUCTION webhook URL
-const DEFAULT_BOOKING_WEBHOOK_URL = 'https://srinidhibusiness.app.n8n.cloud/webhook/58aaad25-0dfc-422a-88b9-d12c2d4a0b00';
+const DEFAULT_BOOKING_WEBHOOK_URL = 'https://vamshiyadav406.app.n8n.cloud/webhook/5f347f8c-353b-4af8-ae83-3c26f152f11a';
 
 /**
  * Send booking data to n8n webhook
