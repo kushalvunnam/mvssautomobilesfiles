@@ -4,7 +4,7 @@ import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, Chevr
 import Login from './Login';
 import { API_BASE_URL } from '../config';
 
-export default function LandingPage({ onLoginSuccess }) {
+export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
   const [heroIdx, setHeroIdx] = useState(0);
   const [activeCategory, setActiveCategory] = useState('All');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -413,6 +413,14 @@ export default function LandingPage({ onLoginSuccess }) {
           <div className="flex items-center gap-3">
             <Link
               to="/login"
+              onClick={(e) => {
+                e.preventDefault();
+                if (onStaffLoginClick) {
+                  onStaffLoginClick();
+                } else {
+                  window.location.href = '/login';
+                }
+              }}
               className="flex items-center gap-2 px-2.5 py-2 sm:px-4 sm:py-2 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-xs font-black transition-all shrink-0 shadow-md shadow-slate-900/10 active:scale-95 select-none"
             >
               <Lock className="w-3.5 h-3.5" />

@@ -1507,7 +1507,15 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LandingPageWrapper onLoginSuccess={handleLoginSuccess} />} />
+        <Route 
+          path="/" 
+          element={
+            <LandingPageWrapper 
+              onLoginSuccess={handleLoginSuccess} 
+              onStaffLoginClick={() => handleLogout('/login')} 
+            />
+          } 
+        />
         <Route path="/login" element={<LoginWrapper token={token} user={user} onLoginSuccess={handleLoginSuccess} />} />
         <Route 
           path="/*" 
@@ -1565,7 +1573,7 @@ function LoginWrapper({ token, user, onLoginSuccess }) {
   );
 }
 
-function LandingPageWrapper({ onLoginSuccess }) {
+function LandingPageWrapper({ onLoginSuccess, onStaffLoginClick }) {
   const navigate = useNavigate();
 
   const handleLandingLoginSuccess = (loginUser, loginToken) => {
@@ -1573,7 +1581,12 @@ function LandingPageWrapper({ onLoginSuccess }) {
     navigate(getRedirectPath(loginUser.role));
   };
 
-  return <LandingPage onLoginSuccess={handleLandingLoginSuccess} />;
+  return (
+    <LandingPage 
+      onLoginSuccess={handleLandingLoginSuccess} 
+      onStaffLoginClick={onStaffLoginClick} 
+    />
+  );
 }
 
 function ERPShell({ 
