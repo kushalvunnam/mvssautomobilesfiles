@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 transition-colors duration-200 antialiased font-sans;
+  }
+  
+  body.dark {
+    @apply bg-slate-950 text-slate-100;
+  }
+}
+
+/* Professional Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-lg hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700;
+}
+
+/* Micro-animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Enterprise Sticky Header Table Styles */
+.overflow-x-auto {
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #ffffff;
+}
+
+.dark table thead {
+  background-color: #0f172a;
+}
+
+/* Refined Form Input Focus Styling */
+input:focus, select:focus, textarea:focus {
+  @apply border-indigo-600 ring-2 ring-indigo-600/10 outline-none !important;
+}
+
+/* Minimalist container helpers */
+.card-enterprise {
+  @apply bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl shadow-sm transition-shadow duration-150;
+}
+
+.card-enterprise:hover {
+  @apply shadow-md;
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-scale-up {
+  animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* React Phone Input styles and dark mode support */
+.international-phone-wrapper .react-tel-input .form-control {
+  border: 1px solid #e2e8f0 !important;
+  color: #1e293b !important;
+  background-color: #f8fafc !important;
+}
+
+.dark .international-phone-wrapper .react-tel-input .form-control {
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+  background-color: #020617 !important;
+}
+
+.international-phone-wrapper .react-tel-input .flag-dropdown {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.international-phone-wrapper .react-tel-input .selected-flag {
+  background-color: transparent !important;
+}
+
+.international-phone-wrapper .react-tel-input .selected-flag:hover {
+  background-color: transparent !important;
+}
+
+.international-phone-wrapper .react-tel-input .country-list {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.dark .international-phone-wrapper .react-tel-input .country-list {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+
+.international-phone-wrapper .react-tel-input .country-list .country:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.dark .international-phone-wrapper .react-tel-input .country-list .country:hover {
+  background-color: #1e293b !important;
+}
+
+.international-phone-wrapper .react-tel-input .country-list .country.highlight {
+  background-color: #e2e8f0 !important;
+}
+
+.dark .international-phone-wrapper .react-tel-input .country-list .country.highlight {
+  background-color: #334155 !important;
+}
+
+/* React Phone Number Input styles */
+.international-phone-wrapper input {
+  width: 100% !important;
+  height: 42px !important;
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  font-family: inherit !important;
+  transition: all 0.2s !important;
+}
+
+.international-phone-wrapper input:focus {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
+  outline: none !important;
+}
+
+.international-phone-wrapper input.error {
+  border-color: #ef4444 !important;
+}
+
+.international-phone-wrapper .phone-input-compact {
+  height: 38px !important;
+  font-weight: 600 !important;
+}
+
+.international-phone-wrapper .PhoneInputCountry {
+  margin-right: 8px !important;
+}
+
+.international-phone-wrapper .PhoneInputCountrySelect {
+  border: none !important;
+  background: transparent !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  padding: 0 !important;
+}
+
+.international-phone-wrapper .PhoneInputCountrySelectArrow {
+  margin-left: 4px !important;
+}
+
+.dark .international-phone-wrapper input {
+  background-color: #020617 !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark .international-phone-wrapper .PhoneInputCountrySelect {
+  color: #f8fafc !important;
+}
+
+/* Safe area padding utilities with Android support (minimum fallback of 12px) */
+.pb-safe {
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+}
+
+.pt-safe {
+  padding-top: max(12px, env(safe-area-inset-top, 12px));
+}
+

@@ -1,0 +1,12 @@
+{
+  "name": "Remix: mvssautomobilesfiles",
+  "description": "Imported from GitHub: kushalvunnam/mvssautomobilesfiles",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,50 @@
+- [x] Refactor `backend/utils/pdfGenerator.js` company header, document titles, metadata columns
+- [x] Add unified table drawer with all columns (`S.No`, `Description`, `HSN`, `UOM`, `Qty`, `Rate`, `Parts Taxable`, `Labour Taxable`, `CGST %`, `CGST Amt`, `SGST %`, `SGST Amt`, `Total`) and grid lines
+- [x] Group table rows under `SPARE PARTS` and `LABOUR CHARGES` sections, including respective subtotal rows (`PARTS TOTAL` and `LABOUR TOTAL`)
+- [x] Implement Right-Side Admin Smart Activity & Notification Panel on Dashboard
+- [x] Verify complete workflow transitions (Estimate -> Approval -> Proforma -> Tax Invoice -> Billing -> Payment -> Gate Pass -> Vehicle Delivery)
+- [x] Verify compilation and deploy to production (Vercel & Surge)
+- [x] Update Vercel production deployment
+- [x] Generate Verification Report
+- [x] Format bottom summary matrix displaying PARTS and LABOUR total splits alongside CGST, SGST, Rounded Off, Grand Total, and Words conversion
+- [x] Add Terms & Conditions, Declaration, and Signatures block
+- [x] Test the backend by compiling and verifying generated PDF layouts are complete
+- [x] Refactor tracking endpoints to perform direct MongoDB regex queries instead of memory filtering
+- [x] Add MongoDB connection listeners for Connected, Error, and Disconnected logs
+- [x] Rectify model field references (`vehicleNumber`) inside backend notification generators
+- [x] Build robust frontend status maps and error warnings for empty JobCard cases
+- [x] Verify live compilation and promote final production to Vercel
+- [x] Resolve frontend API configuration domain mismatch to query Vercel host endpoints relatively
+- [x] Completely remove Track Vehicle navigation links, hero CTA buttons, and descriptions from LandingPage.jsx
+- [x] Delete all tracking states, stages arrays, handleSearch callbacks, and helper functions from LandingPage.jsx
+- [x] Delete the <section id="tracker"> DOM markup from LandingPage.jsx
+- [x] Delete GET /track from jobcards router and POST /track from bookings router
+- [x] Update notifications router to exclude type: 'tracking' entries from dashboard notification list
+- [x] Compile, run builds, and deploy the clean app to Vercel production
+- [x] Add `isSent` and `sentStatus` properties to `Invoice` Mongoose schema in `backend/models/Invoice.js`
+- [x] Implement backend endpoints for `/pay`, `/send`, `/print`, and `/duplicate` inside `backend/routes/invoices.js`
+- [x] Add audit log triggers (`INVOICE_VIEW`, `INVOICE_EDIT`, `INVOICE_PRINT`, `INVOICE_SEND`, `INVOICE_PAY`, `INVOICE_DELETE`, `INVOICE_DUPLICATE`)
+- [x] Add database notification triggers for Invoice Paid, Invoice Sent, and Invoice Deleted
+- [x] Connect frontend `Invoices.jsx` to all action handlers (View, Print, Edit, Email Send, Mark Paid, Duplicate, Delete)
+- [x] Build and deploy updated app to Vercel production
+- [x] Define `currentStock` and `minimumStock` fields in Mongoose `Inventory` model in `backend/models/Inventory.js`
+- [x] Implement pre-save synchronization middleware and post-save auto stock alert hook on `Inventory` model
+- [x] Format low stock warnings dynamically with part details and severity warnings
+- [x] Update dashboard stats route `/api/dashboard/stats` to return `lowStockItemsList` and `latestAuditLogs`
+- [x] Add global search `/api/dashboard/search` endpoint to `backend/routes/dashboard.js`
+- [x] Connect frontend `Dashboard.jsx` to poll stats every 5s and render real-time low stock list and latest 10 logs
+- [x] Add user logout endpoint `/api/auth/logout` to record logout sessions
+- [x] Add CSV and PDF export options to frontend `AuditLogs.jsx`
+- [x] Add preset date quick filters (Today, Last 7 Days, Last 30 Days) to `AuditLogs.jsx`
+- [x] Add warning icon markers for low stock items inside header notification dropdown bell
+- [x] Configure fixed positioning coordinates for dropdown menu in `Invoices.jsx` to prevent overflow vertical clipping
+- [x] Implement all 9 actions (View, Edit, Print, Share, Send Email, Download PDF, Duplicate, Mark Paid, Delete)
+- [x] Integrate backend endpoints for `POST /api/invoices/:id/share` and `POST /api/invoices/:id/download`
+- [x] Add audit log triggers (`INVOICE_SHARE`, `INVOICE_DOWNLOAD`)
+- [x] Create database notification trigger for `Invoice Shared`
+- [x] Add unified share dialog modal supporting Copy Link, WhatsApp redirect, and Email client mailto link
+- [x] Redesign LandingPage.jsx with a premium full-width slideshow hero section and a floating WhatsApp contact bubble
+- [x] Create separate Google Maps navigation links for Gundlapochampally and Petbasheerabad outlets
+- [x] Embed dynamic trust and workshop achievements statistics panels
+- [x] Add nodemailer package and booking email notifier to accounts@auto4m.in on the backend
+- [x] Compile and deploy production frontend to Vercel
