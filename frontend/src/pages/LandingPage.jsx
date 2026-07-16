@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ChevronLeft, ArrowRight, Lock, X, CheckCircle, Navigation, Star, Award, Settings, Users, ShieldAlert, Sparkles, Menu, User, Calendar, Hash, Mail, Home, Image, Info } from 'lucide-react';
-import { FaWhatsapp, FaFacebookF, FaInstagram } from 'react-icons/fa';
+import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, ChevronRight, ChevronLeft, ArrowRight, Lock, X, CheckCircle, Navigation, Star, Award, Settings, Users, ShieldAlert, Sparkles, Menu, User, Calendar, Hash, Mail } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 import Login from './Login';
 import InternationalPhoneInput from '../components/InternationalPhoneInput';
 import { API_BASE_URL } from '../config';
@@ -10,19 +10,6 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
   const [heroIdx, setHeroIdx] = useState(0);
   const [activeCategory, setActiveCategory] = useState('All');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('#home');
-
-  useEffect(() => {
-    const handleHashChange = () => {
-      if (window.location.hash) {
-        setActiveSection(window.location.hash);
-      }
-    };
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange, { passive: true });
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const [bookingRef, setBookingRef] = useState('');
   const [selectedService, setSelectedService] = useState(null);
@@ -189,17 +176,6 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
     return () => {
       document.removeEventListener('mousedown', handleClickOutsideMobileMenu);
       document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isMobileMenuOpen]);
-
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
     };
   }, [isMobileMenuOpen]);
 
@@ -609,7 +585,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
             <button
               ref={mobileMenuButtonRef}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="flex lg:hidden p-2 text-slate-700 hover:text-slate-950 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl transition-all shadow-sm active:scale-95"
+              className="flex lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg md:rounded-xl transition-all"
               aria-label="Toggle Mobile Menu"
             >
               <Menu className="w-5 h-5" />
@@ -617,126 +593,62 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
           </div>
         </div>
 
-        {/* Fullscreen Mobile Navigation Overlay */}
+        {/* Responsive Mobile/Tablet Slide Menu (Drawer) */}
+        {/* Backdrop overlay */}
+        <div 
+          className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity duration-300 lg:hidden ${
+            isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+        
+        {/* Slide Menu Panel */}
         <div 
           ref={mobileMenuRef}
-          style={{ 
-            background: 'linear-gradient(135deg, #020617 0%, #0f172a 50%, #111827 100%)',
-            width: '100vw',
-            height: '100vh'
-          }}
-          className={`fixed inset-0 z-[99999] lg:hidden flex flex-col transition-all duration-300 ease-in-out ${
-            isMobileMenuOpen 
-              ? 'opacity-100 pointer-events-auto scale-100' 
-              : 'opacity-0 pointer-events-none scale-95'
+          className={`fixed top-0 right-0 h-full w-[280px] sm:w-[320px] bg-white z-50 shadow-2xl transition-transform duration-300 ease-in-out transform lg:hidden flex flex-col ${
+            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
-          {/* Ambient Corner Red Glow Effects */}
-          <div className="absolute top-[-100px] left-[-100px] w-80 h-80 rounded-full bg-[#C1121F]/10 blur-[100px] pointer-events-none" />
-          <div className="absolute bottom-[-100px] right-[-100px] w-80 h-80 rounded-full bg-[#C1121F]/15 blur-[100px] pointer-events-none" />
+          {/* Header */}
+          <div className="p-5 flex justify-between items-center border-b border-slate-100">
+            <span className="font-black text-[#0B1528] tracking-tight text-sm uppercase">Menu</span>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
+              aria-label="Close Mobile Menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-          {/* Wrapper for safe areas */}
-          <div className="relative z-10 flex flex-col h-full px-6 py-5 overflow-y-auto">
-            {/* Header */}
-            <div className="flex justify-between items-center pb-5 border-b border-slate-800/60 shrink-0">
-              {/* Logo and Brand Info */}
-              <div className="flex items-center gap-3">
-                <div className="p-0.5 bg-[#030712] rounded-full border border-slate-800/80 shadow-md overflow-hidden shrink-0">
-                  <img 
-                    src="/workshop/auto4m_logo_v1.svg" 
-                    alt="MVSS Logo" 
-                    className="h-10 w-10 object-cover rounded-full block"
-                  />
-                </div>
-                <div className="flex flex-col text-left">
-                  <span className="font-extrabold text-white tracking-widest text-[13px] sm:text-[14px] uppercase leading-none">
-                    MVSS Automobiles
-                  </span>
-                  <span className="text-[#C1121F] font-bold text-[9px] tracking-wider uppercase mt-1 leading-none">
-                    Pvt. Ltd.
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-all duration-200"
-                aria-label="Close Mobile Menu"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+          {/* Navigation Links */}
+          <nav className="flex-1 px-6 py-6 flex flex-col gap-y-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+            <a href="#home" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Home</a>
+            <a href="#services" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Services</a>
+            <a href="#why-choose" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Why Choose us</a>
+            <a href="#gallery" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Gallery</a>
+            <a href="#contact" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Contact</a>
+            <a href="#about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 transition-colors">About</a>
+          </nav>
 
-            {/* Navigation Links List */}
-            <nav className="flex-1 py-10 flex flex-col justify-center gap-y-2 overflow-y-auto">
-              {[
-                { name: 'Home', href: '#home', icon: Home },
-                { name: 'Services', href: '#services', icon: Wrench },
-                { name: 'Why Choose Us', href: '#why-choose', icon: ShieldCheck },
-                { name: 'Gallery', href: '#gallery', icon: Image },
-                { name: 'Contact', href: '#contact', icon: Phone },
-                { name: 'About', href: '#about', icon: Info },
-              ].map((item) => {
-                const IconComponent = item.icon;
-                const isActive = activeSection === item.href;
-                return (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setActiveSection(item.href);
-                    }}
-                    className={`flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 border text-sm font-bold uppercase tracking-widest ${
-                      isActive
-                        ? 'border-[#C1121F]/40 bg-[#C1121F]/10 text-red-500 shadow-[0_0_15px_rgba(193,18,31,0.1)]'
-                        : 'border-transparent text-white hover:text-red-500 hover:bg-slate-800/30'
-                    }`}
-                  >
-                    <IconComponent className={`w-5 h-5 shrink-0 ${isActive ? 'text-red-500' : 'text-slate-400'}`} />
-                    <span>{item.name}</span>
-                  </a>
-                );
-              })}
-            </nav>
-
-            {/* Footer Actions */}
-            <div className="mt-auto shrink-0 space-y-6">
-              {/* Staff Login inside Menu */}
-              <div className="pt-5 border-t border-slate-800/60">
-                <Link
-                  to="/login"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setIsMobileMenuOpen(false);
-                    if (onStaffLoginClick) {
-                      onStaffLoginClick();
-                    } else {
-                      window.location.href = '/login';
-                    }
-                  }}
-                  className="flex items-center justify-center gap-2.5 w-full py-4 bg-[#C1121F]/5 border border-[#C1121F]/60 hover:bg-[#C1121F]/15 text-[#C1121F] rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-200 active:scale-95 shadow-[0_0_20px_rgba(193,18,31,0.05)] select-none"
-                >
-                  <Lock className="w-4 h-4 shrink-0" />
-                  <span>Staff Login</span>
-                </Link>
-              </div>
-
-              {/* Follow Us */}
-              <div className="flex flex-col items-center gap-3">
-                <span className="text-[10px] font-bold text-slate-500 tracking-widest uppercase">Follow Us</span>
-                <div className="flex gap-4">
-                  <a href="#" className="flex items-center justify-center w-10 h-10 bg-slate-900/60 border border-slate-800/60 hover:border-[#C1121F] hover:text-[#C1121F] text-slate-300 rounded-full transition-all duration-200 hover:scale-105">
-                    <FaFacebookF className="w-4 h-4" />
-                  </a>
-                  <a href="#" className="flex items-center justify-center w-10 h-10 bg-slate-900/60 border border-slate-800/60 hover:border-[#C1121F] hover:text-[#C1121F] text-slate-300 rounded-full transition-all duration-200 hover:scale-105">
-                    <FaInstagram className="w-4 h-4" />
-                  </a>
-                  <a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-10 h-10 bg-slate-900/60 border border-slate-800/60 hover:border-[#C1121F] hover:text-[#C1121F] text-slate-300 rounded-full transition-all duration-200 hover:scale-105">
-                    <FaWhatsapp className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
+          {/* Staff Login inside Drawer */}
+          <div className="p-6 border-t border-slate-100">
+            <Link
+              to="/login"
+              onClick={(e) => {
+                e.preventDefault();
+                setIsMobileMenuOpen(false);
+                if (onStaffLoginClick) {
+                  onStaffLoginClick();
+                } else {
+                  window.location.href = '/login';
+                }
+              }}
+              className="flex items-center justify-center gap-1.5 w-full py-3 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 select-none"
+            >
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span>Staff Login</span>
+            </Link>
           </div>
         </div>
       </header>
