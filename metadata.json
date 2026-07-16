@@ -1,0 +1,12 @@
+{
+  "name": "AutoWorkshop Pro",
+  "description": "Premium workshop management platform for creating job cards, tracking repairs, estimates, invoices, and claims.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

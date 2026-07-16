@@ -562,21 +562,46 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
       return;
     }
 
-    const payload = {
-      jobCardId: selectedJcId,
-      parts: partsList.map(p => ({
-        ...p,
-        qty: Number(p.qty) || 0,
-        rate: Number(p.rate) || 0,
-        discount: Number(p.discount) || 0,
-        gstPercent: Number(p.gstPercent) || 0
-      })),
-      labour: labourList.map(l => ({
-        ...l,
+    // Clean up empty or invalid parts rows before saving
+    const cleanedParts = partsList
+      .filter(p => p.name && p.name.trim() !== '')
+      .map(p => {
+        const item = {
+          name: p.name.trim(),
+          partNo: p.partNo ? p.partNo.trim() : '',
+          hsnCode: p.hsnCode ? p.hsnCode.trim() : '',
+          unit: p.unit || 'Pcs',
+          qty: Math.max(1, Number(p.qty) || 1), // Mongoose requires min: 1
+          rate: Number(p.rate) || 0,
+          discount: Number(p.discount) || 0,
+          gstPercent: Number(p.gstPercent) || 0
+        };
+        // Only include partId if it's a valid non-empty string to avoid CastError
+        if (p.partId && p.partId.trim() !== '') {
+          item.partId = p.partId.trim();
+        }
+        return item;
+      });
+
+    // Clean up empty or invalid labour rows before saving
+    const cleanedLabour = labourList
+      .filter(l => l.description && l.description.trim() !== '')
+      .map(l => ({
+        description: l.description.trim(),
         rate: Number(l.rate) || 0,
         discount: Number(l.discount) || 0,
         gstPercent: Number(l.gstPercent) || 0
-      }))
+      }));
+
+    if (cleanedParts.length === 0 && cleanedLabour.length === 0) {
+      alert('Please add at least one spare part or labour service with a description.');
+      return;
+    }
+
+    const payload = {
+      jobCardId: selectedJcId,
+      parts: cleanedParts,
+      labour: cleanedLabour
     };
 
     const url = editId
@@ -602,6 +627,7 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
       }
     } catch (err) {
       console.error(err);
+      alert('An error occurred while saving the estimate.');
     }
   };
 

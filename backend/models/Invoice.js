@@ -25,6 +25,16 @@ const invoiceItemSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  discountPercent: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  discountAmount: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
   gstPercent: {
     type: Number,
     required: true,
@@ -63,9 +73,24 @@ const invoiceLabourSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  qty: {
+    type: Number,
+    required: true,
+    default: 1,
+  },
   rate: {
     type: Number,
     required: true,
+  },
+  discountPercent: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  discountAmount: {
+    type: Number,
+    required: true,
+    default: 0,
   },
   gstPercent: {
     type: Number,
@@ -156,7 +181,9 @@ const invoiceSchema = new mongoose.Schema({
     sgstTotal: { type: Number, required: true, default: 0 },
     igstTotal: { type: Number, required: true, default: 0 },
     gstTotal: { type: Number, required: true, default: 0 },
+    discountTotal: { type: Number, required: true, default: 0 },
     grandTotal: { type: Number, required: true, default: 0 },
+    roundedGrandTotal: { type: Number, required: true, default: 0 },
   },
   grandTotalWords: {
     type: String,

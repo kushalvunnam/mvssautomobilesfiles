@@ -14,6 +14,55 @@ const dotenv = require('dotenv');
 // Load env vars
 dotenv.config();
 
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/autoworkshop';
+const isLocalhostMongo = !MONGODB_URI || MONGODB_URI.includes('localhost') || MONGODB_URI.includes('127.0.0.1');
+
+if (isLocalhostMongo) {
+  console.log('[AI Studio] No remote MONGODB_URI provided (or localhost specified). Running in-memory database fallback.');
+  global.isInMemoryFallback = true;
+} else {
+  global.isInMemoryFallback = false;
+}
+
+// Hijack mongoose.model BEFORE routes require any models
+const originalModel = mongoose.model.bind(mongoose);
+mongoose.model = function(name, schema) {
+  if (global.isInMemoryFallback) {
+    const { getMockModel } = require('./utils/inMemoryDB');
+    return getMockModel(name);
+  }
+  return originalModel(name, schema);
+};
+
+// Mock mongoose.Types.ObjectId
+mongoose.Types = mongoose.Types || {};
+const originalObjectId = mongoose.Types.ObjectId;
+mongoose.Types.ObjectId = function(id) {
+  if (global.isInMemoryFallback) {
+    if (id) return id;
+    const { generateId } = require('./utils/inMemoryDB');
+    return generateId();
+  }
+  return originalObjectId ? new originalObjectId(id) : id;
+};
+
+// Mock mongoose.connect if in-memory fallback
+if (global.isInMemoryFallback) {
+  mongoose.connect = async () => {
+    console.log('[AI Studio] Connected to In-Memory Mock MongoDB successfully');
+    // Trigger seed after next tick so that server startup proceeds
+    process.nextTick(async () => {
+      try {
+        await seedDatabase();
+      } catch (err) {
+        console.error('Seeding fallback DB failed:', err);
+      }
+    });
+    return mongoose;
+  };
+}
+
+
 // Verify required environment variables on startup
 if (!process.env.MONGODB_URI) {
   console.warn('====================================================');
@@ -30,7 +79,6 @@ if (!process.env.JWT_SECRET) {
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/autoworkshop';
 
 // Middlewares
 app.use(cors());
@@ -42,7 +90,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database connection health check middleware to prevent 504 gateway timeouts when offline
 app.use('/api', (req, res, next) => {
-  if (mongoose.connection.readyState !== 1) {
+  if (!global.isInMemoryFallback && mongoose.connection.readyState !== 1) {
     console.warn(`[Database Offline] Request to ${req.originalUrl} failed: mongoose connection state is ${mongoose.connection.readyState}`);
     return res.status(503).send({ error: 'Database is currently offline. Please ensure MongoDB is running and MONGODB_URI is correct.' });
   }
@@ -113,9 +161,22 @@ app.get('/api/test-email', async (req, res) => {
   }
 });
 
-// Base route
-app.get('/', (req, res) => {
+// Serve built frontend static assets in production/fallback
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+
+// Base API route
+app.get('/api', (req, res) => {
   res.send({ message: 'AutoWorkshop Pro API is running.' });
+});
+
+// Serve frontend SPA index.html for all other non-API routes
+app.get('*', (req, res) => {
+  // If request is for an API route that was not matched, return 404
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).send({ error: 'API endpoint not found.' });
+  }
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 // Database Seed function
@@ -177,10 +238,10 @@ async function seedDatabase() {
       console.log('Seeded default inventory parts catalog.');
     }
 
-    // 3. Seed Customers, Vehicles, and Job Cards (Disabled for real testing mode)
+    // 3. Seed Customers, Vehicles, and Job Cards (Enabled for in-memory / testing mode)
     const JobCard = require('./models/JobCard');
     const jobCardCount = await JobCard.countDocuments();
-    if (false) {
+    if (global.isInMemoryFallback || jobCardCount === 0) {
       console.log('Seeding default customers, vehicles and job cards...');
       
       const Customer = require('./models/Customer');

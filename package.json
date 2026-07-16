@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "postinstall": "npm install --prefix backend && npm install --prefix frontend",
+    "dev": "node dev.js",
     "build": "npm run build --prefix frontend && node -e \"const fs = require('fs'); fs.rmSync('dist', { recursive: true, force: true }); fs.cpSync('frontend/dist', 'dist', { recursive: true });\"",
     "start": "node backend/server.js"
   }

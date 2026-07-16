@@ -56,6 +56,79 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// GET /api/customers/search?q=
+router.get('/search', async (req, res) => {
+  try {
+    const q = req.query.q || '';
+    if (!q || q.trim().length < 2) {
+      return res.send([]);
+    }
+
+    const trimmedQuery = q.trim();
+
+    // 1. Search customers by name or mobile (using regex case-insensitive)
+    const matchedCustomers = await Customer.find({
+      $or: [
+        { name: { $regex: trimmedQuery, $options: 'i' } },
+        { mobile: { $regex: trimmedQuery, $options: 'i' } }
+      ]
+    }).limit(10);
+
+    const matchedCustomerIds = matchedCustomers.map(c => c._id);
+
+    // 2. Search vehicles by matched customers, or search vehicles directly by vehicleNumber
+    const matchedVehiclesByNo = await Vehicle.find({
+      vehicleNumber: { $regex: trimmedQuery, $options: 'i' }
+    }).populate('customerId').limit(10);
+
+    const matchedVehiclesByCust = await Vehicle.find({
+      customerId: { $in: matchedCustomerIds }
+    }).populate('customerId');
+
+    // Combine results into a single list of auto-fill entries
+    const resultsMap = new Map();
+
+    // Helper to add unique entries
+    const addResult = (customer, vehicle) => {
+      if (!customer) return;
+      const key = `${customer._id}_${vehicle ? vehicle._id : 'no_vehicle'}`;
+      if (!resultsMap.has(key)) {
+        resultsMap.set(key, {
+          customerId: customer._id,
+          customerName: customer.name,
+          mobile: customer.mobile,
+          vehicleId: vehicle ? vehicle._id : null,
+          vehicleNumber: vehicle ? vehicle.vehicleNumber : '',
+          vehicleModel: vehicle ? `${vehicle.make} ${vehicle.model}` : ''
+        });
+      }
+    };
+
+    // First add results from direct customer matches
+    for (const customer of matchedCustomers) {
+      const custVehicles = matchedVehiclesByCust.filter(v => v.customerId && v.customerId._id.toString() === customer._id.toString());
+      if (custVehicles.length > 0) {
+        for (const vehicle of custVehicles) {
+          addResult(customer, vehicle);
+        }
+      } else {
+        addResult(customer, null);
+      }
+    }
+
+    // Then add results from vehicle matches
+    for (const vehicle of matchedVehiclesByNo) {
+      addResult(vehicle.customerId, vehicle);
+    }
+
+    const results = Array.from(resultsMap.values());
+    res.send(results);
+  } catch (error) {
+    console.error('Search API error:', error);
+    res.status(500).send({ error: 'Search failed' });
+  }
+});
+
 // Get Single Customer Details
 router.get('/:id', auth, async (req, res) => {
   try {

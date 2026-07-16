@@ -6,8 +6,20 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0', // Expose dev server to local network (LAN)
-    port: 5173,
-    allowedHosts: true // Allow connections from public tunnel domains
+    port: 3000,
+    allowedHosts: true, // Allow connections from public tunnel domains
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/uploads': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
   build: {
     chunkSizeWarningLimit: 1000,

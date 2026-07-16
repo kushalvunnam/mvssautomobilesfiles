@@ -80,8 +80,10 @@ const recalculateEstimate = (parts = [], labour = []) => {
     partsTotal += taxableValue;
     gstTotal += gstAmount;
 
+    const partId = (part.partId && typeof part.partId === 'string' && part.partId.trim().length === 24) ? part.partId.trim() : undefined;
+
     return {
-      partId: part.partId,
+      partId,
       name: part.name,
       partNo: part.partNo,
       hsnCode: part.hsnCode,

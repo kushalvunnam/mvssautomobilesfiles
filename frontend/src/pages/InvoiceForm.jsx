@@ -23,7 +23,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
 
   // Tables
   const [partsList, setPartsList] = useState([]);
-  const [labourList, setLabourList] = useState([{ description: '', rate: '', gstPercent: '' }]);
+  const [labourList, setLabourList] = useState([{ description: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0' }]);
   const [inventory, setInventory] = useState([]);
   const [gstDetails, setGstDetails] = useState({ customerGSTIN: '', isInterstate: false });
   const [invoiceType, setInvoiceType] = useState('Tax Invoice');
@@ -46,7 +46,9 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
     sgstTotal: 0,
     igstTotal: 0,
     gstTotal: 0,
-    grandTotal: 0
+    discountTotal: 0,
+    grandTotal: 0,
+    roundedGrandTotal: 0
   });
 
   const cleanNumberInput = (val, allowDecimal = true, maxVal = null) => {
@@ -265,61 +267,88 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
 
   // Recalculate invoice totals with tax splits
   useEffect(() => {
-    let partsTotal = 0;
-    let labourTotal = 0;
+    const roundToTwo = (num) => {
+      return Math.round((num + Number.EPSILON) * 100) / 100;
+    };
+
+    let partsTotal = 0; // net taxable parts sum
+    let labourTotal = 0; // net taxable labour sum
     let cgstTotal = 0;
     let sgstTotal = 0;
     let igstTotal = 0;
     let gstTotal = 0;
+    let discountTotal = 0;
 
     partsList.forEach(part => {
       const qty = Number(part.qty) || 0;
       const rate = Number(part.rate) || 0;
-      const amt = qty * rate;
+      const discountPercent = Number(part.discountPercent) || 0;
       const gstPercent = Number(part.gstPercent) || 0;
-      const gst = amt * (gstPercent / 100);
-      partsTotal += amt;
-      gstTotal += gst;
+
+      const grossAmount = roundToTwo(qty * rate);
+      const discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+      const amount = roundToTwo(grossAmount - discountAmount); // taxable amount
+      const gstAmount = roundToTwo(amount * (gstPercent / 100));
+
+      partsTotal += amount;
+      discountTotal += discountAmount;
+      gstTotal += gstAmount;
 
       if (gstDetails.isInterstate) {
-        igstTotal += gst;
+        igstTotal += gstAmount;
       } else {
-        cgstTotal += gst / 2;
-        sgstTotal += gst / 2;
+        const cgstItem = roundToTwo(gstAmount / 2);
+        const sgstItem = roundToTwo(gstAmount - cgstItem);
+        cgstTotal += cgstItem;
+        sgstTotal += sgstItem;
       }
     });
 
     labourList.forEach(lab => {
-      const amt = Number(lab.rate) || 0;
+      const qty = Number(lab.qty) !== undefined && lab.qty !== null && lab.qty !== '' ? Number(lab.qty) : 1;
+      const rate = Number(lab.rate) || 0;
+      const discountPercent = Number(lab.discountPercent) || 0;
       const gstPercent = Number(lab.gstPercent) || 0;
-      const gst = amt * (gstPercent / 100);
-      labourTotal += amt;
-      gstTotal += gst;
+
+      const grossAmount = roundToTwo(qty * rate);
+      const discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+      const amount = roundToTwo(grossAmount - discountAmount); // taxable amount
+      const gstAmount = roundToTwo(amount * (gstPercent / 100));
+
+      labourTotal += amount;
+      discountTotal += discountAmount;
+      gstTotal += gstAmount;
 
       if (gstDetails.isInterstate) {
-        igstTotal += gst;
+        igstTotal += gstAmount;
       } else {
-        cgstTotal += gst / 2;
-        sgstTotal += gst / 2;
+        const cgstItem = roundToTwo(gstAmount / 2);
+        const sgstItem = roundToTwo(gstAmount - cgstItem);
+        cgstTotal += cgstItem;
+        sgstTotal += sgstItem;
       }
     });
 
-    const grandTotal = Math.round((partsTotal + labourTotal + gstTotal) * 100) / 100;
+    const grandTotal = roundToTwo(partsTotal + labourTotal + gstTotal);
+    const roundedGrandTotal = Math.round(grandTotal);
+
     setTotals({
-      partsTotal: Math.round(partsTotal * 100) / 100,
-      labourTotal: Math.round(labourTotal * 100) / 100,
-      cgstTotal: Math.round(cgstTotal * 100) / 100,
-      sgstTotal: Math.round(sgstTotal * 100) / 100,
-      igstTotal: Math.round(igstTotal * 100) / 100,
-      gstTotal: Math.round(gstTotal * 100) / 100,
-      grandTotal
+      partsTotal: roundToTwo(partsTotal),
+      labourTotal: roundToTwo(labourTotal),
+      cgstTotal: roundToTwo(cgstTotal),
+      sgstTotal: roundToTwo(sgstTotal),
+      igstTotal: roundToTwo(igstTotal),
+      gstTotal: roundToTwo(gstTotal),
+      discountTotal: roundToTwo(discountTotal),
+      grandTotal,
+      roundedGrandTotal
     });
 
     // Update insurance split payable
     const approvedAmt = Number(insuranceDetails.approvedAmount) || 0;
     setInsuranceDetails(prev => ({
       ...prev,
-      customerPayableAmount: Math.max(0, grandTotal - approvedAmt)
+      customerPayableAmount: Math.max(0, roundedGrandTotal - approvedAmt)
     }));
 
   }, [partsList, labourList, gstDetails.isInterstate, insuranceDetails.approvedAmount]);
@@ -394,17 +423,20 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
               hsnCode: p.hsnCode,
               qty: p.qty !== undefined && p.qty !== null ? p.qty.toString() : '',
               rate: p.rate !== undefined && p.rate !== null ? p.rate.toString() : '',
+              discountPercent: p.discountPercent !== undefined && p.discountPercent !== null ? p.discountPercent.toString() : '0',
               gstPercent: p.gstPercent !== undefined && p.gstPercent !== null ? p.gstPercent.toString() : ''
             })));
             setLabourList(approvedEst.labour.map(l => ({
               description: l.description,
+              qty: l.qty !== undefined && l.qty !== null ? l.qty.toString() : '1',
               rate: l.rate !== undefined && l.rate !== null ? l.rate.toString() : '',
+              discountPercent: l.discountPercent !== undefined && l.discountPercent !== null ? l.discountPercent.toString() : '0',
               gstPercent: l.gstPercent !== undefined && l.gstPercent !== null ? l.gstPercent.toString() : ''
             })));
           } else {
             setSelectedEstimateId('');
             setPartsList([]);
-            setLabourList([{ description: '', rate: '', gstPercent: '' }]);
+            setLabourList([{ description: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0' }]);
           }
         }
       }
@@ -415,7 +447,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
 
   // Parts rows operations
   const handleAddPartRow = () => {
-    setPartsList([...partsList, { partId: '', name: '', partNo: '', hsnCode: '', qty: '1', rate: '', gstPercent: '' }]);
+    setPartsList([...partsList, { partId: '', name: '', partNo: '', hsnCode: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0' }]);
   };
 
   const handleRemovePartRow = (idx) => {
@@ -449,7 +481,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
 
   // Labour rows operations
   const handleAddLabourRow = () => {
-    setLabourList([...labourList, { description: '', rate: '', gstPercent: '' }]);
+    setLabourList([...labourList, { description: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0' }]);
   };
 
   const handleRemoveLabourRow = (idx) => {
@@ -478,20 +510,47 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
       }
     }
 
+    // Clean up empty or invalid parts rows before saving
+    const cleanedParts = partsList
+      .filter(p => p.name && p.name.trim() !== '')
+      .map(p => {
+        const item = {
+          name: p.name.trim(),
+          partNo: p.partNo ? p.partNo.trim() : '',
+          hsnCode: p.hsnCode ? p.hsnCode.trim() : '',
+          qty: Math.max(1, Number(p.qty) || 1), // ensure qty is min 1
+          rate: Number(p.rate) || 0,
+          discountPercent: Number(p.discountPercent) || 0,
+          gstPercent: Number(p.gstPercent) || 0
+        };
+        // Only include partId if it's a valid non-empty string to avoid CastError
+        if (p.partId && p.partId.trim() !== '') {
+          item.partId = p.partId.trim();
+        }
+        return item;
+      });
+
+    // Clean up empty or invalid labour rows before saving
+    const cleanedLabour = labourList
+      .filter(l => l.description && l.description.trim() !== '')
+      .map(l => ({
+        description: l.description.trim(),
+        qty: l.qty !== undefined && l.qty !== null && l.qty !== '' ? Math.max(1, Number(l.qty) || 1) : 1,
+        rate: Number(l.rate) || 0,
+        discountPercent: Number(l.discountPercent) || 0,
+        gstPercent: Number(l.gstPercent) || 0
+      }));
+
+    if (cleanedParts.length === 0 && cleanedLabour.length === 0) {
+      alert('Please add at least one spare part or labour service with a description.');
+      return;
+    }
+
     const payload = {
       jobCardId: selectedJcId,
       estimateId: selectedEstimateId || null,
-      parts: partsList.map(p => ({
-        ...p,
-        qty: Number(p.qty) || 0,
-        rate: Number(p.rate) || 0,
-        gstPercent: Number(p.gstPercent) || 0
-      })),
-      labour: labourList.map(l => ({
-        ...l,
-        rate: Number(l.rate) || 0,
-        gstPercent: Number(l.gstPercent) || 0
-      })),
+      parts: cleanedParts,
+      labour: cleanedLabour,
       gstDetails,
       insuranceClaimDetails: {
         ...insuranceDetails,
@@ -756,6 +815,18 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                 </div>
 
                 <div className="w-16">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Disc %</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={part.discountPercent || ''}
+                    onChange={(e) => handleRowNumericChange(e, partsList, setPartsList, idx, 'discountPercent', true, 100)}
+                    placeholder="0"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div className="w-16">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">GST %</label>
                   <input
                     type="text"
@@ -770,7 +841,18 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                 <div className="w-24 text-right pr-2">
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Total (₹)</span>
                   <span className="text-xs font-black text-slate-800 dark:text-slate-200 h-[28px] flex items-center justify-end font-mono">
-                    {Math.round((Number(part.qty) * Number(part.rate) * (1 + (Number(part.gstPercent) || 0) / 100)) * 100) / 100}
+                    {(() => {
+                      const qty = Number(part.qty) || 0;
+                      const rate = Number(part.rate) || 0;
+                      const disc = Number(part.discountPercent) || 0;
+                      const gstPercent = Number(part.gstPercent) || 0;
+                      const gross = Math.round((qty * rate + Number.EPSILON) * 100) / 100;
+                      const discAmt = Math.round((gross * (disc / 100) + Number.EPSILON) * 100) / 100;
+                      const amount = Math.round((gross - discAmt + Number.EPSILON) * 100) / 100;
+                      const gstAmt = Math.round((amount * (gstPercent / 100) + Number.EPSILON) * 100) / 100;
+                      const rowTotal = Math.round((amount + gstAmt + Number.EPSILON) * 100) / 100;
+                      return rowTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    })()}
                   </span>
                 </div>
 
@@ -855,6 +937,30 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                 </div>
 
                 <div className="w-16">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Qty</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={lab.qty !== undefined && lab.qty !== null ? lab.qty : '1'}
+                    onChange={(e) => handleRowNumericChange(e, labourList, setLabourList, idx, 'qty', false)}
+                    placeholder="Qty"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div className="w-16">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Disc %</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={lab.discountPercent || ''}
+                    onChange={(e) => handleRowNumericChange(e, labourList, setLabourList, idx, 'discountPercent', true, 100)}
+                    placeholder="0"
+                    className="w-full px-3.5 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div className="w-16">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">GST %</label>
                   <input
                     type="text"
@@ -869,7 +975,18 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                 <div className="w-28 text-right pr-2">
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Total (₹)</span>
                   <span className="text-xs font-black text-slate-800 dark:text-slate-200 h-[28px] flex items-center justify-end font-mono">
-                    {Math.round((Number(lab.rate) * (1 + (Number(lab.gstPercent) || 0) / 100)) * 100) / 100}
+                    {(() => {
+                      const qty = Number(lab.qty) !== undefined && lab.qty !== null && lab.qty !== '' ? Number(lab.qty) : 1;
+                      const rate = Number(lab.rate) || 0;
+                      const disc = Number(lab.discountPercent) || 0;
+                      const gstPercent = Number(lab.gstPercent) || 0;
+                      const gross = Math.round((qty * rate + Number.EPSILON) * 100) / 100;
+                      const discAmt = Math.round((gross * (disc / 100) + Number.EPSILON) * 100) / 100;
+                      const amount = Math.round((gross - discAmt + Number.EPSILON) * 100) / 100;
+                      const gstAmt = Math.round((amount * (gstPercent / 100) + Number.EPSILON) * 100) / 100;
+                      const rowTotal = Math.round((amount + gstAmt + Number.EPSILON) * 100) / 100;
+                      return rowTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    })()}
                   </span>
                 </div>
 
@@ -940,9 +1057,10 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Amount In Words (Auto Generated)</span>
               <p className="text-xs font-bold text-slate-650 dark:text-slate-300 bg-slate-50 dark:bg-slate-950/20 p-3 rounded-xl border border-slate-200/50 mt-1 italic">
-                {convertNumberToWords(totals.grandTotal)}
+                {convertNumberToWords(totals.roundedGrandTotal || totals.grandTotal)}
               </p>
-                        {/* Insurance Splits */}
+            </div>
+            {/* Insurance Splits */}
             <div className="bg-indigo-50/30 dark:bg-indigo-950/15 border border-indigo-150/30 p-4 rounded-2xl space-y-3">
               <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider block">Insurance Coverage split</span>
               <div className="flex gap-4">
@@ -960,49 +1078,63 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                 <div className="flex-1">
                   <span className="block text-[9px] font-bold text-slate-450 uppercase tracking-wider mb-1">Customer Payable (₹)</span>
                   <span className="text-sm font-extrabold text-indigo-900 dark:text-indigo-400 h-[30px] flex items-center font-mono">
-                    ₹{insuranceDetails.customerPayableAmount.toLocaleString()}
+                    ₹{insuranceDetails.customerPayableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
-            </div>        </div>
+            </div>
           </div>
 
           {/* Totals Table */}
           <div className="bg-slate-50 dark:bg-slate-950/20 border border-slate-205/30 p-5 rounded-2xl space-y-3">
             <div className="flex justify-between text-xs font-semibold text-slate-550">
-              <span>Spare Parts:</span>
-              <span>₹{totals.partsTotal.toLocaleString()}</span>
+              <span>Spare Parts Subtotal (after discount):</span>
+              <span>₹{totals.partsTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between text-xs font-semibold text-slate-550">
-              <span>Labour Charges:</span>
-              <span>₹{totals.labourTotal.toLocaleString()}</span>
+              <span>Labour Subtotal (after discount):</span>
+              <span>₹{totals.labourTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300 border-t border-slate-200/50 pt-2 pb-1">
-              <span>Net Taxable Total:</span>
-              <span>₹{(totals.partsTotal + totals.labourTotal).toLocaleString()}</span>
+              <span>Net Taxable Value:</span>
+              <span>₹{(totals.partsTotal + totals.labourTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between text-xs font-semibold text-slate-550">
+              <span>Total Discount:</span>
+              <span className="text-emerald-600 font-bold">-₹{totals.discountTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             
             {gstDetails.isInterstate ? (
               <div className="flex justify-between text-xs font-semibold text-slate-550">
-                <span>IGST Total (18%):</span>
-                <span>₹{totals.igstTotal.toLocaleString()}</span>
+                <span>IGST Total:</span>
+                <span>₹{totals.igstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             ) : (
               <>
                 <div className="flex justify-between text-xs font-semibold text-slate-550">
-                  <span>CGST Total (9%):</span>
-                  <span>₹{totals.cgstTotal.toLocaleString()}</span>
+                  <span>CGST Total:</span>
+                  <span>₹{totals.cgstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between text-xs font-semibold text-slate-550">
-                  <span>SGST Total (9%):</span>
-                  <span>₹{totals.sgstTotal.toLocaleString()}</span>
+                  <span>SGST Total:</span>
+                  <span>₹{totals.sgstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </>
             )}
 
-            <div className="flex justify-between text-sm font-black border-t border-slate-200/50 pt-3 text-slate-900 dark:text-white">
+            <div className="flex justify-between text-xs font-semibold text-slate-550">
+              <span>Total GST:</span>
+              <span>₹{totals.gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+
+            <div className="flex justify-between text-sm font-semibold border-t border-slate-200/50 pt-3 text-slate-900 dark:text-white">
               <span>Grand Total:</span>
-              <span>₹{totals.grandTotal.toLocaleString()}</span>
+              <span>₹{totals.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+
+            <div className="flex justify-between text-base font-black border-t-2 border-double border-slate-300/60 pt-3 text-indigo-700 dark:text-indigo-400">
+              <span>Rounded Grand Total:</span>
+              <span>₹{totals.roundedGrandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
         </div>

@@ -32,22 +32,32 @@ const generateInvoiceNo = async () => {
 
 // Recalculate Invoice totals with GST splits
 const recalculateInvoice = (parts = [], labour = [], isInterstate = false) => {
-  let partsTotal = 0;
-  let labourTotal = 0;
+  const roundToTwo = (num) => {
+    return Math.round((num + Number.EPSILON) * 100) / 100;
+  };
+
+  let partsTotal = 0; // Net taxable sum
+  let labourTotal = 0; // Net taxable sum
   let cgstTotal = 0;
   let sgstTotal = 0;
   let igstTotal = 0;
   let gstTotal = 0;
+  let discountTotal = 0;
 
   const processedParts = parts.map(part => {
-    const qty = part.qty || 1;
-    const rate = part.rate || 0;
+    const qty = Number(part.qty) || 0;
+    const rate = Number(part.rate) || 0;
+    const discountPercent = Number(part.discountPercent) || 0;
     const gstPercent = (part.gstPercent !== undefined && part.gstPercent !== null && part.gstPercent !== '') ? Number(part.gstPercent) : 18;
-    const amount = qty * rate;
-    const gstAmount = amount * (gstPercent / 100);
-    const total = amount + gstAmount;
+    
+    const grossAmount = roundToTwo(qty * rate);
+    const discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+    const amount = roundToTwo(grossAmount - discountAmount); // taxable amount
+    const gstAmount = roundToTwo(amount * (gstPercent / 100));
+    const total = roundToTwo(amount + gstAmount);
 
     partsTotal += amount;
+    discountTotal += discountAmount;
     gstTotal += gstAmount;
 
     let cgstAmount = 0;
@@ -58,19 +68,23 @@ const recalculateInvoice = (parts = [], labour = [], isInterstate = false) => {
       igstAmount = gstAmount;
       igstTotal += gstAmount;
     } else {
-      cgstAmount = gstAmount / 2;
-      sgstAmount = gstAmount / 2;
+      cgstAmount = roundToTwo(gstAmount / 2);
+      sgstAmount = roundToTwo(gstAmount - cgstAmount); // prevent split loss
       cgstTotal += cgstAmount;
       sgstTotal += sgstAmount;
     }
 
+    const partId = (part.partId && typeof part.partId === 'string' && part.partId.trim().length === 24) ? part.partId.trim() : undefined;
+
     return {
-      partId: part.partId,
+      partId,
       name: part.name,
       partNo: part.partNo,
       hsnCode: part.hsnCode,
       qty,
       rate,
+      discountPercent,
+      discountAmount,
       gstPercent,
       amount,
       gstAmount,
@@ -82,13 +96,19 @@ const recalculateInvoice = (parts = [], labour = [], isInterstate = false) => {
   });
 
   const processedLabour = labour.map(lab => {
-    const rate = lab.rate || 0;
+    const qty = Number(lab.qty) !== undefined && lab.qty !== null && lab.qty !== '' ? Number(lab.qty) : 1;
+    const rate = Number(lab.rate) || 0;
+    const discountPercent = Number(lab.discountPercent) || 0;
     const gstPercent = (lab.gstPercent !== undefined && lab.gstPercent !== null && lab.gstPercent !== '') ? Number(lab.gstPercent) : 18;
-    const amount = rate;
-    const gstAmount = amount * (gstPercent / 100);
-    const total = amount + gstAmount;
+    
+    const grossAmount = roundToTwo(qty * rate);
+    const discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+    const amount = roundToTwo(grossAmount - discountAmount); // taxable amount
+    const gstAmount = roundToTwo(amount * (gstPercent / 100));
+    const total = roundToTwo(amount + gstAmount);
 
     labourTotal += amount;
+    discountTotal += discountAmount;
     gstTotal += gstAmount;
 
     let cgstAmount = 0;
@@ -99,15 +119,18 @@ const recalculateInvoice = (parts = [], labour = [], isInterstate = false) => {
       igstAmount = gstAmount;
       igstTotal += gstAmount;
     } else {
-      cgstAmount = gstAmount / 2;
-      sgstAmount = gstAmount / 2;
+      cgstAmount = roundToTwo(gstAmount / 2);
+      sgstAmount = roundToTwo(gstAmount - cgstAmount);
       cgstTotal += cgstAmount;
       sgstTotal += sgstAmount;
     }
 
     return {
       description: lab.description,
+      qty,
       rate,
+      discountPercent,
+      discountAmount,
       gstPercent,
       amount,
       gstAmount,
@@ -118,21 +141,25 @@ const recalculateInvoice = (parts = [], labour = [], isInterstate = false) => {
     };
   });
 
-  const grandTotal = Math.round((partsTotal + labourTotal + gstTotal) * 100) / 100;
+  const rawGrandTotal = partsTotal + labourTotal + gstTotal;
+  const grandTotal = roundToTwo(rawGrandTotal);
+  const roundedGrandTotal = Math.round(grandTotal);
 
   return {
     parts: processedParts,
     labour: processedLabour,
     totals: {
-      partsTotal: Math.round(partsTotal * 100) / 100,
-      labourTotal: Math.round(labourTotal * 100) / 100,
-      cgstTotal: Math.round(cgstTotal * 100) / 100,
-      sgstTotal: Math.round(sgstTotal * 100) / 100,
-      igstTotal: Math.round(igstTotal * 100) / 100,
-      gstTotal: Math.round(gstTotal * 100) / 100,
+      partsTotal: roundToTwo(partsTotal),
+      labourTotal: roundToTwo(labourTotal),
+      cgstTotal: roundToTwo(cgstTotal),
+      sgstTotal: roundToTwo(sgstTotal),
+      igstTotal: roundToTwo(igstTotal),
+      gstTotal: roundToTwo(gstTotal),
+      discountTotal: roundToTwo(discountTotal),
       grandTotal,
+      roundedGrandTotal
     },
-    grandTotalWords: numberToWords(grandTotal)
+    grandTotalWords: numberToWords(roundedGrandTotal)
   };
 };
 
@@ -213,7 +240,14 @@ router.post('/', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
       labour: calculations.labour,
       totals: calculations.totals,
       grandTotalWords: calculations.grandTotalWords,
-      insuranceClaimDetails: insuranceClaimDetails || { claimNo: '', insuranceCompany: '', surveyorName: '', approvedAmount: 0, customerPayableAmount: calculations.totals.grandTotal },
+      insuranceClaimDetails: {
+        claimNo: insuranceClaimDetails?.claimNo || '',
+        insuranceCompany: insuranceClaimDetails?.insuranceCompany || '',
+        surveyorName: insuranceClaimDetails?.surveyorName || '',
+        surveyDate: insuranceClaimDetails?.surveyDate,
+        approvedAmount: Number(insuranceClaimDetails?.approvedAmount) || 0,
+        customerPayableAmount: Math.max(0, calculations.totals.roundedGrandTotal - (Number(insuranceClaimDetails?.approvedAmount) || 0))
+      },
       invoiceType: invoiceType || 'Tax Invoice',
       status: 'Draft'
     };
@@ -286,7 +320,7 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
     if (paymentStatus) {
       invoice.paymentStatus = paymentStatus;
       if (paymentStatus === 'Paid') {
-        invoice.amountPaid = invoice.totals.grandTotal;
+        invoice.amountPaid = invoice.totals.roundedGrandTotal || invoice.totals.grandTotal;
       }
     }
 
@@ -299,7 +333,15 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
     }
 
     if (insuranceClaimDetails) {
-      invoice.insuranceClaimDetails = insuranceClaimDetails;
+      const approvedAmount = Number(insuranceClaimDetails.approvedAmount) || 0;
+      invoice.insuranceClaimDetails = {
+        ...insuranceClaimDetails,
+        approvedAmount,
+        customerPayableAmount: Math.max(0, (invoice.totals.roundedGrandTotal || invoice.totals.grandTotal || 0) - approvedAmount)
+      };
+    } else if (invoice.insuranceClaimDetails) {
+      const approvedAmount = invoice.insuranceClaimDetails.approvedAmount || 0;
+      invoice.insuranceClaimDetails.customerPayableAmount = Math.max(0, (invoice.totals.roundedGrandTotal || invoice.totals.grandTotal || 0) - approvedAmount);
     }
 
     if (invoiceType) {

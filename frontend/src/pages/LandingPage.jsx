@@ -18,6 +18,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
   const [customerName, setCustomerName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [vehiclePlate, setVehiclePlate] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
   const [preferredStream, setPreferredStream] = useState('');
   const [preferredDate, setPreferredDate] = useState('');
   const [submittedDate, setSubmittedDate] = useState('');
@@ -26,6 +27,157 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessMsg, setShowSuccessMsg] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Auto-fill & Search dropdown states
+  const [suggestions, setSuggestions] = useState([]);
+  const [activeSearchField, setActiveSearchField] = useState(null); // 'name' | 'phone' | 'plate'
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const performSearch = async (query) => {
+    if (!query || query.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const q = query.trim();
+    try {
+      const res = await fetch(`${API_BASE_URL}/customers/search?q=${encodeURIComponent(q)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSuggestions(data);
+      } else {
+        throw new Error('API failed');
+      }
+    } catch (err) {
+      console.warn('Search API failed or offline, searching local mock storage:', err);
+      // Fallback search across local/session storage
+      const customers = JSON.parse(sessionStorage.getItem('mock_customers') || localStorage.getItem('mock_customers') || '[]');
+      const vehicles = JSON.parse(sessionStorage.getItem('mock_vehicles') || localStorage.getItem('mock_vehicles') || '[]');
+
+      const resultsMap = new Map();
+
+      // Search by Customer Name or Mobile
+      const matchedCustomers = customers.filter(c => 
+        (c.name && c.name.toLowerCase().includes(q.toLowerCase())) ||
+        (c.mobile && c.mobile.toLowerCase().includes(q.toLowerCase()))
+      );
+
+      // Helper to add unique entry
+      const addResult = (cust, veh) => {
+        if (!cust) return;
+        const key = `${cust._id}_${veh ? veh._id : 'no_vehicle'}`;
+        if (!resultsMap.has(key)) {
+          resultsMap.set(key, {
+            customerId: cust._id,
+            customerName: cust.name,
+            mobile: cust.mobile,
+            vehicleId: veh ? veh._id : null,
+            vehicleNumber: veh ? veh.vehicleNumber : '',
+            vehicleModel: veh ? `${veh.make} ${veh.model}` : ''
+          });
+        }
+      };
+
+      // Add direct customer matches
+      matchedCustomers.forEach(cust => {
+        const custVehs = vehicles.filter(v => v.customerId === cust._id || (v.customerId && v.customerId._id === cust._id));
+        if (custVehs.length > 0) {
+          custVehs.forEach(veh => addResult(cust, veh));
+        } else {
+          addResult(cust, null);
+        }
+      });
+
+      // Search directly by Vehicle Number
+      const matchedVehiclesByNo = vehicles.filter(v => 
+        v.vehicleNumber && v.vehicleNumber.toLowerCase().includes(q.toLowerCase())
+      );
+      matchedVehiclesByNo.forEach(veh => {
+        const custId = typeof veh.customerId === 'object' ? veh.customerId?._id : veh.customerId;
+        const cust = customers.find(c => c._id === custId) || veh.customerId;
+        addResult(cust, veh);
+      });
+
+      setSuggestions(Array.from(resultsMap.values()));
+    }
+  };
+
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  const handleSelectSuggestion = (suggestion) => {
+    if (suggestion.customerName) setCustomerName(suggestion.customerName);
+    if (suggestion.mobile) setContactPhone(suggestion.mobile);
+    if (suggestion.vehicleNumber) setVehiclePlate(suggestion.vehicleNumber);
+    if (suggestion.vehicleModel) setVehicleModel(suggestion.vehicleModel);
+
+    // Clear suggestions
+    setSuggestions([]);
+    setActiveSearchField(null);
+    setSearchQuery('');
+
+    // Clear validation errors for these fields
+    setErrors(prev => ({
+      ...prev,
+      customerName: '',
+      contactPhone: '',
+      vehiclePlate: ''
+    }));
+  };
+
+  const dropdownRef = React.useRef(null);
+  const mobileMenuRef = React.useRef(null);
+  const mobileMenuButtonRef = React.useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setActiveSearchField(null);
+        setSuggestions([]);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutsideMobileMenu = (event) => {
+      if (
+        isMobileMenuOpen &&
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target) &&
+        mobileMenuButtonRef.current &&
+        !mobileMenuButtonRef.current.contains(event.target)
+      ) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutsideMobileMenu);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutsideMobileMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMobileMenuOpen]);
 
   const validateField = (name, value) => {
     let errorMsg = '';
@@ -102,6 +254,8 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
   const handleNameChange = (e) => {
     let val = e.target.value.replace(/[^A-Za-z ]/g, '').replace(/  +/g, ' ');
     setCustomerName(val);
+    setActiveSearchField('name');
+    setSearchQuery(val);
     if (formTouched || errors.customerName) {
       const err = validateField('customerName', val);
       setErrors(prev => ({ ...prev, customerName: err }));
@@ -117,6 +271,8 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
 
   const handlePhoneChange = (val) => {
     setContactPhone(val);
+    setActiveSearchField('phone');
+    setSearchQuery(val);
     if (formTouched || errors.contactPhone) {
       const err = validateField('contactPhone', val);
       setErrors(prev => ({ ...prev, contactPhone: err }));
@@ -131,6 +287,8 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
   const handlePlateChange = (e) => {
     let val = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
     setVehiclePlate(val);
+    setActiveSearchField('plate');
+    setSearchQuery(val);
     if (formTouched || errors.vehiclePlate) {
       const err = validateField('vehiclePlate', val);
       setErrors(prev => ({ ...prev, vehiclePlate: err }));
@@ -197,6 +355,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
     const sanitizedName = sanitize(trimmedName);
     const sanitizedPhone = sanitize(trimmedPhone);
     const sanitizedPlate = sanitize(trimmedPlate);
+    const sanitizedModel = sanitize(vehicleModel.trim());
     const sanitizedStream = sanitize(preferredStream);
 
     setIsSubmitting(true);
@@ -211,6 +370,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
           customerName: sanitizedName,
           mobile: sanitizedPhone,
           vehicleNumber: sanitizedPlate,
+          vehicleModel: sanitizedModel,
           serviceType: sanitizedStream,
           preferredDate: formatDateToDMY(preferredDate),
           bookingDate: new Date().toLocaleDateString('en-IN'),
@@ -230,6 +390,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
       setCustomerName('');
       setContactPhone('');
       setVehiclePlate('');
+      setVehicleModel('');
       setPreferredStream('');
       setPreferredDate('');
       setErrors({});
@@ -258,6 +419,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
           customerName: sanitizedName,
           mobile: sanitizedPhone,
           vehicleNumber: sanitizedPlate,
+          vehicleModel: sanitizedModel,
           serviceType: sanitizedStream,
           preferredDate: formatDateToDMY(preferredDate),
           status: 'unread',
@@ -273,7 +435,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
           senderName: sanitizedName,
           phone: sanitizedPhone,
           subject: 'Service Booking Message',
-          body: `${sanitizedName} has requested a service slot for vehicle ${sanitizedPlate} (Type: ${sanitizedStream}) on ${formatDateToDMY(preferredDate)} (submitted on ${new Date().toLocaleDateString('en-IN')}).`,
+          body: `${sanitizedName} has requested a service slot for vehicle ${sanitizedPlate}${sanitizedModel ? ` (${sanitizedModel})` : ''} (Type: ${sanitizedStream}) on ${formatDateToDMY(preferredDate)} (submitted on ${new Date().toLocaleDateString('en-IN')}).`,
           status: 'unread',
           createdAt: new Date().toISOString()
         });
@@ -285,6 +447,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
         setCustomerName('');
         setContactPhone('');
         setVehiclePlate('');
+        setVehicleModel('');
         setPreferredStream('');
         setPreferredDate('');
         setErrors({});
@@ -366,39 +529,26 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
   return (
     <div className="min-h-screen bg-slate-50 text-[#111827] font-sans relative overflow-x-hidden scroll-smooth">
       
-      {/* Floating WhatsApp Button */}
-      <a
-        href="https://wa.me/919949479765?text=Hi%20MVSS%20Automobiles,%20I'd%20like%20to%20inquire%20about%20a%20service%20for%20my%20vehicle."
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-4 right-4 md:bottom-8 md:right-8 bg-[#25D366] hover:bg-[#20BA56] text-white p-3 md:p-4 rounded-full shadow-2xl z-40 transition-all duration-300 hover:scale-110 flex items-center justify-center animate-bounce"
-        aria-label="Contact us on WhatsApp"
-      >
-        <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.455L0 24zm6.59-4.846c1.6.95 3.588 1.45 5.416 1.451 5.408 0 9.81-4.394 9.813-9.799.002-2.618-1.012-5.08-2.859-6.93C17.172 2.025 14.71 1.01 12.016 1.01c-5.41 0-9.813 4.394-9.815 9.8.001 1.87.493 3.693 1.42 5.29L2.62 20.352l4.027-1.198z" />
-        </svg>
-      </a>
-
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 select-none shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-6 py-3.5 flex justify-between items-center w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3.5 flex justify-between items-center w-full">
           <a 
             href="/" 
             onClick={(e) => { e.preventDefault(); window.location.href = '/'; }} 
-            className="flex items-center gap-3 select-none shrink-0 group"
+            className="flex items-center gap-2 sm:gap-3 select-none shrink-0 group"
           >
-            <div className="shrink-0 transition-transform duration-350 group-hover:scale-105 p-0.5 flex items-center justify-center bg-white rounded-xl border border-slate-100 shadow-sm">
+            <div className="shrink-0 transition-transform duration-350 group-hover:scale-105 p-0.5 flex items-center justify-center bg-[#030712] rounded-full border-2 border-[#C1121F]/30 shadow-md overflow-hidden">
               <img 
-                src="/workshop/auto4m_logo_v1.png" 
+                src="/workshop/auto4m_logo_v1.svg" 
                 alt="MVSS Logo" 
-                className="h-[42px] md:h-[50px] w-auto object-contain block"
+                className="h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 lg:h-24 lg:w-24 object-cover rounded-full block"
               />
             </div>
             <div className="text-left flex flex-col justify-center select-none">
-              <h1 className="text-base md:text-xl font-black tracking-tight uppercase text-[#0B1528] leading-none">
+              <h1 className="text-[14px] md:text-base lg:text-xl font-black tracking-tight uppercase text-[#0B1528] leading-none">
                 MVSS AUTOMOBILES
               </h1>
-              <p className="text-[8px] md:text-[9px] text-[#C1121F] font-black uppercase tracking-widest leading-none mt-0.5">
+              <p className="text-[10px] md:text-[9px] lg:text-[10px] text-[#C1121F] font-black uppercase tracking-widest leading-none mt-1 md:mt-0.5">
                 PVT. LTD.
               </p>
             </div>
@@ -408,13 +558,13 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
           <nav className="hidden lg:flex items-center gap-x-8 text-xs font-bold text-slate-500 uppercase tracking-widest">
             <a href="#home" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">Home</a>
             <a href="#services" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">Services</a>
-            <a href="#why-choose" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">Why Choose Us</a>
+            <a href="#why-choose" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">Why Choose us</a>
             <a href="#gallery" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">Gallery</a>
-            <a href="#testimonials" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">Testimonials</a>
             <a href="#contact" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">Contact</a>
+            <a href="#about" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">About</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               to="/login"
               onClick={(e) => {
@@ -425,15 +575,17 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                   window.location.href = '/login';
                 }
               }}
-              className="flex items-center gap-2 px-2.5 py-2 sm:px-4 sm:py-2 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-xs font-black transition-all shrink-0 shadow-md shadow-slate-900/10 active:scale-95 select-none"
+              className="flex items-center gap-1.5 p-2 md:px-3 md:py-1.5 lg:px-4 lg:py-2 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-lg md:rounded-xl text-[11px] md:text-xs font-black transition-all shrink-0 shadow-md shadow-slate-900/10 active:scale-95 select-none"
             >
-              <Lock className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Staff Login</span>
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden md:inline">Staff Login</span>
             </Link>
-            {/* Mobile Menu Toggle */}
+            
+            {/* Mobile Menu Toggle Button */}
             <button
+              ref={mobileMenuButtonRef}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
+              className="flex lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg md:rounded-xl transition-all"
               aria-label="Toggle Mobile Menu"
             >
               <Menu className="w-5 h-5" />
@@ -441,23 +593,68 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
           </div>
         </div>
 
-        {/* Mobile Menu Drawer */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-100 bg-white/95 backdrop-blur-md px-6 py-4 space-y-3 shadow-md animate-fade-in">
-            <nav className="flex flex-col gap-y-3.5 text-xs font-bold text-slate-500 uppercase tracking-widest">
-              <a href="#home" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-1 border-b border-slate-50">Home</a>
-              <a href="#services" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-1 border-b border-slate-50">Services</a>
-              <a href="#why-choose" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-1 border-b border-slate-50">Why Choose Us</a>
-              <a href="#gallery" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-1 border-b border-slate-50">Gallery</a>
-              <a href="#testimonials" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-1 border-b border-slate-50">Testimonials</a>
-              <a href="#contact" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-1">Contact</a>
-            </nav>
+        {/* Responsive Mobile/Tablet Slide Menu (Drawer) */}
+        {/* Backdrop overlay */}
+        <div 
+          className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity duration-300 lg:hidden ${
+            isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+        
+        {/* Slide Menu Panel */}
+        <div 
+          ref={mobileMenuRef}
+          className={`fixed top-0 right-0 h-full w-[280px] sm:w-[320px] bg-white z-50 shadow-2xl transition-transform duration-300 ease-in-out transform lg:hidden flex flex-col ${
+            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          {/* Header */}
+          <div className="p-5 flex justify-between items-center border-b border-slate-100">
+            <span className="font-black text-[#0B1528] tracking-tight text-sm uppercase">Menu</span>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
+              aria-label="Close Mobile Menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        )}
+
+          {/* Navigation Links */}
+          <nav className="flex-1 px-6 py-6 flex flex-col gap-y-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+            <a href="#home" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Home</a>
+            <a href="#services" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Services</a>
+            <a href="#why-choose" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Why Choose us</a>
+            <a href="#gallery" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Gallery</a>
+            <a href="#contact" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Contact</a>
+            <a href="#about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 transition-colors">About</a>
+          </nav>
+
+          {/* Staff Login inside Drawer */}
+          <div className="p-6 border-t border-slate-100">
+            <Link
+              to="/login"
+              onClick={(e) => {
+                e.preventDefault();
+                setIsMobileMenuOpen(false);
+                if (onStaffLoginClick) {
+                  onStaffLoginClick();
+                } else {
+                  window.location.href = '/login';
+                }
+              }}
+              className="flex items-center justify-center gap-1.5 w-full py-3 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 select-none"
+            >
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span>Staff Login</span>
+            </Link>
+          </div>
+        </div>
       </header>
 
       {/* Hero Section */}
-      <section id="home" className="relative w-full h-[600px] lg:h-[750px] overflow-hidden bg-slate-950 flex items-center pb-12 lg:pb-16">
+      <section id="home" className="relative w-full h-[auto] min-h-[500px] sm:min-h-[550px] md:min-h-[600px] lg:h-[700px] xl:h-[750px] overflow-hidden bg-slate-950 flex items-center pt-28 pb-16 sm:pb-20 lg:py-0">
         
         {/* Subtle Dark Overlay Gradient */}
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-slate-950/40 z-10" />
@@ -523,7 +720,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
       </section>
 
       {/* Trust Section */}
-      <section className="relative z-30 mt-8 lg:-mt-10 max-w-7xl mx-auto px-6">
+      <section className="relative z-30 my-12 sm:my-16 md:my-20 lg:my-24 max-w-7xl mx-auto px-6">
         <div className="bg-white border border-slate-200/80 rounded-[24px] shadow-sm lg:shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <div className="flex items-center gap-4 p-4 bg-slate-50/50 lg:bg-transparent rounded-2xl border border-slate-100/70 lg:border-0 lg:border-r lg:border-slate-100 lg:p-0 last:border-0 last:border-r-0">
             <div className="p-3 lg:p-2.5 bg-red-50 text-[#C1121F] rounded-xl shrink-0">
@@ -565,7 +762,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
       </section>
 
       {/* Services Section */}
-      <section id="services" className="py-24 max-w-7xl mx-auto px-6 space-y-12">
+      <section id="services" className="pb-12 sm:pb-16 md:pb-20 lg:pb-24 max-w-7xl mx-auto px-6 space-y-12">
         <div className="text-center space-y-2">
           <span className="text-[10px] font-black text-[#C1121F] uppercase tracking-widest">Our Capabilities</span>
           <h3 className="text-3xl font-extrabold text-slate-900 uppercase tracking-tight">Premium Service Offerings</h3>
@@ -756,7 +953,8 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
       </section>
 
       {/* Why Choose Us */}
-      <section id="why-choose" className="py-24 bg-white border-t border-b border-slate-200/50">
+      <section id="why-choose" className="py-24 bg-white border-t border-b border-slate-200/50 relative">
+        <div id="about" className="absolute -top-24" />
         <div className="max-w-7xl mx-auto px-6 space-y-12">
           <div className="text-center space-y-2">
             <span className="text-[10px] font-black text-[#C1121F] uppercase tracking-widest">Enterprise Car Care</span>
@@ -940,10 +1138,10 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
               <h4 className="text-base font-black text-slate-900 uppercase tracking-wide">Schedule Your Service</h4>
             </div>
             
-            <form onSubmit={handleBookingSubmit} noValidate className="space-y-4 text-xs font-semibold">
+            <form onSubmit={handleBookingSubmit} ref={dropdownRef} noValidate className="space-y-4 text-xs font-semibold relative">
               
               {/* Name Field */}
-              <div className="space-y-1">
+              <div className="space-y-1 relative">
                 <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Customer Name</label>
                 <div className="relative flex items-center">
                   <User className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -960,10 +1158,29 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                 {errors.customerName && (
                   <span className="block mt-0.5 text-[9px] text-red-500 font-semibold">{errors.customerName}</span>
                 )}
+
+                {/* Name suggestions */}
+                {activeSearchField === 'name' && suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-slate-800 animate-fade-in">
+                    {suggestions.map((s, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectSuggestion(s)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col gap-0.5 transition-colors"
+                      >
+                        <span className="font-bold text-slate-900 dark:text-white text-xs">{s.customerName}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {s.mobile} {s.vehicleNumber ? `• ${s.vehicleNumber} (${s.vehicleModel || 'No Model'})` : ''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Phone Field */}
-              <div className="space-y-1">
+              <div className="space-y-1 relative">
                 <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Contact Phone</label>
                 <InternationalPhoneInput
                   value={contactPhone}
@@ -980,11 +1197,30 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                 {errors.contactPhone && (
                   <span id="contactPhone-error" className="block mt-0.5 text-[9px] text-red-500 font-semibold">{errors.contactPhone}</span>
                 )}
+
+                {/* Phone suggestions */}
+                {activeSearchField === 'phone' && suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-slate-800 animate-fade-in">
+                    {suggestions.map((s, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectSuggestion(s)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col gap-0.5 transition-colors"
+                      >
+                        <span className="font-bold text-slate-900 dark:text-white text-xs">{s.mobile}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {s.customerName} {s.vehicleNumber ? `• ${s.vehicleNumber} (${s.vehicleModel || 'No Model'})` : ''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 relative">
                 {/* Plate Field */}
-                <div className="space-y-1">
+                <div className="space-y-1 relative">
                   <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Vehicle Reg No</label>
                   <div className="relative flex items-center">
                     <Hash className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -1000,6 +1236,25 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                   </div>
                   {errors.vehiclePlate && (
                     <span className="block mt-0.5 text-[9px] text-red-500 font-semibold">{errors.vehiclePlate}</span>
+                  )}
+
+                  {/* Plate suggestions */}
+                  {activeSearchField === 'plate' && suggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-slate-800 animate-fade-in">
+                      {suggestions.map((s, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSelectSuggestion(s)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col gap-0.5 transition-colors"
+                        >
+                          <span className="font-bold text-slate-900 dark:text-white text-xs">{s.vehicleNumber}</span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {s.customerName} • {s.mobile} {s.vehicleModel ? `• ${s.vehicleModel}` : ''}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -1020,6 +1275,22 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                   {errors.preferredDate && (
                     <span className="block mt-0.5 text-[9px] text-red-500 font-semibold">{errors.preferredDate}</span>
                   )}
+                </div>
+              </div>
+
+              {/* Vehicle Model Field */}
+              <div className="space-y-1">
+                <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Vehicle Model</label>
+                <div className="relative flex items-center">
+                  <Car className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input 
+                    type="text" 
+                    value={vehicleModel}
+                    disabled={isSubmitting}
+                    onChange={(e) => setVehicleModel(e.target.value)}
+                    placeholder="e.g. Maruti Suzuki Swift" 
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:bg-white focus:border-[#C1121F] transition-all" 
+                  />
                 </div>
               </div>
 
@@ -1105,11 +1376,11 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
         <div className="relative z-10 max-w-7xl mx-auto px-6 space-y-10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8 text-xs select-none">
             <div className="flex items-center gap-3">
-              <div className="p-1 bg-white rounded-xl border border-slate-800 shrink-0 shadow-md">
+              <div className="p-1.5 bg-[#030712] rounded-full border-2 border-[#C1121F]/40 shrink-0 shadow-lg overflow-hidden">
                 <img 
-                  src="/workshop/auto4m_logo_v1.png" 
+                  src="/workshop/auto4m_logo_v1.svg" 
                   alt="MVSS Logo" 
-                  className="h-[32px] max-w-[100px] object-contain"
+                  className="h-24 w-24 object-cover rounded-full"
                 />
               </div>
               <span className="font-extrabold text-white text-xs uppercase tracking-widest">MVSS AUTOMOBILES</span>
@@ -1226,7 +1497,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
 
       {/* WhatsApp Floating Button */}
       <a
-        href="https://wa.me/919949479765"
+        href="https://wa.me/919949479765?text=Hi%20MVSS%20Automobiles,%20I'd%20like%20to%20inquire%20about%20a%20service%20for%20my%20vehicle."
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 group"

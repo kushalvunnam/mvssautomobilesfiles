@@ -805,7 +805,9 @@ function generateEstimatePDF(estimate, customer, vehicle, stream) {
     estimate.labour.forEach(item => {
       y = checkPageOverflow(doc, y);
       
-      const amount = item.taxableValue !== undefined ? item.taxableValue : (item.amount !== undefined ? item.amount : (item.rate - (item.discount || 0)));
+      const qty = item.qty || 1;
+      const rate = item.rate || 0;
+      const amount = item.taxableValue !== undefined ? item.taxableValue : (item.amount !== undefined ? item.amount : (qty * rate - (item.discount || 0)));
       const gstAmount = item.gstAmount || (amount * (item.gstPercent / 100));
       const total = item.total || (amount + gstAmount);
 
@@ -829,9 +831,9 @@ function generateEstimatePDF(estimate, customer, vehicle, stream) {
         item.description,
         '998729',
         'ACT',
-        '1',
+        qty.toString(),
+        rate.toFixed(2),
         '',
-        amount.toFixed(2),
         amount.toFixed(2),
         cgstRateStr,
         cgstAmt.toFixed(2),
@@ -988,7 +990,9 @@ function generateInvoicePDF(invoice, customer, vehicle, stream) {
     invoice.labour.forEach(item => {
       y = checkPageOverflow(doc, y);
       
-      const amount = item.amount || item.rate || 0;
+      const qty = item.qty || 1;
+      const rate = item.rate || 0;
+      const amount = item.amount || (qty * rate);
       const gstAmount = item.gstAmount || (amount * (item.gstPercent / 100));
       const total = item.total || (amount + gstAmount);
 
@@ -1012,8 +1016,8 @@ function generateInvoicePDF(invoice, customer, vehicle, stream) {
         item.description,
         '998729',
         'ACT',
-        '1',
-        amount.toFixed(2),
+        qty.toString(),
+        rate.toFixed(2),
         '',
         amount.toFixed(2),
         cgstRateStr,
@@ -1048,12 +1052,12 @@ function generateInvoicePDF(invoice, customer, vehicle, stream) {
     sgstTotalLabour: labourSgstSum,
     igstTotalLabour: labourIgstSum,
     gstTotalLabour: labourCgstSum + labourSgstSum + labourIgstSum,
-    grandTotal: invoice.totals.grandTotal,
+    grandTotal: invoice.totals.roundedGrandTotal || invoice.totals.grandTotal,
     approvedAmount: invoice.insuranceClaimDetails?.approvedAmount || 0,
-    customerPayableAmount: invoice.insuranceClaimDetails?.customerPayableAmount || invoice.totals.grandTotal
+    customerPayableAmount: invoice.insuranceClaimDetails?.customerPayableAmount || invoice.totals.roundedGrandTotal || invoice.totals.grandTotal
   };
   
-  const grandTotalWords = invoice.grandTotalWords || numberToWords(invoice.totals.grandTotal);
+  const grandTotalWords = invoice.grandTotalWords || numberToWords(invoice.totals.roundedGrandTotal || invoice.totals.grandTotal);
 
   y = drawSummaryBlock(doc, y, summaryTotals, isInterstate, grandTotalWords);
   drawInvoiceFooter(doc, y, true, invoice);

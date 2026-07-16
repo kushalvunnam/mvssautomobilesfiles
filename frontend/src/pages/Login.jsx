@@ -55,11 +55,11 @@ export default function Login({ onLoginSuccess }) {
         
         {/* Branding header */}
         <div className="flex flex-col items-center text-center space-y-3 pb-6 border-b border-slate-100">
-          <div className="p-2 bg-white rounded-2xl border border-slate-100 shadow-sm shrink-0">
+          <div className="p-2 bg-[#030712] rounded-full border-2 border-[#C1121F]/30 shadow-lg overflow-hidden shrink-0">
             <img 
-              src="/workshop/auto4m_logo_v1.png" 
+              src="/workshop/auto4m_logo_v1.svg" 
               alt="MVSS Logo" 
-              className="h-10 w-auto object-contain"
+              className="h-32 w-32 object-cover rounded-full"
             />
           </div>
           <div className="space-y-1">

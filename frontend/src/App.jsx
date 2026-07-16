@@ -1180,6 +1180,67 @@ export default function App() {
           }
         }
 
+        if (urlStr.includes('/api/customers/search')) {
+          const urlObj = new URL(urlStr, window.location.origin);
+          const q = (urlObj.searchParams.get('q') || '').trim();
+          if (!q || q.length < 2) {
+            return responseJson([]);
+          }
+
+          const customers = JSON.parse(sessionStorage.getItem('mock_customers') || '[]');
+          const vehicles = JSON.parse(sessionStorage.getItem('mock_vehicles') || '[]');
+
+          const resultsMap = new Map();
+
+          // Search customers by name or mobile
+          const matchedCustomers = customers.filter(c => 
+            (c.name && c.name.toLowerCase().includes(q.toLowerCase())) ||
+            (c.mobile && c.mobile.toLowerCase().includes(q.toLowerCase()))
+          );
+
+          // Helper to add unique entry
+          const addResult = (cust, veh) => {
+            if (!cust) return;
+            const key = `${cust._id}_${veh ? veh._id : 'no_vehicle'}`;
+            if (!resultsMap.has(key)) {
+              resultsMap.set(key, {
+                customerId: cust._id,
+                customerName: cust.name,
+                mobile: cust.mobile,
+                vehicleId: veh ? veh._id : null,
+                vehicleNumber: veh ? veh.vehicleNumber : '',
+                vehicleModel: veh ? `${veh.make} ${veh.model}` : ''
+              });
+            }
+          };
+
+          // Add direct customer matches
+          matchedCustomers.forEach(cust => {
+            const custId = cust._id;
+            const custVehs = vehicles.filter(v => {
+              const vCustId = typeof v.customerId === 'object' ? v.customerId?._id : v.customerId;
+              return vCustId === custId;
+            });
+            if (custVehs.length > 0) {
+              custVehs.forEach(veh => addResult(cust, veh));
+            } else {
+              addResult(cust, null);
+            }
+          });
+
+          // Search directly by Vehicle Number
+          const matchedVehiclesByNo = vehicles.filter(v => 
+            v.vehicleNumber && v.vehicleNumber.toLowerCase().includes(q.toLowerCase())
+          );
+          matchedVehiclesByNo.forEach(veh => {
+            const custId = typeof veh.customerId === 'object' ? veh.customerId?._id : veh.customerId;
+            const cust = customers.find(c => c._id === custId) || veh.customerId;
+            addResult(cust, veh);
+          });
+
+          return responseJson(Array.from(resultsMap.values()));
+        }
+
         if (urlStr.includes('/api/claims')) {
           const db = JSON.parse(sessionStorage.getItem('mock_claims') || '[]');
           const customers = JSON.parse(sessionStorage.getItem('mock_customers') || '[]');

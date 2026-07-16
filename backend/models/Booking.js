@@ -14,6 +14,7 @@ const BookingSchema = new mongoose.Schema({
     }
   },
   vehicleNumber: { type: String, required: true },
+  vehicleModel: { type: String, default: '' },
   serviceType: { type: String, required: true },
   bookingDate: { type: String, required: true },
   bookingTime: { type: String, required: true },
