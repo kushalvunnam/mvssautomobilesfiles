@@ -207,8 +207,8 @@ router.get('/:id/pdf', auth, async (req, res) => {
     const jobCard = await JobCard.findById(req.params.id);
     if (!jobCard) return res.status(404).send({ error: 'Job Card not found.' });
 
-    const customer = await Customer.findById(jobCard.customerId);
-    const vehicle = await Vehicle.findById(jobCard.vehicleId);
+    const customer = (jobCard.customerId ? await Customer.findById(jobCard.customerId) : null) || { name: 'Walk-in Customer', mobile: 'N/A' };
+    const vehicle = (jobCard.vehicleId ? await Vehicle.findById(jobCard.vehicleId) : null) || { vehicleNumber: 'N/A', make: 'N/A', model: 'N/A' };
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=jobcard-${jobCard.jobCardNo}.pdf`);
@@ -217,7 +217,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
 
     generateJobCardPDF(jobCard, customer, vehicle, res);
   } catch (error) {
-    res.status(500).send({ error: 'Failed to generate PDF.' });
+    res.status(500).send({ error: 'Failed to generate PDF: ' + error.message });
   }
 });
 
@@ -227,8 +227,8 @@ router.get('/:id/gatepass/pdf', auth, async (req, res) => {
     const jobCard = await JobCard.findById(req.params.id);
     if (!jobCard) return res.status(404).send({ error: 'Job Card not found.' });
 
-    const customer = await Customer.findById(jobCard.customerId);
-    const vehicle = await Vehicle.findById(jobCard.vehicleId);
+    const customer = (jobCard.customerId ? await Customer.findById(jobCard.customerId) : null) || { name: 'Walk-in Customer', mobile: 'N/A' };
+    const vehicle = (jobCard.vehicleId ? await Vehicle.findById(jobCard.vehicleId) : null) || { vehicleNumber: 'N/A', make: 'N/A', model: 'N/A' };
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=gatepass-${jobCard.jobCardNo}.pdf`);

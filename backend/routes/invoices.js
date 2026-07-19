@@ -394,8 +394,8 @@ router.get('/:id/pdf', auth, async (req, res) => {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).send({ error: 'Invoice not found.' });
 
-    const customer = await Customer.findById(invoice.customerId);
-    const vehicle = await Vehicle.findById(invoice.vehicleId);
+    const customer = (invoice.customerId ? await Customer.findById(invoice.customerId) : null) || { name: 'Walk-in Customer', mobile: 'N/A' };
+    const vehicle = (invoice.vehicleId ? await Vehicle.findById(invoice.vehicleId) : null) || { vehicleNumber: 'N/A', make: 'N/A', model: 'N/A' };
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=invoice-${invoice.invoiceNo}.pdf`);
@@ -418,8 +418,8 @@ router.get('/:id/gatepass/pdf', auth, async (req, res) => {
       return res.status(400).send({ error: 'Gate Pass can be generated only if Payment Status is Paid.' });
     }
 
-    const customer = await Customer.findById(invoice.customerId);
-    const vehicle = await Vehicle.findById(invoice.vehicleId);
+    const customer = (invoice.customerId ? await Customer.findById(invoice.customerId) : null) || { name: 'Walk-in Customer', mobile: 'N/A' };
+    const vehicle = (invoice.vehicleId ? await Vehicle.findById(invoice.vehicleId) : null) || { vehicleNumber: 'N/A', make: 'N/A', model: 'N/A' };
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=gatepass-${invoice.invoiceNo}.pdf`);

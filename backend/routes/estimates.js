@@ -303,9 +303,9 @@ router.get('/:id/pdf', auth, async (req, res) => {
     const estimate = await Estimate.findById(req.params.id);
     if (!estimate) return res.status(404).send({ error: 'Estimate not found.' });
 
-    const jobCard = await JobCard.findById(estimate.jobCardId);
-    const customer = await Customer.findById(jobCard.customerId);
-    const vehicle = await Vehicle.findById(jobCard.vehicleId);
+    const jobCard = (estimate.jobCardId ? await JobCard.findById(estimate.jobCardId) : null) || {};
+    const customer = (jobCard.customerId ? await Customer.findById(jobCard.customerId) : null) || { name: 'Walk-in Customer', mobile: 'N/A' };
+    const vehicle = (jobCard.vehicleId ? await Vehicle.findById(jobCard.vehicleId) : null) || { vehicleNumber: 'N/A', make: 'N/A', model: 'N/A' };
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=estimate-${estimate.estimateNo}.pdf`);
@@ -314,7 +314,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
 
     generateEstimatePDF(estimate, customer, vehicle, res);
   } catch (error) {
-    res.status(500).send({ error: 'Failed to generate PDF.' });
+    res.status(500).send({ error: 'Failed to generate PDF: ' + error.message });
   }
 });
 
