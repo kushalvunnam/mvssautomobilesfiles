@@ -9,6 +9,7 @@ const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
 const Message = require('../models/Message');
 const { logAction } = require('../utils/logger');
+const { auth } = require('../middleware/auth');
 
 // n8n PRODUCTION webhook URL
 const DEFAULT_BOOKING_WEBHOOK_URL = 'https://vamshiyadav406.app.n8n.cloud/webhook/5f347f8c-353b-4af8-ae83-3c26f152f11a';
@@ -300,5 +301,16 @@ router.post('/', async (req, res) => {
   }
 });
 
+
+// Get all bookings (Authenticated)
+router.get('/', auth, async (req, res) => {
+  try {
+    const bookings = await Booking.find().sort({ createdAt: -1 });
+    res.json(bookings);
+  } catch (err) {
+    console.error('Failed to fetch bookings:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 module.exports = router;

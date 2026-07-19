@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, OWNER_SUPPORT_NUMBER } from '../config';
 import { 
   FileText, 
   Printer, 
@@ -390,7 +390,7 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
             <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-wider">MVSS AUTOMOBILES PRIVATE LIMITED</h2>
             <p className="text-xs text-slate-450 dark:text-slate-500 font-semibold mt-1">
               Sy. No. 25/1, Opp. Cine Planet, Beside PSR Convention, Kompally, Hyderabad - 500014. <br />
-              PH. No. 9949479765 | Email: accounts@auto4m.in
+              PH. No. {OWNER_SUPPORT_NUMBER} | Email: accounts@auto4m.in
             </p>
           </div>
           <div className="text-right">
@@ -826,7 +826,7 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
 
       {showUpdateModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in print:hidden">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 overflow-y-auto max-h-[90vh]">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider border-b pb-2">
               Update Job Card Work Log / QC
             </h3>

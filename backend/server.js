@@ -12,7 +12,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 
 // Load env vars
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/autoworkshop';
 const isLocalhostMongo = !MONGODB_URI || MONGODB_URI.includes('localhost') || MONGODB_URI.includes('127.0.0.1');
@@ -29,7 +29,7 @@ const originalModel = mongoose.model.bind(mongoose);
 mongoose.model = function(name, schema) {
   if (global.isInMemoryFallback) {
     const { getMockModel } = require('./utils/inMemoryDB');
-    return getMockModel(name);
+    return getMockModel(name, schema);
   }
   return originalModel(name, schema);
 };
@@ -241,7 +241,7 @@ async function seedDatabase() {
     // 3. Seed Customers, Vehicles, and Job Cards (Enabled for in-memory / testing mode)
     const JobCard = require('./models/JobCard');
     const jobCardCount = await JobCard.countDocuments();
-    if (global.isInMemoryFallback || jobCardCount === 0) {
+    if (global.isInMemoryFallback && jobCardCount === 0) {
       console.log('Seeding default customers, vehicles and job cards...');
       
       const Customer = require('./models/Customer');

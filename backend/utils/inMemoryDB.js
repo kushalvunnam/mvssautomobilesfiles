@@ -210,6 +210,23 @@ class MockDoc {
     if (!this._id) {
       this._id = generateId();
     }
+
+    // Apply Schema defaults
+    const schema = schemas[modelName];
+    if (schema) {
+      schema.eachPath((path, schemaType) => {
+        if (this[path] === undefined && schemaType.defaultValue !== undefined) {
+          if (typeof schemaType.defaultValue === 'function') {
+            if (schemaType.defaultValue.name !== 'defaultId') {
+              this[path] = schemaType.defaultValue();
+            }
+          } else {
+            this[path] = schemaType.defaultValue;
+          }
+        }
+      });
+    }
+
     if (!this.createdAt) {
       this.createdAt = new Date().toISOString();
     }
@@ -248,11 +265,16 @@ class MockDoc {
   }
 
   toObject() {
-    return deepClone(this);
+    const rawData = {};
+    for (const key of Object.keys(this)) {
+      if (key.startsWith('_') && key !== '_id') continue;
+      rawData[key] = this[key];
+    }
+    return deepClone(rawData);
   }
 
   toJSON() {
-    return deepClone(this);
+    return this.toObject();
   }
 }
 
@@ -368,6 +390,44 @@ function createMockModel(modelName) {
       collections[modelName] = collections[modelName].filter(doc => !matchesQuery(doc, query));
       return { deletedCount: originalLength - collections[modelName].length };
     }
+
+    static async create(data) {
+      if (Array.isArray(data)) {
+        return MockModel.insertMany(data);
+      }
+      const inst = new MockDoc(modelName, data);
+      return inst.save();
+    }
+
+    static async aggregate(pipeline = []) {
+      let data = collections[modelName] || [];
+      for (const stage of pipeline) {
+        if (stage.$group) {
+          const groupRule = stage.$group;
+          const idKey = groupRule._id;
+          const groups = {};
+          for (const doc of data) {
+            let keyVal = 'Unknown';
+            if (typeof idKey === 'string' && idKey.startsWith('$')) {
+              keyVal = doc[idKey.substring(1)] || null;
+            }
+            if (!groups[keyVal]) {
+              groups[keyVal] = { _id: keyVal };
+            }
+            for (const field of Object.keys(groupRule)) {
+              if (field === '_id') continue;
+              const op = groupRule[field];
+              if (op && op.$sum !== undefined) {
+                const sumVal = typeof op.$sum === 'number' ? op.$sum : (doc[op.$sum.substring(1)] || 0);
+                groups[keyVal][field] = (groups[keyVal][field] || 0) + sumVal;
+              }
+            }
+          }
+          data = Object.values(groups);
+        }
+      }
+      return data;
+    }
   }
 
   return MockModel;
@@ -375,7 +435,11 @@ function createMockModel(modelName) {
 
 // Override mongoose model helper
 const mockModels = {};
-function getMockModel(name) {
+const schemas = {};
+function getMockModel(name, schema) {
+  if (schema) {
+    schemas[name] = schema;
+  }
   if (!mockModels[name]) {
     mockModels[name] = createMockModel(name);
   }

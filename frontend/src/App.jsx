@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from './config';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -53,6 +53,8 @@ const tabPermissions = {
 };
 
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [user, setUser] = useState(() => {
     try {
@@ -1513,7 +1515,7 @@ export default function App() {
     setActiveTab(defaultTab);
   };
 
-  const handleLogout = async (redirectTo = '/') => {
+  const handleLogout = async (redirectTo = '/', useReplace = true) => {
     try {
       if (token && token !== 'mock_jwt_token_for_offline_demo') {
         await fetch(`${API_BASE_URL}/auth/logout`, {
@@ -1549,7 +1551,7 @@ export default function App() {
     localStorage.removeItem('user');
     setToken('');
     setUser(null);
-    window.location.replace(redirectTo);
+    navigate(redirectTo, { replace: useReplace });
   };
 
   const handleNavigateToJobCard = (jcId) => {
@@ -1566,42 +1568,40 @@ export default function App() {
   }
 
   return (
-    <Router>
-      <Routes>
-        <Route 
-          path="/" 
-          element={
-            <LandingPageWrapper 
-              onLoginSuccess={handleLoginSuccess} 
-              onStaffLoginClick={() => handleLogout('/login')} 
+    <Routes>
+      <Route 
+        path="/" 
+        element={
+          <LandingPageWrapper 
+            onLoginSuccess={handleLoginSuccess} 
+            onStaffLoginClick={() => handleLogout('/login', false)} 
+          />
+        } 
+      />
+      <Route path="/login" element={<LoginWrapper token={token} user={user} onLoginSuccess={handleLoginSuccess} />} />
+      <Route 
+        path="/*" 
+        element={
+          <ProtectedRoute token={token} user={user}>
+            <ERPShell 
+              user={user}
+              token={token}
+              handleLogout={handleLogout}
+              sidebarOpen={sidebarOpen}
+              setSidebarOpen={setSidebarOpen}
+              isCollapsed={isCollapsed}
+              setIsCollapsed={setIsCollapsed}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              viewJcId={viewJcId}
+              setViewJcId={setViewJcId}
+              handleNavigateToJobCard={handleNavigateToJobCard}
+              tabPermissions={tabPermissions}
             />
-          } 
-        />
-        <Route path="/login" element={<LoginWrapper token={token} user={user} onLoginSuccess={handleLoginSuccess} />} />
-        <Route 
-          path="/*" 
-          element={
-            <ProtectedRoute token={token} user={user}>
-              <ERPShell 
-                user={user}
-                token={token}
-                handleLogout={handleLogout}
-                sidebarOpen={sidebarOpen}
-                setSidebarOpen={setSidebarOpen}
-                isCollapsed={isCollapsed}
-                setIsCollapsed={setIsCollapsed}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                viewJcId={viewJcId}
-                setViewJcId={setViewJcId}
-                handleNavigateToJobCard={handleNavigateToJobCard}
-                tabPermissions={tabPermissions}
-              />
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
-    </Router>
+          </ProtectedRoute>
+        } 
+      />
+    </Routes>
   );
 }
 

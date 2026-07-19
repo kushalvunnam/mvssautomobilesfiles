@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import { 
   Eye, 
@@ -6,15 +7,26 @@ import {
   Lock, 
   Mail,
   AlertCircle,
-  ArrowRight
+  ArrowRight,
+  X,
+  ArrowLeft
 } from 'lucide-react';
 
 export default function Login({ onLoginSuccess }) {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,6 +64,24 @@ export default function Login({ onLoginSuccess }) {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#C1121F]/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6 animate-scale-up">
+        
+        {/* Navigation Buttons */}
+        <button
+          type="button"
+          onClick={handleBack}
+          className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all duration-200 focus:outline-none border border-slate-100"
+          aria-label="Go Back"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+
+        <Link 
+          to="/" 
+          className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center text-slate-400 hover:bg-[#FEE2E2] hover:text-[#DC2626] transition-all duration-200 focus:outline-none border border-slate-100"
+          aria-label="Exit Login"
+        >
+          <X className="w-5 h-5" />
+        </Link>
         
         {/* Branding header */}
         <div className="flex flex-col items-center text-center space-y-3 pb-6 border-b border-slate-100">

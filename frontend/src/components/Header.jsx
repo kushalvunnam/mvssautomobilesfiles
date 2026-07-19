@@ -457,7 +457,7 @@ export default function Header({ user, token, currentTab, onMenuClick, onLogout,
               </button>
 
               {showMessagesMenu && (
-                <div className="absolute right-0 mt-2.5 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-3 text-xs z-50 animate-fade-in">
+                <div className="absolute right-0 mt-2.5 w-[calc(100vw-2rem)] sm:w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-3 text-xs z-50 animate-fade-in">
                   <div className="px-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                     <span className="font-bold text-slate-500 uppercase tracking-wider">Messages</span>
                     {unreadMessagesCount > 0 && (
@@ -525,7 +525,7 @@ export default function Header({ user, token, currentTab, onMenuClick, onLogout,
               </button>
 
               {showAlertsMenu && (
-                <div className="absolute right-0 mt-2.5 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-3 text-xs z-50 animate-fade-in">
+                <div className="absolute right-0 mt-2.5 w-[calc(100vw-2rem)] sm:w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-3 text-xs z-50 animate-fade-in">
                   <div className="px-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                     <span className="font-bold text-slate-500 uppercase tracking-wider">System Alerts</span>
                     <span className="text-[9px] bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 font-bold px-1.5 py-0.5 rounded-full">
@@ -573,7 +573,7 @@ export default function Header({ user, token, currentTab, onMenuClick, onLogout,
               </button>
 
               {showNotificationsMenu && (
-                <div className="absolute right-0 mt-2.5 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-3 text-xs z-50 animate-fade-in">
+                <div className="absolute right-0 mt-2.5 w-[calc(100vw-2rem)] sm:w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-3 text-xs z-50 animate-fade-in">
                   <div className="px-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                     <span className="font-bold text-slate-500 uppercase tracking-wider">Bookings</span>
                     {unreadCount > 0 && (

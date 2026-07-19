@@ -1,4 +1,5 @@
 import React from 'react';
+import { OWNER_SUPPORT_NUMBER } from '../config';
 import { 
   LayoutDashboard, 
   Users, 
@@ -116,7 +117,12 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
           <div className="p-3 border-t border-slate-800 animate-fade-in">
             <div className="p-3 bg-slate-800/30 border border-slate-800/60 rounded-lg text-center">
               <p className="font-semibold text-slate-400 text-[10px]">Need Help?</p>
-              <p className="text-[11px] text-slate-200 font-bold mt-0.5">+91 96400 12345</p>
+              <a 
+                href={`tel:${OWNER_SUPPORT_NUMBER.replace(/\s+/g, '')}`} 
+                className="text-[11px] text-slate-200 hover:text-indigo-400 font-bold mt-0.5 block transition-colors"
+              >
+                {OWNER_SUPPORT_NUMBER}
+              </a>
             </div>
           </div>
         )}

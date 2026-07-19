@@ -7,9 +7,10 @@ const backend = spawn('node', ['backend/server.js'], {
 });
 
 console.log('[AI Studio Dev] Starting frontend Vite dev server on port 3000...');
-const frontend = spawn('npx', ['vite', '--port', '3000', '--host', '0.0.0.0'], {
+const frontend = spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['vite', '--port', '3000', '--host', '0.0.0.0'], {
   cwd: 'frontend',
-  stdio: 'inherit'
+  stdio: 'inherit',
+  shell: true
 });
 
 process.on('SIGINT', () => {

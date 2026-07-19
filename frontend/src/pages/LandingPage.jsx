@@ -4,7 +4,7 @@ import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, Chevr
 import { FaWhatsapp } from 'react-icons/fa';
 import Login from './Login';
 import InternationalPhoneInput from '../components/InternationalPhoneInput';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, OWNER_SUPPORT_NUMBER } from '../config';
 
 export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
   const [heroIdx, setHeroIdx] = useState(0);
@@ -594,64 +594,92 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
         </div>
 
         {/* Responsive Mobile/Tablet Slide Menu (Drawer) */}
-        {/* Backdrop overlay */}
-        <div 
-          className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity duration-300 lg:hidden ${
-            isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-          }`}
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-        
-        {/* Slide Menu Panel */}
-        <div 
-          ref={mobileMenuRef}
-          className={`fixed top-0 right-0 h-full w-[280px] sm:w-[320px] bg-white z-50 shadow-2xl transition-transform duration-300 ease-in-out transform lg:hidden flex flex-col ${
-            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          {/* Header */}
-          <div className="p-5 flex justify-between items-center border-b border-slate-100">
-            <span className="font-black text-[#0B1528] tracking-tight text-sm uppercase">Menu</span>
-            <button
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
-              aria-label="Close Mobile Menu"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="flex-1 px-6 py-6 flex flex-col gap-y-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
-            <a href="#home" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Home</a>
-            <a href="#services" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Services</a>
-            <a href="#why-choose" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Why Choose us</a>
-            <a href="#gallery" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Gallery</a>
-            <a href="#contact" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 border-b border-slate-50 transition-colors">Contact</a>
-            <a href="#about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#C1121F] py-2 transition-colors">About</a>
-          </nav>
-
-          {/* Staff Login inside Drawer */}
-          <div className="p-6 border-t border-slate-100">
-            <Link
-              to="/login"
-              onClick={(e) => {
-                e.preventDefault();
-                setIsMobileMenuOpen(false);
-                if (onStaffLoginClick) {
-                  onStaffLoginClick();
-                } else {
-                  window.location.href = '/login';
-                }
-              }}
-              className="flex items-center justify-center gap-1.5 w-full py-3 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 select-none"
-            >
-              <Lock className="w-3.5 h-3.5 shrink-0" />
-              <span>Staff Login</span>
-            </Link>
-          </div>
-        </div>
       </header>
+
+      {/* Backdrop overlay */}
+      <div 
+        className={`fixed inset-0 bg-black/55 backdrop-blur-sm z-[9999] transition-opacity duration-300 lg:hidden ${
+          isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
+      
+      {/* Slide Menu Panel */}
+      <div 
+        ref={mobileMenuRef}
+        className={`fixed top-0 right-0 h-screen w-[80vw] sm:w-[320px] bg-white z-[9999] shadow-2xl transition-transform duration-300 ease-in-out transform lg:hidden flex flex-col ${
+          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-white z-10 px-5 py-4 flex justify-between items-center border-b border-slate-150 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="p-0.5 bg-[#030712] rounded-full border border-[#C1121F]/30 overflow-hidden shrink-0">
+              <img 
+                src="/workshop/auto4m_logo_v1.svg" 
+                alt="MVSS Logo" 
+                className="h-8 w-8 object-cover rounded-full"
+              />
+            </div>
+            <div className="text-left flex flex-col justify-center">
+              <span className="text-xs font-black tracking-tight uppercase text-[#0B1528] leading-none">
+                MVSS AUTOMOBILES
+              </span>
+              <span className="text-[7px] text-[#C1121F] font-black uppercase tracking-widest leading-none mt-0.5">
+                PVT. LTD.
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="w-10 h-10 flex items-center justify-center text-slate-500 hover:text-[#DC2626] hover:bg-red-50 rounded-full transition-all focus:outline-none"
+            aria-label="Close Mobile Menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Navigation Links */}
+        <nav className="flex-1 overflow-y-auto flex flex-col">
+          {[
+            { label: 'Home', href: '#home' },
+            { label: 'Services', href: '#services' },
+            { label: 'Why Choose us', href: '#why-choose' },
+            { label: 'Gallery', href: '#gallery' },
+            { label: 'Contact', href: '#contact' },
+            { label: 'About', href: '#about' }
+          ].map((link, idx) => (
+            <a 
+              key={idx}
+              href={link.href} 
+              onClick={() => setIsMobileMenuOpen(false)} 
+              className="h-14 px-5 flex items-center text-sm font-semibold text-[#111827] hover:bg-[#F3F4F6] hover:text-[#DC2626] transition-all border-b border-slate-100"
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
+        {/* Staff Login inside Drawer */}
+        <div className="p-6 border-t border-slate-100 bg-white shrink-0">
+          <Link
+            to="/login"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsMobileMenuOpen(false);
+              if (onStaffLoginClick) {
+                onStaffLoginClick();
+              } else {
+                window.location.href = '/login';
+              }
+            }}
+            className="flex items-center justify-center gap-1.5 w-full py-3 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 select-none"
+          >
+            <Lock className="w-3.5 h-3.5 shrink-0" />
+            <span>Staff Login</span>
+          </Link>
+        </div>
+      </div>
 
       {/* Hero Section */}
       <section id="home" className="relative w-full h-[auto] min-h-[500px] sm:min-h-[550px] md:min-h-[600px] lg:h-[700px] xl:h-[750px] overflow-hidden bg-slate-950 flex items-center pt-28 pb-16 sm:pb-20 lg:py-0">
@@ -701,14 +729,14 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
               Book Appointment
             </a>
             <a
-              href="tel:+919949479765"
+              href={`tel:${OWNER_SUPPORT_NUMBER.replace(/\s+/g, '')}`}
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-4 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-black transition-all border border-white/20 hover:scale-105 active:scale-95 w-full sm:w-auto"
             >
               <Phone className="w-4 h-4 text-[#C1121F]" />
               Call Workshop
             </a>
             <a
-              href="https://wa.me/919949479765"
+              href={`https://wa.me/${OWNER_SUPPORT_NUMBER.replace(/[\s\+]+/g, '')}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-4 bg-[#25D366] hover:bg-[#20BA56] text-white rounded-xl text-xs font-black transition-all shadow-md hover:scale-105 active:scale-95 w-full sm:w-auto"
@@ -1087,7 +1115,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                 </div>
                 <div className="pt-2">
                   <a 
-                    href="https://www.google.com/maps/dir/?api=1&destination=MVSS+Automobiles+Gundlapochampally"
+                    href="https://www.google.com/maps/dir/?api=1&destination=MVSS+Automobiles,+Survey+No.+48/5,+Near+Anthem+Villas,+Gundlapochampally,+NH-44,+Medchal-Malkajgiri+-+500014"
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
@@ -1107,7 +1135,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                 </div>
                 <div>
                   <span className="block font-black text-slate-950 text-[8px] uppercase tracking-widest">Phone Support</span>
-                  <a href="tel:+919949479765" className="hover:underline text-[#C1121F] font-mono text-xs font-bold">+91 99494 79765</a>
+                  <a href={`tel:${OWNER_SUPPORT_NUMBER.replace(/\s+/g, '')}`} className="hover:underline text-[#C1121F] font-mono text-xs font-bold">{OWNER_SUPPORT_NUMBER}</a>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -1497,7 +1525,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
 
       {/* WhatsApp Floating Button */}
       <a
-        href="https://wa.me/919949479765?text=Hi%20MVSS%20Automobiles,%20I'd%20like%20to%20inquire%20about%20a%20service%20for%20my%20vehicle."
+        href={`https://wa.me/${OWNER_SUPPORT_NUMBER.replace(/[\s\+]+/g, '')}?text=Hi%20MVSS%20Automobiles,%20I'd%20like%20to%20inquire%20about%20a%20service%20for%20my%20vehicle.`}
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 group"

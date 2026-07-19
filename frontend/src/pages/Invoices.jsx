@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, OWNER_SUPPORT_NUMBER } from '../config';
 import { Search, Plus, Receipt, Download, Share2, Mail, CheckCircle2, Printer, Edit2, Eye, Trash2, Copy, Link, ChevronDown, MessageSquare } from 'lucide-react';
 import InvoiceForm from './InvoiceForm';
 
@@ -693,7 +693,7 @@ export default function Invoices({ token, user, setActiveTab }) {
                   <div>Sy. No. 25/1, Opp. Cine Planet, Beside PSR Convention</div>
                   <div>Kompally, Hyderabad, Telangana - 500014</div>
                   <div>GSTIN: <strong>36AAJCM4778P1ZI</strong> (State Code: 36)</div>
-                  <div>Email: accounts@auto4m.in | Cell: 99494 79765</div>
+                  <div>Email: accounts@auto4m.in | Cell: {OWNER_SUPPORT_NUMBER}</div>
                 </td>
               </tr>
             </table>
