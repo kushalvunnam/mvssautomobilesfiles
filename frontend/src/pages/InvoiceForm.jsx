@@ -23,7 +23,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
 
   // Tables
   const [partsList, setPartsList] = useState([]);
-  const [labourList, setLabourList] = useState([{ description: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0' }]);
+  const [labourList, setLabourList] = useState([{ description: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0', discountAmount: '0', discountType: 'Percent' }]);
   const [inventory, setInventory] = useState([]);
   const [gstDetails, setGstDetails] = useState({ customerGSTIN: '', isInterstate: false });
   const [invoiceType, setInvoiceType] = useState('Tax Invoice');
@@ -192,12 +192,19 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
               hsnCode: p.hsnCode,
               qty: p.qty !== undefined && p.qty !== null ? p.qty.toString() : '',
               rate: p.rate !== undefined && p.rate !== null ? p.rate.toString() : '',
-              gstPercent: p.gstPercent !== undefined && p.gstPercent !== null ? p.gstPercent.toString() : ''
+              gstPercent: p.gstPercent !== undefined && p.gstPercent !== null ? p.gstPercent.toString() : '',
+              discountPercent: '0',
+              discountAmount: '0',
+              discountType: 'Percent'
             })));
             setLabourList(est.labour.map(l => ({
               description: l.description,
+              qty: '1',
               rate: l.rate !== undefined && l.rate !== null ? l.rate.toString() : '',
-              gstPercent: l.gstPercent !== undefined && l.gstPercent !== null ? l.gstPercent.toString() : ''
+              gstPercent: l.gstPercent !== undefined && l.gstPercent !== null ? l.gstPercent.toString() : '',
+              discountPercent: '0',
+              discountAmount: '0',
+              discountType: 'Percent'
             })));
 
             const jc = est.jobCardId || {};
@@ -241,12 +248,19 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
               hsnCode: p.hsnCode,
               qty: p.qty !== undefined && p.qty !== null ? p.qty.toString() : '',
               rate: p.rate !== undefined && p.rate !== null ? p.rate.toString() : '',
-              gstPercent: p.gstPercent !== undefined && p.gstPercent !== null ? p.gstPercent.toString() : ''
+              gstPercent: p.gstPercent !== undefined && p.gstPercent !== null ? p.gstPercent.toString() : '',
+              discountPercent: p.discountPercent !== undefined && p.discountPercent !== null ? p.discountPercent.toString() : '0',
+              discountAmount: p.discountAmount !== undefined && p.discountAmount !== null ? p.discountAmount.toString() : '0',
+              discountType: p.discountType || 'Percent'
             })));
             setLabourList(inv.labour.map(l => ({
               description: l.description,
+              qty: l.qty !== undefined && l.qty !== null ? l.qty.toString() : '1',
               rate: l.rate !== undefined && l.rate !== null ? l.rate.toString() : '',
-              gstPercent: l.gstPercent !== undefined && l.gstPercent !== null ? l.gstPercent.toString() : ''
+              gstPercent: l.gstPercent !== undefined && l.gstPercent !== null ? l.gstPercent.toString() : '',
+              discountPercent: l.discountPercent !== undefined && l.discountPercent !== null ? l.discountPercent.toString() : '0',
+              discountAmount: l.discountAmount !== undefined && l.discountAmount !== null ? l.discountAmount.toString() : '0',
+              discountType: l.discountType || 'Percent'
             })));
             setInsuranceDetails({
               claimNo: inv.insuranceClaimDetails?.claimNo || '',
@@ -283,10 +297,21 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
       const qty = Number(part.qty) || 0;
       const rate = Number(part.rate) || 0;
       const discountPercent = Number(part.discountPercent) || 0;
+      const discountAmountInput = Number(part.discountAmount) || 0;
       const gstPercent = Number(part.gstPercent) || 0;
 
       const grossAmount = roundToTwo(qty * rate);
-      const discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+      
+      let discountAmount = 0;
+      if (part.discountType === 'Fixed') {
+        discountAmount = roundToTwo(discountAmountInput);
+      } else {
+        discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+      }
+
+      if (discountAmount > grossAmount) discountAmount = grossAmount;
+      if (discountAmount < 0) discountAmount = 0;
+
       const amount = roundToTwo(grossAmount - discountAmount); // taxable amount
       const gstAmount = roundToTwo(amount * (gstPercent / 100));
 
@@ -308,10 +333,21 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
       const qty = Number(lab.qty) !== undefined && lab.qty !== null && lab.qty !== '' ? Number(lab.qty) : 1;
       const rate = Number(lab.rate) || 0;
       const discountPercent = Number(lab.discountPercent) || 0;
+      const discountAmountInput = Number(lab.discountAmount) || 0;
       const gstPercent = Number(lab.gstPercent) || 0;
 
       const grossAmount = roundToTwo(qty * rate);
-      const discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+      
+      let discountAmount = 0;
+      if (lab.discountType === 'Fixed') {
+        discountAmount = roundToTwo(discountAmountInput);
+      } else {
+        discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+      }
+
+      if (discountAmount > grossAmount) discountAmount = grossAmount;
+      if (discountAmount < 0) discountAmount = 0;
+
       const amount = roundToTwo(grossAmount - discountAmount); // taxable amount
       const gstAmount = roundToTwo(amount * (gstPercent / 100));
 
@@ -436,7 +472,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
           } else {
             setSelectedEstimateId('');
             setPartsList([]);
-            setLabourList([{ description: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0' }]);
+            setLabourList([{ description: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0', discountAmount: '0', discountType: 'Percent' }]);
           }
         }
       }
@@ -447,7 +483,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
 
   // Parts rows operations
   const handleAddPartRow = () => {
-    setPartsList([...partsList, { partId: '', name: '', partNo: '', hsnCode: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0' }]);
+    setPartsList([...partsList, { partId: '', name: '', partNo: '', hsnCode: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0', discountAmount: '0', discountType: 'Percent' }]);
   };
 
   const handleRemovePartRow = (idx) => {
@@ -468,7 +504,10 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
       partNo: part.partNumber,
       hsnCode: part.hsnCode,
       rate: part.sellingPrice !== undefined && part.sellingPrice !== null ? part.sellingPrice.toString() : '',
-      gstPercent: part.gstPercent !== undefined && part.gstPercent !== null ? part.gstPercent.toString() : ''
+      gstPercent: part.gstPercent !== undefined && part.gstPercent !== null ? part.gstPercent.toString() : '',
+      discountPercent: '0',
+      discountAmount: '0',
+      discountType: 'Percent'
     };
     setPartsList(list);
   };
@@ -481,7 +520,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
 
   // Labour rows operations
   const handleAddLabourRow = () => {
-    setLabourList([...labourList, { description: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0' }]);
+    setLabourList([...labourList, { description: '', qty: '1', rate: '', gstPercent: '', discountPercent: '0', discountAmount: '0', discountType: 'Percent' }]);
   };
 
   const handleRemoveLabourRow = (idx) => {
@@ -510,6 +549,97 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
       }
     }
 
+    // Validation: prevent negative values, invalid GST rates, and verify stock availability
+    const validGstRates = [0, 5, 12, 18, 28];
+
+    for (const part of partsList) {
+      if (part.name && part.name.trim() !== '') {
+        const qty = Number(part.qty) || 0;
+        const rate = Number(part.rate) || 0;
+        const discPercent = Number(part.discountPercent) || 0;
+        const discAmount = Number(part.discountAmount) || 0;
+        const gstVal = Number(part.gstPercent) || 0;
+
+        if (qty < 0) {
+          alert(`Quantity for part "${part.name}" cannot be negative.`);
+          return;
+        }
+        if (rate < 0) {
+          alert(`Rate for part "${part.name}" cannot be negative.`);
+          return;
+        }
+        if (part.discountType === 'Fixed') {
+          if (discAmount < 0) {
+            alert(`Discount for part "${part.name}" cannot be negative.`);
+            return;
+          }
+          if (discAmount > qty * rate) {
+            alert(`Discount for part "${part.name}" cannot exceed subtotal (₹${qty * rate}).`);
+            return;
+          }
+        } else {
+          if (discPercent < 0 || discPercent > 100) {
+            alert(`Discount percentage for part "${part.name}" must be between 0% and 100%.`);
+            return;
+          }
+        }
+        if (!validGstRates.includes(gstVal)) {
+          alert(`Invalid GST rate ${gstVal}% for part "${part.name}". Supported rates are: 0%, 5%, 12%, 18%, 28%.`);
+          return;
+        }
+
+        // Validate stock availability if finalizing
+        if (isFinalize && part.partId && part.partId.trim() !== '') {
+          const invItem = inventory.find(item => item._id === part.partId);
+          if (invItem) {
+            const availStock = invItem.stockQuantity || 0;
+            if (qty > availStock) {
+              alert(`Insufficient stock for "${part.name}". Available stock: ${availStock}.`);
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    for (const lab of labourList) {
+      if (lab.description && lab.description.trim() !== '') {
+        const qty = lab.qty !== undefined && lab.qty !== null && lab.qty !== '' ? Number(lab.qty) : 1;
+        const rate = Number(lab.rate) || 0;
+        const discPercent = Number(lab.discountPercent) || 0;
+        const discAmount = Number(lab.discountAmount) || 0;
+        const gstVal = Number(lab.gstPercent) || 0;
+
+        if (qty < 0) {
+          alert(`Labour quantity for "${lab.description}" cannot be negative.`);
+          return;
+        }
+        if (rate < 0) {
+          alert(`Labour rate for "${lab.description}" cannot be negative.`);
+          return;
+        }
+        if (lab.discountType === 'Fixed') {
+          if (discAmount < 0) {
+            alert(`Labour discount for "${lab.description}" cannot be negative.`);
+            return;
+          }
+          if (discAmount > qty * rate) {
+            alert(`Labour discount for "${lab.description}" cannot exceed subtotal (₹${qty * rate}).`);
+            return;
+          }
+        } else {
+          if (discPercent < 0 || discPercent > 100) {
+            alert(`Labour discount percentage for "${lab.description}" must be between 0% and 100%.`);
+            return;
+          }
+        }
+        if (!validGstRates.includes(gstVal)) {
+          alert(`Invalid GST rate ${gstVal}% for labour "${lab.description}". Supported rates are: 0%, 5%, 12%, 18%, 28%.`);
+          return;
+        }
+      }
+    }
+
     // Clean up empty or invalid parts rows before saving
     const cleanedParts = partsList
       .filter(p => p.name && p.name.trim() !== '')
@@ -520,7 +650,9 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
           hsnCode: p.hsnCode ? p.hsnCode.trim() : '',
           qty: Math.max(1, Number(p.qty) || 1), // ensure qty is min 1
           rate: Number(p.rate) || 0,
+          discountType: p.discountType || 'Percent',
           discountPercent: Number(p.discountPercent) || 0,
+          discountAmount: Number(p.discountAmount) || 0,
           gstPercent: Number(p.gstPercent) || 0
         };
         // Only include partId if it's a valid non-empty string to avoid CastError
@@ -537,7 +669,9 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
         description: l.description.trim(),
         qty: l.qty !== undefined && l.qty !== null && l.qty !== '' ? Math.max(1, Number(l.qty) || 1) : 1,
         rate: Number(l.rate) || 0,
+        discountType: l.discountType || 'Percent',
         discountPercent: Number(l.discountPercent) || 0,
+        discountAmount: Number(l.discountAmount) || 0,
         gstPercent: Number(l.gstPercent) || 0
       }));
 
@@ -814,16 +948,46 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                   />
                 </div>
 
-                <div className="w-16">
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Disc %</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={part.discountPercent || ''}
-                    onChange={(e) => handleRowNumericChange(e, partsList, setPartsList, idx, 'discountPercent', true, 100)}
-                    placeholder="0"
-                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
-                  />
+                <div className="w-28 flex gap-1">
+                  <div className="flex-1">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Discount</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={part.discountType === 'Fixed' ? (part.discountAmount || '') : (part.discountPercent || '')}
+                      onChange={(e) => {
+                        const val = cleanNumberInput(e.target.value, true);
+                        const updated = [...partsList];
+                        if (part.discountType === 'Fixed') {
+                          updated[idx].discountAmount = val;
+                          updated[idx].discountPercent = '0';
+                        } else {
+                          updated[idx].discountPercent = val;
+                          updated[idx].discountAmount = '0';
+                        }
+                        setPartsList(updated);
+                      }}
+                      placeholder="0"
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                    />
+                  </div>
+                  <div className="w-10 shrink-0">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Type</label>
+                    <select
+                      value={part.discountType || 'Percent'}
+                      onChange={(e) => {
+                        const updated = [...partsList];
+                        updated[idx].discountType = e.target.value;
+                        updated[idx].discountPercent = '0';
+                        updated[idx].discountAmount = '0';
+                        setPartsList(updated);
+                      }}
+                      className="w-full h-[28px] px-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none"
+                    >
+                      <option value="Percent">%</option>
+                      <option value="Fixed">₹</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="w-16">
@@ -844,10 +1008,16 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                     {(() => {
                       const qty = Number(part.qty) || 0;
                       const rate = Number(part.rate) || 0;
-                      const disc = Number(part.discountPercent) || 0;
                       const gstPercent = Number(part.gstPercent) || 0;
                       const gross = Math.round((qty * rate + Number.EPSILON) * 100) / 100;
-                      const discAmt = Math.round((gross * (disc / 100) + Number.EPSILON) * 100) / 100;
+                      let discAmt = 0;
+                      if (part.discountType === 'Fixed') {
+                        discAmt = Math.round((Number(part.discountAmount) || 0 + Number.EPSILON) * 100) / 100;
+                      } else {
+                        discAmt = Math.round((gross * ((Number(part.discountPercent) || 0) / 100) + Number.EPSILON) * 100) / 100;
+                      }
+                      if (discAmt > gross) discAmt = gross;
+                      if (discAmt < 0) discAmt = 0;
                       const amount = Math.round((gross - discAmt + Number.EPSILON) * 100) / 100;
                       const gstAmt = Math.round((amount * (gstPercent / 100) + Number.EPSILON) * 100) / 100;
                       const rowTotal = Math.round((amount + gstAmt + Number.EPSILON) * 100) / 100;
@@ -948,16 +1118,46 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                   />
                 </div>
 
-                <div className="w-16">
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Disc %</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={lab.discountPercent || ''}
-                    onChange={(e) => handleRowNumericChange(e, labourList, setLabourList, idx, 'discountPercent', true, 100)}
-                    placeholder="0"
-                    className="w-full px-3.5 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
-                  />
+                <div className="w-28 flex gap-1">
+                  <div className="flex-1">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Discount</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={lab.discountType === 'Fixed' ? (lab.discountAmount || '') : (lab.discountPercent || '')}
+                      onChange={(e) => {
+                        const val = cleanNumberInput(e.target.value, true);
+                        const updated = [...labourList];
+                        if (lab.discountType === 'Fixed') {
+                          updated[idx].discountAmount = val;
+                          updated[idx].discountPercent = '0';
+                        } else {
+                          updated[idx].discountPercent = val;
+                          updated[idx].discountAmount = '0';
+                        }
+                        setLabourList(updated);
+                      }}
+                      placeholder="0"
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                    />
+                  </div>
+                  <div className="w-10 shrink-0">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Type</label>
+                    <select
+                      value={lab.discountType || 'Percent'}
+                      onChange={(e) => {
+                        const updated = [...labourList];
+                        updated[idx].discountType = e.target.value;
+                        updated[idx].discountPercent = '0';
+                        updated[idx].discountAmount = '0';
+                        setLabourList(updated);
+                      }}
+                      className="w-full h-[28px] px-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none"
+                    >
+                      <option value="Percent">%</option>
+                      <option value="Fixed">₹</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="w-16">
@@ -978,10 +1178,16 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                     {(() => {
                       const qty = Number(lab.qty) !== undefined && lab.qty !== null && lab.qty !== '' ? Number(lab.qty) : 1;
                       const rate = Number(lab.rate) || 0;
-                      const disc = Number(lab.discountPercent) || 0;
                       const gstPercent = Number(lab.gstPercent) || 0;
                       const gross = Math.round((qty * rate + Number.EPSILON) * 100) / 100;
-                      const discAmt = Math.round((gross * (disc / 100) + Number.EPSILON) * 100) / 100;
+                      let discAmt = 0;
+                      if (lab.discountType === 'Fixed') {
+                        discAmt = Math.round((Number(lab.discountAmount) || 0 + Number.EPSILON) * 100) / 100;
+                      } else {
+                        discAmt = Math.round((gross * ((Number(lab.discountPercent) || 0) / 100) + Number.EPSILON) * 100) / 100;
+                      }
+                      if (discAmt > gross) discAmt = gross;
+                      if (discAmt < 0) discAmt = 0;
                       const amount = Math.round((gross - discAmt + Number.EPSILON) * 100) / 100;
                       const gstAmt = Math.round((amount * (gstPercent / 100) + Number.EPSILON) * 100) / 100;
                       const rowTotal = Math.round((amount + gstAmt + Number.EPSILON) * 100) / 100;

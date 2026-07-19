@@ -45,13 +45,27 @@ const recalculateInvoice = (parts = [], labour = [], isInterstate = false) => {
   let discountTotal = 0;
 
   const processedParts = parts.map(part => {
-    const qty = Number(part.qty) || 0;
-    const rate = Number(part.rate) || 0;
-    const discountPercent = Number(part.discountPercent) || 0;
+    const qty = Math.max(0, Number(part.qty) || 0);
+    const rate = Math.max(0, Number(part.rate) || 0);
     const gstPercent = (part.gstPercent !== undefined && part.gstPercent !== null && part.gstPercent !== '') ? Number(part.gstPercent) : 18;
     
     const grossAmount = roundToTwo(qty * rate);
-    const discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+    
+    let discountAmount = 0;
+    let discountPercent = 0;
+    const discountType = part.discountType || 'Percent';
+
+    if (discountType === 'Fixed') {
+      discountAmount = roundToTwo(Number(part.discountAmount) || 0);
+      discountPercent = grossAmount > 0 ? roundToTwo((discountAmount / grossAmount) * 100) : 0;
+    } else {
+      discountPercent = Number(part.discountPercent) || 0;
+      discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+    }
+
+    if (discountAmount > grossAmount) discountAmount = grossAmount;
+    if (discountAmount < 0) discountAmount = 0;
+
     const amount = roundToTwo(grossAmount - discountAmount); // taxable amount
     const gstAmount = roundToTwo(amount * (gstPercent / 100));
     const total = roundToTwo(amount + gstAmount);
@@ -83,6 +97,7 @@ const recalculateInvoice = (parts = [], labour = [], isInterstate = false) => {
       hsnCode: part.hsnCode,
       qty,
       rate,
+      discountType,
       discountPercent,
       discountAmount,
       gstPercent,
@@ -96,13 +111,27 @@ const recalculateInvoice = (parts = [], labour = [], isInterstate = false) => {
   });
 
   const processedLabour = labour.map(lab => {
-    const qty = Number(lab.qty) !== undefined && lab.qty !== null && lab.qty !== '' ? Number(lab.qty) : 1;
-    const rate = Number(lab.rate) || 0;
-    const discountPercent = Number(lab.discountPercent) || 0;
+    const qty = Math.max(0, Number(lab.qty) !== undefined && lab.qty !== null && lab.qty !== '' ? Number(lab.qty) : 1);
+    const rate = Math.max(0, Number(lab.rate) || 0);
     const gstPercent = (lab.gstPercent !== undefined && lab.gstPercent !== null && lab.gstPercent !== '') ? Number(lab.gstPercent) : 18;
     
     const grossAmount = roundToTwo(qty * rate);
-    const discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+
+    let discountAmount = 0;
+    let discountPercent = 0;
+    const discountType = lab.discountType || 'Percent';
+
+    if (discountType === 'Fixed') {
+      discountAmount = roundToTwo(Number(lab.discountAmount) || 0);
+      discountPercent = grossAmount > 0 ? roundToTwo((discountAmount / grossAmount) * 100) : 0;
+    } else {
+      discountPercent = Number(lab.discountPercent) || 0;
+      discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
+    }
+
+    if (discountAmount > grossAmount) discountAmount = grossAmount;
+    if (discountAmount < 0) discountAmount = 0;
+
     const amount = roundToTwo(grossAmount - discountAmount); // taxable amount
     const gstAmount = roundToTwo(amount * (gstPercent / 100));
     const total = roundToTwo(amount + gstAmount);
@@ -129,6 +158,7 @@ const recalculateInvoice = (parts = [], labour = [], isInterstate = false) => {
       description: lab.description,
       qty,
       rate,
+      discountType,
       discountPercent,
       discountAmount,
       gstPercent,
@@ -291,6 +321,21 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
     if (!invoice) return res.status(404).send({ error: 'Invoice not found.' });
 
     const isFinalizing = status === 'Finalized' && invoice.status !== 'Finalized';
+
+    if (isFinalizing) {
+      const partsToCheck = parts || invoice.parts;
+      for (const part of partsToCheck) {
+        if (part.partId) {
+          const invItem = await Inventory.findById(part.partId);
+          if (!invItem) {
+            return res.status(400).send({ error: `Inventory item for part "${part.name}" not found.` });
+          }
+          if (Number(part.qty) > invItem.stockQuantity) {
+            return res.status(400).send({ error: `Insufficient stock for "${part.name}". Available: ${invItem.stockQuantity}, Required: ${part.qty}.` });
+          }
+        }
+      }
+    }
 
     if (parts || labour) {
       // Allow modifying items even if finalized

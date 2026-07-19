@@ -35,6 +35,11 @@ const invoiceItemSchema = new mongoose.Schema({
     required: true,
     default: 0,
   },
+  discountType: {
+    type: String,
+    enum: ['Percent', 'Fixed'],
+    default: 'Percent'
+  },
   gstPercent: {
     type: Number,
     required: true,
@@ -91,6 +96,11 @@ const invoiceLabourSchema = new mongoose.Schema({
     type: Number,
     required: true,
     default: 0,
+  },
+  discountType: {
+    type: String,
+    enum: ['Percent', 'Fixed'],
+    default: 'Percent'
   },
   gstPercent: {
     type: Number,
