@@ -308,6 +308,10 @@ router.post('/reset-database', auth, restrictTo('Admin'), async (req, res) => {
     const Booking = require('../models/Booking');
     const Estimate = require('../models/Estimate');
     const InsuranceClaim = require('../models/InsuranceClaim');
+    const Invoice = require('../models/Invoice');
+    const GatePass = require('../models/GatePass');
+    const Notification = require('../models/Notification');
+    const Message = require('../models/Message');
     const AuditLog = require('../models/AuditLog');
     const { logAction } = require('../utils/logger');
 
@@ -317,12 +321,16 @@ router.post('/reset-database', auth, restrictTo('Admin'), async (req, res) => {
     const resBook = await Booking.deleteMany({});
     const resEst = await Estimate.deleteMany({});
     const resClaim = await InsuranceClaim.deleteMany({});
+    const resInv = await Invoice.deleteMany({});
+    const resGp = await GatePass.deleteMany({});
+    const resNotif = await Notification.deleteMany({});
+    const resMsg = await Message.deleteMany({});
     
     // Clear all audit logs except USER_LOGIN and USER_LOGOUT
     const resLogs = await AuditLog.deleteMany({ action: { $nin: ['USER_LOGIN', 'USER_LOGOUT'] } });
 
     // Log the reset action
-    await logAction(req.user, 'SYSTEM_RESET', 'Purged customers, vehicles, job cards, bookings, estimates, claims, and logs for real testing mode.', req);
+    await logAction(req.user, 'SYSTEM_RESET', 'Purged customers, vehicles, job cards, bookings, estimates, claims, invoices, gate passes, notifications, messages, and logs for real testing mode.', req);
 
     res.send({
       message: 'Database reset successful.',
@@ -333,6 +341,10 @@ router.post('/reset-database', auth, restrictTo('Admin'), async (req, res) => {
         bookings: resBook.deletedCount,
         estimates: resEst.deletedCount,
         claims: resClaim.deletedCount,
+        invoices: resInv.deletedCount,
+        gatePasses: resGp.deletedCount,
+        notifications: resNotif.deletedCount,
+        messages: resMsg.deletedCount,
         logs: resLogs.deletedCount
       }
     });

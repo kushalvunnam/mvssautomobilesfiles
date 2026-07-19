@@ -176,9 +176,12 @@ export default function AuditLogs({ token }) {
       localStorage.setItem('mock_vehicles', JSON.stringify([]));
       localStorage.setItem('mock_jobcards', JSON.stringify([]));
       localStorage.setItem('mock_estimates', JSON.stringify([]));
+      localStorage.setItem('mock_invoices', JSON.stringify([]));
       localStorage.setItem('mock_claims', JSON.stringify([]));
       localStorage.setItem('mock_bookings', JSON.stringify([]));
       localStorage.setItem('mock_gatepasses', JSON.stringify([]));
+      localStorage.setItem('mock_messages', JSON.stringify([]));
+      localStorage.setItem('mock_notifications', JSON.stringify([]));
       const mockLogs = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
       const filteredLogs = mockLogs.filter(l => ['USER_LOGIN', 'USER_LOGOUT'].includes(l.action));
       localStorage.setItem('mock_auditlogs', JSON.stringify(filteredLogs));
