@@ -41,7 +41,8 @@ router.get('/', auth, async (req, res) => {
     const totalOutstanding = vendors.reduce((acc, v) => acc + (v.outstandingBalance || 0), 0);
     const totalPaid = vendors.reduce((acc, v) => acc + (v.totalPaidAmount || 0), 0);
 
-    res.send({
+    res.json({
+      success: true,
       vendors,
       stats: {
         totalVendors,
@@ -51,7 +52,7 @@ router.get('/', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).send({ error: 'Failed to fetch vendors: ' + error.message });
+    res.status(500).json({ success: false, error: 'Failed to fetch vendors: ' + error.message, message: error.message });
   }
 });
 
@@ -59,12 +60,12 @@ router.get('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const vendor = await Vendor.findById(req.params.id);
-    if (!vendor) return res.status(404).send({ error: 'Vendor not found.' });
+    if (!vendor) return res.status(404).json({ success: false, error: 'Vendor not found.', message: 'Vendor not found.' });
 
     const purchases = await Purchase.find({ vendorId: vendor._id }).sort({ createdAt: -1 });
-    res.send({ vendor, purchases });
+    res.json({ success: true, vendor, purchases });
   } catch (error) {
-    res.status(500).send({ error: 'Failed to fetch vendor details.' });
+    res.status(500).json({ success: false, error: 'Failed to fetch vendor details.', message: error.message });
   }
 });
 
@@ -73,7 +74,7 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
   try {
     const { name, mobile, vendorCode } = req.body;
     if (!name || !mobile) {
-      return res.status(400).send({ error: 'Vendor Name and Mobile Number are required.' });
+      return res.status(400).json({ success: false, error: 'Vendor Name and Mobile Number are required.', message: 'Vendor Name and Mobile Number are required.' });
     }
 
     const code = vendorCode ? vendorCode.trim() : await generateVendorCode();
@@ -81,7 +82,7 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
     // Unique check
     const existingCode = await Vendor.findOne({ vendorCode: code });
     if (existingCode) {
-      return res.status(400).send({ error: `Vendor code "${code}" already exists.` });
+      return res.status(400).json({ success: false, error: `Vendor code "${code}" already exists.`, message: `Vendor code "${code}" already exists.` });
     }
 
     const vendor = new Vendor({
@@ -91,9 +92,9 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
 
     await vendor.save();
     await logAction(req.user, 'VENDOR_CREATE', `Created vendor ${vendor.name} (${vendor.vendorCode})`, req);
-    res.status(201).send(vendor);
+    res.status(201).json({ success: true, vendor });
   } catch (error) {
-    res.status(400).send({ error: 'Failed to create vendor: ' + error.message });
+    res.status(400).json({ success: false, error: 'Failed to create vendor: ' + error.message, message: error.message });
   }
 });
 
@@ -101,12 +102,12 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
 router.put('/:id', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
   try {
     const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!vendor) return res.status(404).send({ error: 'Vendor not found.' });
+    if (!vendor) return res.status(404).json({ success: false, error: 'Vendor not found.', message: 'Vendor not found.' });
 
     await logAction(req.user, 'VENDOR_UPDATE', `Updated vendor ${vendor.name} (${vendor.vendorCode})`, req);
-    res.send(vendor);
+    res.json({ success: true, vendor });
   } catch (error) {
-    res.status(400).send({ error: 'Failed to update vendor: ' + error.message });
+    res.status(400).json({ success: false, error: 'Failed to update vendor: ' + error.message, message: error.message });
   }
 });
 
@@ -114,19 +115,19 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, 
 router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
   try {
     const vendor = await Vendor.findById(req.params.id);
-    if (!vendor) return res.status(404).send({ error: 'Vendor not found.' });
+    if (!vendor) return res.status(404).json({ success: false, error: 'Vendor not found.', message: 'Vendor not found.' });
 
     // Check if vendor has purchases
     const purchaseCount = await Purchase.countDocuments({ vendorId: vendor._id });
     if (purchaseCount > 0) {
-      return res.status(400).send({ error: `Cannot delete vendor with ${purchaseCount} existing purchase transactions. Set status to Inactive instead.` });
+      return res.status(400).json({ success: false, error: `Cannot delete vendor with ${purchaseCount} existing purchase transactions. Set status to Inactive instead.`, message: `Cannot delete vendor with ${purchaseCount} existing purchase transactions.` });
     }
 
     await Vendor.findByIdAndDelete(req.params.id);
     await logAction(req.user, 'VENDOR_DELETE', `Deleted vendor ${vendor.name} (${vendor.vendorCode})`, req);
-    res.send({ message: 'Vendor deleted successfully.' });
+    res.json({ success: true, message: 'Vendor deleted successfully.' });
   } catch (error) {
-    res.status(500).send({ error: 'Failed to delete vendor: ' + error.message });
+    res.status(500).json({ success: false, error: 'Failed to delete vendor: ' + error.message, message: error.message });
   }
 });
 

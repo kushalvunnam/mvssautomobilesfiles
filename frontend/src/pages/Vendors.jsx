@@ -59,6 +59,19 @@ export default function Vendors({ token, user }) {
     fetchVendors();
   }, [token, categoryFilter, typeFilter]);
 
+  const parseJsonResponse = async (res) => {
+    try {
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await res.json();
+      }
+      const text = await res.text();
+      return { error: `Server error (${res.status}): ${text.slice(0, 150)}` };
+    } catch (err) {
+      return { error: `Failed to parse response: ${err.message}` };
+    }
+  };
+
   const fetchVendors = async () => {
     setLoading(true);
     try {
@@ -70,8 +83,12 @@ export default function Vendors({ token, user }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        const data = await res.json();
-        setVendors(data.vendors || []);
+        const data = await parseJsonResponse(res);
+        if (data.vendors) {
+          setVendors(Array.isArray(data.vendors) ? data.vendors : []);
+        } else if (Array.isArray(data)) {
+          setVendors(data);
+        }
         if (data.stats) setStats(data.stats);
       }
     } catch (err) {
@@ -152,16 +169,17 @@ export default function Vendors({ token, user }) {
         body: JSON.stringify(formData)
       });
 
-      if (res.ok) {
+      const data = await parseJsonResponse(res);
+
+      if (res.ok && (data.success || data._id || data.vendor)) {
         setShowModal(false);
         fetchVendors();
       } else {
-        const errData = await res.json();
-        alert(`Error: ${errData.error || 'Failed to save vendor'}`);
+        alert(`Error: ${data.error || data.message || 'Failed to save vendor'}`);
       }
     } catch (err) {
-      console.error(err);
-      alert('Failed to connect to server.');
+      console.error('Save Vendor failed:', err);
+      alert(`Failed to save vendor: ${err.message || 'Network error'}`);
     }
   };
 
@@ -172,11 +190,11 @@ export default function Vendors({ token, user }) {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.ok) {
+      const data = await parseJsonResponse(res);
+      if (res.ok && (data.success || data.message)) {
         fetchVendors();
       } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to delete vendor.');
+        alert(data.error || data.message || 'Failed to delete vendor.');
       }
     } catch (err) {
       alert('Failed to delete vendor.');

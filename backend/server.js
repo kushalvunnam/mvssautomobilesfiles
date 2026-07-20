@@ -173,15 +173,33 @@ app.use(express.static(distPath));
 
 // Base API route
 app.get('/api', (req, res) => {
-  res.send({ message: 'AutoWorkshop Pro API is running.' });
+  res.json({ success: true, message: 'AutoWorkshop Pro API is running.' });
+});
+
+// JSON 404 Handler for all unmatched API routes across ALL HTTP methods (GET, POST, PUT, DELETE)
+app.all('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'API endpoint not found.',
+    message: `Cannot ${req.method} ${req.originalUrl}`
+  });
+});
+
+// Global Express JSON Error Handler to prevent HTML error pages
+app.use((err, req, res, next) => {
+  console.error('[API Error]:', err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || 'Internal server error',
+    message: err.message || 'Internal server error'
+  });
 });
 
 // Serve frontend SPA index.html for all other non-API routes
 app.get('*', (req, res) => {
-  // If request is for an API route that was not matched, return 404
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).send({ error: 'API endpoint not found.' });
-  }
   res.sendFile(path.join(distPath, 'index.html'));
 });
 

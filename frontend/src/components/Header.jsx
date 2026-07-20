@@ -346,12 +346,15 @@ export default function Header({ user, token, currentTab, onMenuClick, onLogout,
     if (!token) return;
     const fetchLowStockAlerts = async () => {
       try {
-        const res = await fetch('https://mvssautomobiles.com/api/inventory?lowStock=true', {
+        const res = await fetch(`${API_BASE_URL}/inventory?lowStock=true`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
-          const data = await res.json();
-          setAlerts(data);
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await res.json();
+            setAlerts(Array.isArray(data) ? data : []);
+          }
         }
       } catch (err) {
         console.error('Failed to load stock alerts:', err);
