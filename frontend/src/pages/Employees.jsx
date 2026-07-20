@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config';
 import InternationalPhoneInput from '../components/InternationalPhoneInput';
-import { Search, Plus, Calendar, Receipt, Download, FileText, CheckCircle2, XCircle, AlertCircle, Save, Edit2, Trash2, Eye } from 'lucide-react';
+import { Search, Plus, Calendar, Receipt, Download, FileText, CheckCircle2, XCircle, AlertCircle, Save, Edit2, Trash2, Eye, X, UserPlus } from 'lucide-react';
 
 export default function Employees({ token, user }) {
   const [employees, setEmployees] = useState([]);
@@ -55,6 +55,118 @@ export default function Employees({ token, user }) {
   const [photoFile, setPhotoFile] = useState(null);
   const [editPhotoFile, setEditPhotoFile] = useState(null);
   const [selectedProfileEmployee, setSelectedProfileEmployee] = useState(null);
+
+  const addNameInputRef = useRef(null);
+  const editNameInputRef = useRef(null);
+
+  // Keyboard shortcut listener (ESC closes modals)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (showAddModal) setShowAddModal(false);
+        if (showEditModal) setShowEditModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAddModal, showEditModal]);
+
+  // Auto-focus first input field when modal opens
+  useEffect(() => {
+    if (showAddModal) {
+      setTimeout(() => addNameInputRef.current?.focus(), 100);
+    }
+  }, [showAddModal]);
+
+  useEffect(() => {
+    if (showEditModal) {
+      setTimeout(() => editNameInputRef.current?.focus(), 100);
+    }
+  }, [showEditModal]);
+
+  // Comprehensive Form Validation Helper
+  const validateEmployeeForm = (form) => {
+    // 1. Phone validation
+    const rawPhone = form.phone || '';
+    const digitsOnly = rawPhone.replace(/[^\d]/g, '');
+    
+    if (!rawPhone || digitsOnly.length === 0) {
+      return 'Please enter a valid phone number.';
+    }
+    
+    // For Indian numbers (+91 default or 10-digit number)
+    const isIndian = rawPhone.startsWith('+91') || rawPhone.startsWith('91') || (digitsOnly.length <= 10 && !rawPhone.startsWith('+'));
+    if (isIndian) {
+      let nationalDigits = rawPhone;
+      if (rawPhone.startsWith('+91')) {
+        nationalDigits = rawPhone.slice(3).replace(/[^\d]/g, '');
+      } else if (rawPhone.startsWith('91') && digitsOnly.length === 12) {
+        nationalDigits = rawPhone.slice(2).replace(/[^\d]/g, '');
+      } else {
+        nationalDigits = digitsOnly;
+      }
+      
+      if (nationalDigits.length !== 10) {
+        return 'Mobile number must contain exactly 10 digits.';
+      }
+    } else if (digitsOnly.length < 7 || digitsOnly.length > 15) {
+      return 'Mobile number must contain valid digits.';
+    }
+
+    // 2. Email validation (OPTIONAL)
+    if (form.email && form.email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.email.trim())) {
+        return 'Invalid email address format.';
+      }
+    }
+
+    // 3. Aadhaar validation (Exactly 12 numeric digits)
+    const cleanAadhaar = (form.aadharNumber || '').replace(/[^\d]/g, '');
+    if (!cleanAadhaar || cleanAadhaar.length !== 12) {
+      return 'Aadhaar number must contain exactly 12 digits.';
+    }
+
+    // 4. PAN validation (Optional)
+    if (form.panNumber && form.panNumber.trim() !== '') {
+      const cleanPan = form.panNumber.trim().toUpperCase();
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(cleanPan)) {
+        return 'Invalid PAN number format (e.g. ABCDE1234F).';
+      }
+    }
+
+    // 5. Date validation
+    if (form.dateOfBirth) {
+      const dob = new Date(form.dateOfBirth);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+
+      if (dob > today) {
+        return 'Date of Birth cannot be in the future.';
+      }
+
+      // Age >= 18 check
+      let age = today.getFullYear() - dob.getFullYear();
+      const monthDiff = today.getMonth() - dob.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        age--;
+      }
+
+      if (age < 18) {
+        return 'Employee must be at least 18 years old.';
+      }
+
+      if (form.dateOfJoining) {
+        const doj = new Date(form.dateOfJoining);
+        if (doj < dob) {
+          return 'Date of Joining cannot be earlier than Date of Birth.';
+        }
+      }
+    }
+
+    return null;
+  };
 
 
   // Attendance states
@@ -250,20 +362,15 @@ export default function Employees({ token, user }) {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!addForm.phone) {
-      setErrorMsg('Please enter a valid phone number.');
-      return;
-    } else if (addForm.phone.length < 8) {
-      setErrorMsg('Phone number is too short.');
-      return;
-    } else if (addForm.phone.length > 16) {
-      setErrorMsg('Phone number is too long.');
+    const validationError = validateEmployeeForm(addForm);
+    if (validationError) {
+      setErrorMsg(validationError);
       return;
     }
 
     const formData = new FormData();
-    formData.append('name', addForm.name);
-    formData.append('email', addForm.email);
+    formData.append('name', addForm.name.trim());
+    formData.append('email', addForm.email.trim());
     formData.append('phone', addForm.phone);
     formData.append('dateOfJoining', addForm.dateOfJoining);
     formData.append('basicDetails', addForm.basicDetails);
@@ -272,7 +379,7 @@ export default function Employees({ token, user }) {
     formData.append('department', addForm.department || 'Service');
     formData.append('role', addForm.role || '');
     formData.append('address', addForm.address || '');
-    formData.append('panNumber', addForm.panNumber || '');
+    formData.append('panNumber', addForm.panNumber ? addForm.panNumber.toUpperCase().trim() : '');
     if (addForm.dateOfBirth) {
       formData.append('dateOfBirth', addForm.dateOfBirth);
     }
@@ -351,20 +458,15 @@ export default function Employees({ token, user }) {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!editForm.phone) {
-      setErrorMsg('Please enter a valid phone number.');
-      return;
-    } else if (editForm.phone.length < 8) {
-      setErrorMsg('Phone number is too short.');
-      return;
-    } else if (editForm.phone.length > 16) {
-      setErrorMsg('Phone number is too long.');
+    const validationError = validateEmployeeForm(editForm);
+    if (validationError) {
+      setErrorMsg(validationError);
       return;
     }
 
     const formData = new FormData();
-    formData.append('name', editForm.name);
-    formData.append('email', editForm.email);
+    formData.append('name', editForm.name.trim());
+    formData.append('email', editForm.email.trim());
     formData.append('phone', editForm.phone);
     formData.append('dateOfJoining', editForm.dateOfJoining);
     formData.append('basicDetails', editForm.basicDetails);
@@ -1348,256 +1450,287 @@ export default function Employees({ token, user }) {
 
       {/* Add Employee Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in select-none">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Register New Employee</h3>
+        <div 
+          className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 animate-fade-in select-none overflow-hidden"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden max-h-[90vh] flex flex-col relative">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/50 dark:bg-slate-950/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-800/40 flex items-center justify-center">
+                  <UserPlus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Register New Employee</h3>
+                  <p className="text-[10px] text-slate-400 font-semibold">Enter staff personal, contact, and employment details</p>
+                </div>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowAddModal(false)}
-                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+                title="Close Modal (ESC)"
               >
-                Cancel
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} className="p-6 space-y-4 overflow-y-auto">
-              {errorMsg && (
-                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl p-3 flex gap-2 text-xs text-red-650 dark:text-red-400">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span className="font-semibold">{errorMsg}</span>
-                </div>
-              )}
+            <form onSubmit={handleAddSubmit} className="flex flex-col flex-1 overflow-hidden">
+              {/* Form Body - Scrollable */}
+              <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-130px)] flex-1">
+                {errorMsg && (
+                  <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl p-3.5 flex gap-2.5 text-xs text-red-650 dark:text-red-400">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span className="font-semibold leading-relaxed">{errorMsg}</span>
+                  </div>
+                )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Section 1: Basic Information */}
                 <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={addForm.name}
-                    onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                    placeholder="e.g. John Doe"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3">1. Personal & Contact Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name *</label>
+                      <input
+                        ref={addNameInputRef}
+                        type="text"
+                        required
+                        value={addForm.name}
+                        onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                        placeholder="e.g. John Doe"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number *</label>
+                      <InternationalPhoneInput
+                        value={addForm.phone}
+                        onChange={(val) => handlePhoneChange(val, addForm, setAddForm)}
+                        country="IN"
+                        variant="compact"
+                        name="phone"
+                        required={true}
+                        ariaLabel="Phone number"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email Address <span className="text-slate-400 font-normal lowercase">(optional)</span></label>
+                      <input
+                        type="email"
+                        value={addForm.email}
+                        onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
+                        placeholder="john@autoworkshop.com"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Aadhaar Number (12 Digits) *</label>
+                      <input
+                        type="text"
+                        required
+                        value={addForm.aadharNumber}
+                        onChange={(e) => handleAadharChange(e, addForm, setAddForm)}
+                        placeholder="e.g. 1234 5678 9012"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">PAN Number <span className="text-slate-400 font-normal lowercase">(optional)</span></label>
+                      <input
+                        type="text"
+                        value={addForm.panNumber}
+                        onChange={(e) => setAddForm({ ...addForm, panNumber: e.target.value.toUpperCase().slice(0, 10) })}
+                        placeholder="e.g. ABCDE1234F"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Birth</label>
+                      <input
+                        type="date"
+                        value={addForm.dateOfBirth}
+                        onChange={(e) => setAddForm({ ...addForm, dateOfBirth: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={addForm.email}
-                    onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
-                    placeholder="john@autoworkshop.com"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
+                {/* Section 2: Employment Details */}
+                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3">2. Employment & Role Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Joining *</label>
+                      <input
+                        type="date"
+                        required
+                        value={addForm.dateOfJoining}
+                        onChange={(e) => setAddForm({ ...addForm, dateOfJoining: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Department *</label>
+                      <select
+                        value={addForm.department}
+                        onChange={(e) => setAddForm({ ...addForm, department: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      >
+                        <option value="Service">Service</option>
+                        <option value="Spares">Spares</option>
+                        <option value="Accounts">Accounts</option>
+                        <option value="Body Shop">Body Shop</option>
+                        <option value="Administration">Administration</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Role / Job Position *</label>
+                      <input
+                        type="text"
+                        required
+                        value={addForm.role}
+                        onChange={(e) => setAddForm({ ...addForm, role: e.target.value })}
+                        placeholder="e.g. Advisor, Mechanic, Painter"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Designation</label>
+                      <input
+                        type="text"
+                        value={addForm.designation}
+                        onChange={(e) => setAddForm({ ...addForm, designation: e.target.value })}
+                        placeholder="e.g. Senior Technician"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Employment Status</label>
+                      <select
+                        value={addForm.status}
+                        onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Address & Extra Info */}
+                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">3. Address & Documents</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Residential Address *</label>
+                      <input
+                        type="text"
+                        required
+                        value={addForm.address}
+                        onChange={(e) => setAddForm({ ...addForm, address: e.target.value })}
+                        placeholder="House No, Street, Landmark, City, Pincode"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Notes / Emergency Contacts</label>
+                      <input
+                        type="text"
+                        value={addForm.basicDetails}
+                        onChange={(e) => setAddForm({ ...addForm, basicDetails: e.target.value })}
+                        placeholder="Emergency contact info, references..."
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Profile Photo (Image)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
+                            alert('File size exceeds 1.5MB. Please choose a smaller photo file.');
+                            e.target.value = null;
+                            return;
+                          }
+                          setPhotoFile(file);
+                        }}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200 transition-colors cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Aadhaar Doc (PDF/Img)</label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
+                            alert('File size exceeds 1.5MB. Please choose a smaller file.');
+                            e.target.value = null;
+                            return;
+                          }
+                          setAadharFile(file);
+                        }}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200 transition-colors cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Resume Doc (PDF/Img)</label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
+                            alert('File size exceeds 1.5MB. Please choose a smaller resume file.');
+                            e.target.value = null;
+                            return;
+                          }
+                          setResumeFile(file);
+                        }}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200 transition-colors cursor-pointer"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
-                  <InternationalPhoneInput
-                    value={addForm.phone}
-                    onChange={(val) => handlePhoneChange(val, addForm, setAddForm)}
-                    country="IN"
-                    variant="compact"
-                    name="phone"
-                    required={true}
-                    ariaLabel="Phone number"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Joining</label>
-                  <input
-                    type="date"
-                    required
-                    value={addForm.dateOfJoining}
-                    onChange={(e) => setAddForm({ ...addForm, dateOfJoining: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Aadhar Number</label>
-                  <input
-                    type="text"
-                    required
-                    value={addForm.aadharNumber}
-                    onChange={(e) => handleAadharChange(e, addForm, setAddForm)}
-                    placeholder="e.g. 1234-5678-9012"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
-                  <select
-                    value={addForm.status}
-                    onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Department</label>
-                  <select
-                    value={addForm.department}
-                    onChange={(e) => setAddForm({ ...addForm, department: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  >
-                    <option value="Service">Service</option>
-                    <option value="Spares">Spares</option>
-                    <option value="Accounts">Accounts</option>
-                    <option value="Body Shop">Body Shop</option>
-                    <option value="Administration">Administration</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Role / Designation</label>
-                  <input
-                    type="text"
-                    required
-                    value={addForm.role}
-                    onChange={(e) => setAddForm({ ...addForm, role: e.target.value })}
-                    placeholder="e.g. Advisor, Mechanic, Painter"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Address</label>
-                <input
-                  type="text"
-                  required
-                  value={addForm.address}
-                  onChange={(e) => setAddForm({ ...addForm, address: e.target.value })}
-                  placeholder="Street name, City, Pincode"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">PAN Number (Optional)</label>
-                  <input
-                    type="text"
-                    value={addForm.panNumber}
-                    onChange={(e) => setAddForm({ ...addForm, panNumber: e.target.value.toUpperCase().slice(0, 10) })}
-                    placeholder="e.g. ABCDE1234F"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Birth</label>
-                  <input
-                    type="date"
-                    value={addForm.dateOfBirth}
-                    onChange={(e) => setAddForm({ ...addForm, dateOfBirth: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Designation</label>
-                  <input
-                    type="text"
-                    value={addForm.designation}
-                    onChange={(e) => setAddForm({ ...addForm, designation: e.target.value })}
-                    placeholder="e.g. Junior Technician"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Profile Photo (Image)</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
-                        alert('File size exceeds 1.5MB. Please choose a smaller photo file for the offline demo to preserve storage.');
-                        e.target.value = null;
-                        return;
-                      }
-                      setPhotoFile(file);
-                    }}
-                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-extrabold file:uppercase file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Aadhaar Document (PDF/Image)</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
-                        alert('File size exceeds 1.5MB. Please choose a smaller Aadhaar document for the offline demo to preserve storage.');
-                        e.target.value = null;
-                        return;
-                      }
-                      setAadharFile(file);
-                    }}
-                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-extrabold file:uppercase file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Resume Document (PDF/Image)</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
-                        alert('File size exceeds 1.5MB. Please choose a smaller resume file for the offline demo to preserve storage.');
-                        e.target.value = null;
-                        return;
-                      }
-                      setResumeFile(file);
-                    }}
-                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-extrabold file:uppercase file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Basic details / Role description</label>
-                <textarea
-                  value={addForm.basicDetails}
-                  onChange={(e) => setAddForm({ ...addForm, basicDetails: e.target.value })}
-                  placeholder="References, emergency contacts..."
-                  rows={2}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              {/* Sticky Footer */}
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end items-center gap-3 shrink-0 rounded-b-3xl">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold"
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold"
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer flex items-center gap-2"
                 >
-                  Save Profile
+                  <Save className="w-4 h-4" />
+                  Save Employee Profile
                 </button>
               </div>
             </form>
@@ -1607,258 +1740,289 @@ export default function Employees({ token, user }) {
 
       {/* Edit Employee Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in select-none">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Edit Employee Details</h3>
+        <div 
+          className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 animate-fade-in select-none overflow-hidden"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false); }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden max-h-[90vh] flex flex-col relative">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/50 dark:bg-slate-950/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-800/40 flex items-center justify-center">
+                  <Edit2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide flex items-center gap-2">
+                    Edit Employee Profile
+                    <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950/50 text-indigo-650 dark:text-indigo-400 font-bold border border-indigo-200 dark:border-indigo-800/60">
+                      {editForm.employeeId || 'N/A'}
+                    </span>
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-semibold">Update employee details, contact info, and documents</p>
+                </div>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowEditModal(false)}
-                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+                title="Close Modal (ESC)"
               >
-                Cancel
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 overflow-y-auto">
-              {errorMsg && (
-                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl p-3 flex gap-2 text-xs text-red-650 dark:text-red-400">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span className="font-semibold">{errorMsg}</span>
-                </div>
-              )}
+            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 overflow-hidden">
+              {/* Form Body - Scrollable */}
+              <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-130px)] flex-1">
+                {errorMsg && (
+                  <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl p-3.5 flex gap-2.5 text-xs text-red-650 dark:text-red-400">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span className="font-semibold leading-relaxed">{errorMsg}</span>
+                  </div>
+                )}
 
-              <div className="bg-slate-50 dark:bg-slate-950 rounded-xl p-3 border border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs font-bold text-slate-700 dark:text-slate-300">
-                <span className="uppercase text-[9px] text-slate-400 tracking-wider">Employee ID</span>
-                <span className="font-mono text-indigo-650 dark:text-indigo-400">{editForm.employeeId || 'N/A'}</span>
+                {/* Section 1: Personal Details */}
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3">1. Personal & Contact Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name *</label>
+                      <input
+                        ref={editNameInputRef}
+                        type="text"
+                        required
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number *</label>
+                      <InternationalPhoneInput
+                        value={editForm.phone}
+                        onChange={(val) => handlePhoneChange(val, editForm, setEditForm)}
+                        country="IN"
+                        variant="compact"
+                        name="phone"
+                        required={true}
+                        ariaLabel="Phone number"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email Address <span className="text-slate-400 font-normal lowercase">(optional)</span></label>
+                      <input
+                        type="email"
+                        value={editForm.email}
+                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        placeholder="john@autoworkshop.com"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Aadhaar Number (12 Digits) *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editForm.aadharNumber}
+                        onChange={(e) => handleAadharChange(e, editForm, setEditForm)}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">PAN Number <span className="text-slate-400 font-normal lowercase">(optional)</span></label>
+                      <input
+                        type="text"
+                        value={editForm.panNumber}
+                        onChange={(e) => setEditForm({ ...editForm, panNumber: e.target.value.toUpperCase().slice(0, 10) })}
+                        placeholder="e.g. ABCDE1234F"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Birth</label>
+                      <input
+                        type="date"
+                        value={editForm.dateOfBirth}
+                        onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Employment Details */}
+                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3">2. Employment & Role Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Joining *</label>
+                      <input
+                        type="date"
+                        required
+                        value={editForm.dateOfJoining}
+                        onChange={(e) => setEditForm({ ...editForm, dateOfJoining: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Department *</label>
+                      <select
+                        value={editForm.department}
+                        onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      >
+                        <option value="Service">Service</option>
+                        <option value="Spares">Spares</option>
+                        <option value="Accounts">Accounts</option>
+                        <option value="Body Shop">Body Shop</option>
+                        <option value="Administration">Administration</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Role / Job Position *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editForm.role}
+                        onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                        placeholder="e.g. Advisor, Mechanic, Painter"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Designation</label>
+                      <input
+                        type="text"
+                        value={editForm.designation}
+                        onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}
+                        placeholder="e.g. Senior Technician"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Employment Status</label>
+                      <select
+                        value={editForm.status}
+                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Address & Extra Info */}
+                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">3. Address & Documents</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Residential Address *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editForm.address}
+                        onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Notes / Emergency Contacts</label>
+                      <input
+                        type="text"
+                        value={editForm.basicDetails}
+                        onChange={(e) => setEditForm({ ...editForm, basicDetails: e.target.value })}
+                        placeholder="Emergency contact info, references..."
+                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Profile Photo (Image) <span className="text-slate-400 font-normal lowercase">(optional update)</span></label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
+                            alert('File size exceeds 1.5MB. Please choose a smaller photo file.');
+                            e.target.value = null;
+                            return;
+                          }
+                          setEditPhotoFile(file);
+                        }}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200 transition-colors cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Aadhaar Doc (PDF/Img) <span className="text-slate-400 font-normal lowercase">(optional update)</span></label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
+                            alert('File size exceeds 1.5MB. Please choose a smaller file.');
+                            e.target.value = null;
+                            return;
+                          }
+                          setEditAadharFile(file);
+                        }}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200 transition-colors cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Resume Doc (PDF/Img) <span className="text-slate-400 font-normal lowercase">(optional update)</span></label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
+                            alert('File size exceeds 1.5MB. Please choose a smaller resume file.');
+                            e.target.value = null;
+                            return;
+                          }
+                          setEditResumeFile(file);
+                        }}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200 transition-colors cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={editForm.email}
-                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
-                  <InternationalPhoneInput
-                    value={editForm.phone}
-                    onChange={(val) => handlePhoneChange(val, editForm, setEditForm)}
-                    country="IN"
-                    variant="compact"
-                    name="phone"
-                    required={true}
-                    ariaLabel="Phone number"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Joining</label>
-                  <input
-                    type="date"
-                    required
-                    value={editForm.dateOfJoining}
-                    onChange={(e) => setEditForm({ ...editForm, dateOfJoining: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Aadhar Number</label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.aadharNumber}
-                    onChange={(e) => handleAadharChange(e, editForm, setEditForm)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
-                  <select
-                    value={editForm.status}
-                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Department</label>
-                  <select
-                    value={editForm.department}
-                    onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  >
-                    <option value="Service">Service</option>
-                    <option value="Spares">Spares</option>
-                    <option value="Accounts">Accounts</option>
-                    <option value="Body Shop">Body Shop</option>
-                    <option value="Administration">Administration</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Role / Designation</label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.role}
-                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    placeholder="e.g. Advisor, Mechanic, Painter"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Address</label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.address}
-                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                  placeholder="Street name, City, Pincode"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">PAN Number (Optional)</label>
-                  <input
-                    type="text"
-                    value={editForm.panNumber}
-                    onChange={(e) => setEditForm({ ...editForm, panNumber: e.target.value.toUpperCase().slice(0, 10) })}
-                    placeholder="e.g. ABCDE1234F"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Birth</label>
-                  <input
-                    type="date"
-                    value={editForm.dateOfBirth}
-                    onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Designation</label>
-                  <input
-                    type="text"
-                    value={editForm.designation}
-                    onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}
-                    placeholder="e.g. Junior Technician"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Profile Photo (Image) - Leave empty to keep existing</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
-                        alert('File size exceeds 1.5MB. Please choose a smaller photo file for the offline demo to preserve storage.');
-                        e.target.value = null;
-                        return;
-                      }
-                      setEditPhotoFile(file);
-                    }}
-                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-extrabold file:uppercase file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Aadhaar Document (PDF/Image) - Leave empty to keep existing</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
-                        alert('File size exceeds 1.5MB. Please choose a smaller Aadhaar document for the offline demo to preserve storage.');
-                        e.target.value = null;
-                        return;
-                      }
-                      setEditAadharFile(file);
-                    }}
-                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-extrabold file:uppercase file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Resume Document (PDF/Image) - Leave empty to keep existing</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file && file.size > 1.5 * 1024 * 1024 && token === 'mock_jwt_token_for_offline_demo') {
-                        alert('File size exceeds 1.5MB. Please choose a smaller resume file for the offline demo to preserve storage.');
-                        e.target.value = null;
-                        return;
-                      }
-                      setEditResumeFile(file);
-                    }}
-                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-extrabold file:uppercase file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Basic details / Role description</label>
-                <textarea
-                  value={editForm.basicDetails}
-                  onChange={(e) => setEditForm({ ...editForm, basicDetails: e.target.value })}
-                  placeholder="References, emergency contacts..."
-                  rows={2}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              {/* Sticky Footer */}
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end items-center gap-3 shrink-0 rounded-b-3xl">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold"
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold"
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer flex items-center gap-2"
                 >
-                  Save Updates
+                  <Save className="w-4 h-4" />
+                  Save Changes
                 </button>
               </div>
             </form>

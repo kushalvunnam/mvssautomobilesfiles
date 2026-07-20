@@ -146,7 +146,7 @@ router.put('/:id', upload.fields([
     }
 
     if (name) employee.name = name;
-    if (email) employee.email = email;
+    if (email !== undefined) employee.email = email || '';
     if (phone) employee.phone = phone;
     if (dateOfJoining) employee.dateOfJoining = dateOfJoining;
     if (basicDetails) employee.basicDetails = basicDetails;

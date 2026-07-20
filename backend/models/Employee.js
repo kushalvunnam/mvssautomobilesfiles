@@ -21,7 +21,7 @@ const salarySchema = new mongoose.Schema({
 
 const employeeSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
-  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  email: { type: String, required: false, default: '', lowercase: true, trim: true },
   employeeId: { type: String, unique: true },
   department: { type: String, enum: ['Service', 'Spares', 'Accounts', 'Body Shop', 'Administration'], default: 'Service' },
   role: { type: String, default: '' },

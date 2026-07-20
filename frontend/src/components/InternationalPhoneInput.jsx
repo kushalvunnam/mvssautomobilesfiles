@@ -141,7 +141,12 @@ const InternationalPhoneInput = ({
   }, [dropdownOpen]);
 
   const handleNationalNumberChange = (e) => {
-    const inputVal = e.target.value.replace(/[^\d]/g, ''); // only digits
+    let inputVal = e.target.value.replace(/[^\d]/g, ''); // only digits
+    if (selectedCountry.code === 'IN' || selectedCountry.dialCode === '+91') {
+      inputVal = inputVal.slice(0, 10);
+    } else {
+      inputVal = inputVal.slice(0, 15);
+    }
     setNationalNum(inputVal);
     
     // Notify parent

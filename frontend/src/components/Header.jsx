@@ -396,11 +396,11 @@ export default function Header({ user, token, currentTab, onMenuClick, onLogout,
 
           <div className="flex items-center gap-2 min-w-0">
             {/* Brand Logo replaced with actual brand logo */}
-            <div className="shrink-0 p-0.5 flex items-center justify-center bg-[#030712] rounded-full border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="shrink-0 p-0.5 flex items-center justify-center overflow-hidden">
               <img 
-                src="/workshop/auto4m_logo_v1.svg" 
+                src="/logo.png" 
                 alt="MVSS Logo" 
-                className="h-8 w-8 object-cover rounded-full block"
+                className="h-8 w-auto max-w-[100px] object-contain block"
               />
             </div>
             

@@ -70,11 +70,11 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
         {/* Brand Logo Section */}
         <div className={`p-4 border-b border-slate-800 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} relative transition-all duration-300`}>
           <div className="flex items-center gap-2.5 px-1 py-1 min-w-0">
-            <div className="shrink-0 p-0.5 flex items-center justify-center bg-[#030712] rounded-full border border-slate-700 shadow-md overflow-hidden transition-transform duration-350 hover:scale-105">
+            <div className="shrink-0 p-0.5 flex items-center justify-center overflow-hidden transition-transform duration-350 hover:scale-105">
               <img 
-                src="/workshop/auto4m_logo_v1.svg" 
+                src="/logo.png" 
                 alt="MVSS Logo" 
-                className="h-7 w-7 object-cover rounded-full block"
+                className="h-8 w-auto max-w-[100px] object-contain block"
               />
             </div>
             {!isCollapsed && (

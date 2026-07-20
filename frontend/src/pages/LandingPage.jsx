@@ -537,11 +537,11 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
             onClick={(e) => { e.preventDefault(); window.location.href = '/'; }} 
             className="flex items-center gap-2 sm:gap-3 select-none shrink-0 group"
           >
-            <div className="shrink-0 transition-transform duration-350 group-hover:scale-105 p-0.5 flex items-center justify-center bg-[#030712] rounded-full border-2 border-[#C1121F]/30 shadow-md overflow-hidden">
+            <div className="shrink-0 transition-transform duration-350 group-hover:scale-105 p-0.5 flex items-center justify-center overflow-hidden">
               <img 
-                src="/workshop/auto4m_logo_v1.svg" 
-                alt="MVSS Logo" 
-                className="h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 lg:h-24 lg:w-24 object-cover rounded-full block"
+                src="/logo.png" 
+                alt="Auto4M Logo" 
+                className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto max-w-[180px] object-contain block"
               />
             </div>
             <div className="text-left flex flex-col justify-center select-none">
