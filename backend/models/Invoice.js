@@ -180,7 +180,17 @@ const invoiceSchema = new mongoose.Schema({
   gstDetails: {
     companyGSTIN: { type: String, default: '' },
     customerGSTIN: { type: String, default: '' },
-    isInterstate: { type: Boolean, default: false }
+    isInterstate: {
+      type: Boolean,
+      default: false,
+      set: function(val) {
+        if (val === '' || val === null || val === undefined) return false;
+        if (typeof val === 'string') {
+          return val.trim().toLowerCase() === 'true';
+        }
+        return Boolean(val);
+      }
+    }
   },
   parts: [invoiceItemSchema],
   labour: [invoiceLabourSchema],
@@ -242,6 +252,21 @@ const invoiceSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true,
+});
+
+invoiceSchema.pre('validate', function(next) {
+  if (!this.gstDetails) {
+    this.gstDetails = { companyGSTIN: '36AAJCM4778P1ZI', customerGSTIN: '', isInterstate: false };
+  } else {
+    if (this.gstDetails.isInterstate === '' || this.gstDetails.isInterstate === null || this.gstDetails.isInterstate === undefined) {
+      this.gstDetails.isInterstate = false;
+    } else if (typeof this.gstDetails.isInterstate === 'string') {
+      this.gstDetails.isInterstate = this.gstDetails.isInterstate.trim().toLowerCase() === 'true';
+    } else {
+      this.gstDetails.isInterstate = Boolean(this.gstDetails.isInterstate);
+    }
+  }
+  next();
 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

@@ -245,7 +245,16 @@ router.post('/', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
     const invoiceNo = await generateInvoiceNo();
     
     // Check if interstate based on customer and shop state (we assume shop is in Telangana code 36)
-    const isInterstate = gstDetails && gstDetails.customerGSTIN && !gstDetails.customerGSTIN.startsWith('36');
+    let isInterstate = false;
+    if (typeof gstDetails?.isInterstate === 'boolean') {
+      isInterstate = gstDetails.isInterstate;
+    } else if (typeof gstDetails?.isInterstate === 'string' && gstDetails.isInterstate.trim() !== '') {
+      isInterstate = gstDetails.isInterstate.trim().toLowerCase() === 'true';
+    } else if (gstDetails?.customerGSTIN) {
+      isInterstate = !gstDetails.customerGSTIN.startsWith('36');
+    } else if (customer?.gstNumber) {
+      isInterstate = !customer.gstNumber.startsWith('36');
+    }
 
     const calculations = recalculateInvoice(parts, labour, isInterstate);
 
@@ -264,7 +273,7 @@ router.post('/', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
       gstDetails: {
         companyGSTIN: '36AAJCM4778P1ZI',
         customerGSTIN: gstDetails?.customerGSTIN || customer.gstNumber || '',
-        isInterstate
+        isInterstate: Boolean(isInterstate)
       },
       parts: calculations.parts,
       labour: calculations.labour,

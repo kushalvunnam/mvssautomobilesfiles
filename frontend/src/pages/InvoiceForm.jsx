@@ -680,12 +680,22 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
       return;
     }
 
+    const cleanIsInterstate = typeof gstDetails?.isInterstate === 'boolean' 
+      ? gstDetails.isInterstate 
+      : (typeof gstDetails?.isInterstate === 'string' && gstDetails.isInterstate.trim() !== '' 
+          ? gstDetails.isInterstate.trim().toLowerCase() === 'true' 
+          : false);
+
     const payload = {
       jobCardId: selectedJcId,
       estimateId: selectedEstimateId || null,
       parts: cleanedParts,
       labour: cleanedLabour,
-      gstDetails,
+      gstDetails: {
+        companyGSTIN: gstDetails?.companyGSTIN || '36AAJCM4778P1ZI',
+        customerGSTIN: gstDetails?.customerGSTIN || '',
+        isInterstate: Boolean(cleanIsInterstate)
+      },
       insuranceClaimDetails: {
         ...insuranceDetails,
         approvedAmount: Number(insuranceDetails.approvedAmount) || 0
