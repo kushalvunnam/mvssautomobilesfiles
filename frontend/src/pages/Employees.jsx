@@ -2081,7 +2081,7 @@ export default function Employees({ token, user }) {
         <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 z-[99999] animate-fade-in select-none">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-[min(800px,95vw)] max-h-[90vh] overflow-hidden flex flex-col my-auto">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Employee History & Profile</h3>
+              <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Employee Details & History</h3>
               <button
                 onClick={() => setSelectedProfileEmployee(null)}
                 className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center text-slate-400 transition-all duration-200 shadow-xs hover:scale-105 cursor-pointer shrink-0"
@@ -2091,245 +2091,266 @@ export default function Employees({ token, user }) {
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 min-h-0">
-              {/* Header profile summary card */}
-              <div className="flex flex-col sm:flex-row items-center gap-6 bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
-                {selectedProfileEmployee.photoUrl ? (
-                  <img
-                    src={getResumeDownloadUrl(selectedProfileEmployee.photoUrl)}
-                    alt={selectedProfileEmployee.name}
-                    className="w-20 h-20 rounded-full object-cover border-2 border-indigo-500 shadow-sm shrink-0"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = 'https://via.placeholder.com/150';
-                    }}
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-indigo-500 text-white flex items-center justify-center text-2xl font-black shrink-0 shadow-sm">
-                    {selectedProfileEmployee.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                  </div>
-                )}
-                
-                <div className="text-center sm:text-left space-y-1">
-                  <h4 className="text-base font-black text-slate-800 dark:text-white">{selectedProfileEmployee.name}</h4>
-                  <span className="text-xs font-mono font-bold text-indigo-650 dark:text-indigo-400 block">
-                    {selectedProfileEmployee.employeeId || 'N/A'}
-                  </span>
-                  <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 mt-2">
-                    <span className="px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-650 dark:text-indigo-400 rounded-full text-[10px] font-bold">
-                      {selectedProfileEmployee.department || 'Service'}
-                    </span>
-                    <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-400 rounded-full text-[10px] font-bold">
-                      {selectedProfileEmployee.designation || selectedProfileEmployee.role || 'Staff'}
-                    </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                      selectedProfileEmployee.status === 'Inactive' 
-                        ? 'bg-red-50 dark:bg-red-950/30 text-red-650 dark:text-red-400 border border-red-200' 
-                        : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-605 dark:text-emerald-400 border border-emerald-200'
-                    }`}>
-                      {selectedProfileEmployee.status || 'Active'}
-                    </span>
-                  </div>
-                </div>
+            {!selectedProfileEmployee._id && !selectedProfileEmployee.name ? (
+              <div className="p-8 text-center space-y-4">
+                <AlertCircle className="w-12 h-12 text-amber-500 mx-auto animate-bounce" />
+                <h4 className="text-base font-bold text-slate-800 dark:text-white">Employee details could not be loaded</h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">Please try again or select a valid employee record from the registry table.</p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedProfileEmployee(null)}
+                  className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold"
+                >
+                  Close
+                </button>
               </div>
-
-              {/* Personal & Professional Info Grid */}
-              <div className="space-y-3">
-                <h5 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Personal & Professional Information</h5>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-950/30 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs">
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Employee ID</span>
-                    <span className="font-mono font-bold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.employeeId || 'Not Available'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Full Name</span>
-                    <span className="font-bold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.name || 'Not Available'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Designation</span>
-                    <span className="font-semibold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.designation || selectedProfileEmployee.role || 'Not Available'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Department</span>
-                    <span className="font-semibold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.department || 'Not Available'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Role / Access</span>
-                    <span className="font-semibold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.role || 'Staff'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Status</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{selectedProfileEmployee.status || 'Active'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Mobile Number</span>
-                    <span className="font-mono text-slate-850 dark:text-slate-200">{selectedProfileEmployee.phone || 'Not Available'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Email Address</span>
-                    <span className="text-slate-850 dark:text-slate-200 font-mono">{selectedProfileEmployee.email || 'Not Available'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Date of Joining</span>
-                    <span className="text-slate-850 dark:text-slate-200">
-                      {selectedProfileEmployee.dateOfJoining ? new Date(selectedProfileEmployee.dateOfJoining).toLocaleDateString('en-IN') : 'Not Available'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Date of Birth</span>
-                    <span className="text-slate-850 dark:text-slate-200">
-                      {selectedProfileEmployee.dateOfBirth ? new Date(selectedProfileEmployee.dateOfBirth).toLocaleDateString('en-IN') : 'Not Available'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Base Salary</span>
-                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {selectedProfileEmployee.salaries?.[0]?.basicSalary ? `₹ ${selectedProfileEmployee.salaries[0].basicSalary.toLocaleString('en-IN')}` : (selectedProfileEmployee.salary ? `₹ ${Number(selectedProfileEmployee.salary).toLocaleString('en-IN')}` : 'Not Available')}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">PAN Number</span>
-                    <span className="font-mono uppercase text-slate-850 dark:text-slate-200">{selectedProfileEmployee.panNumber || 'Not Available'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Aadhaar Number</span>
-                    <span className="font-mono text-slate-850 dark:text-slate-200">{selectedProfileEmployee.aadharNumber || 'Not Available'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Emergency Contact</span>
-                    <span className="text-slate-850 dark:text-slate-200">{selectedProfileEmployee.emergencyContact || selectedProfileEmployee.basicDetails || 'Not Available'}</span>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <span className="text-[10px] text-slate-400 font-bold block">Address</span>
-                    <span className="text-slate-850 dark:text-slate-200">{selectedProfileEmployee.address || 'Not Available'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Created Date</span>
-                    <span className="text-slate-500 font-mono text-[11px]">
-                      {selectedProfileEmployee.createdAt ? new Date(selectedProfileEmployee.createdAt).toLocaleString('en-IN') : 'Not Available'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold block">Last Updated</span>
-                    <span className="text-slate-500 font-mono text-[11px]">
-                      {selectedProfileEmployee.updatedAt ? new Date(selectedProfileEmployee.updatedAt).toLocaleString('en-IN') : 'Not Available'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Document Downloads */}
-              <div className="space-y-3">
-                <h5 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Verification Documents</h5>
-                <div className="flex flex-wrap gap-3">
-                  {selectedProfileEmployee.resumeUrl ? (
-                    <button
-                      onClick={(e) => handleDownloadResume(e, selectedProfileEmployee.resumeUrl)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-650 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30 rounded-xl hover:bg-indigo-100/50 text-xs font-bold"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Download Resume
-                    </button>
-                  ) : (
-                    <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 text-slate-400 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs font-semibold">
-                      No Resume Uploaded
-                    </div>
-                  )}
-
-                  {selectedProfileEmployee.aadharDocUrl ? (
-                    <button
-                      onClick={(e) => handleDownloadResume(e, selectedProfileEmployee.aadharDocUrl)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-650 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl hover:bg-emerald-100/50 text-xs font-bold"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Download Aadhaar Doc
-                    </button>
-                  ) : (
-                    <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 text-slate-400 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs font-semibold">
-                      No Aadhaar Doc Uploaded
-                    </div>
-                  )}
-
+            ) : (
+              <div className="p-6 overflow-y-auto space-y-6 flex-1 min-h-0">
+                {/* Header profile summary card */}
+                <div className="flex flex-col sm:flex-row items-center gap-6 bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
                   {selectedProfileEmployee.photoUrl ? (
-                    <button
-                      onClick={(e) => handleDownloadResume(e, selectedProfileEmployee.photoUrl)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-650 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30 rounded-xl hover:bg-indigo-100/50 text-xs font-bold"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Download Profile Photo
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* History & Logs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Attendance Summary */}
-                <div className="space-y-3">
-                  <h5 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Attendance Breakdown</h5>
-                  <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2 text-xs font-bold">
-                    <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
-                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Present Days</span>
-                      <span>{selectedProfileEmployee.attendance?.filter(a => a.status === 'Present').length || 0} days</span>
+                    <img
+                      src={getResumeDownloadUrl(selectedProfileEmployee.photoUrl)}
+                      alt={selectedProfileEmployee.name || 'Employee Photo'}
+                      className="w-20 h-20 rounded-full object-cover border-2 border-indigo-500 shadow-sm shrink-0"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://via.placeholder.com/150';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-indigo-500 text-white flex items-center justify-center text-2xl font-black shrink-0 shadow-sm">
+                      {(selectedProfileEmployee.name || 'Staff').split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                     </div>
-                    <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
-                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" /> Absent Days</span>
-                      <span>{selectedProfileEmployee.attendance?.filter(a => a.status === 'Absent').length || 0} days</span>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
-                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" /> Half Days</span>
-                      <span>{selectedProfileEmployee.attendance?.filter(a => a.status === 'Half Day').length || 0} days</span>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
-                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" /> Leave Days</span>
-                      <span>{selectedProfileEmployee.attendance?.filter(a => a.status === 'Leave').length || 0} days</span>
+                  )}
+                  
+                  <div className="text-center sm:text-left space-y-1">
+                    <h4 className="text-base font-black text-slate-800 dark:text-white">{selectedProfileEmployee.name || 'Not Available'}</h4>
+                    <span className="text-xs font-mono font-bold text-indigo-650 dark:text-indigo-400 block">
+                      {selectedProfileEmployee.employeeId || 'Not Available'}
+                    </span>
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 mt-2">
+                      <span className="px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-650 dark:text-indigo-400 rounded-full text-[10px] font-bold">
+                        {selectedProfileEmployee.department || 'Service'}
+                      </span>
+                      <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-400 rounded-full text-[10px] font-bold">
+                        {selectedProfileEmployee.designation || selectedProfileEmployee.role || 'Staff'}
+                      </span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        selectedProfileEmployee.status === 'Inactive' 
+                          ? 'bg-red-50 dark:bg-red-950/30 text-red-650 dark:text-red-400 border border-red-200' 
+                          : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-605 dark:text-emerald-400 border border-emerald-200'
+                      }`}>
+                        {selectedProfileEmployee.status || 'Active'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Salary slip Timeline archives */}
+                {/* Personal & Professional Info Grid */}
                 <div className="space-y-3">
-                  <h5 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Salary Statement Logs</h5>
-                  <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2.5 max-h-[160px] overflow-y-auto text-xs font-semibold">
-                    {selectedProfileEmployee.salaries && selectedProfileEmployee.salaries.length > 0 ? (
-                      selectedProfileEmployee.salaries.slice().sort((a,b) => b.monthYear.localeCompare(a.monthYear)).map((slip, index) => {
-                        const [year, month] = slip.monthYear.split('-');
-                        const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
-                        return (
-                          <div key={index} className="flex justify-between items-center border-b border-slate-100 dark:border-slate-900 pb-2 last:border-b-0 last:pb-0">
-                            <div>
-                              <span className="block font-bold text-slate-850 dark:text-slate-200">{monthName}</span>
-                              <span className="block text-[10px] text-emerald-600 font-bold">₹{slip.netSalary.toLocaleString()}</span>
-                            </div>
-                            <button
-                              onClick={() => handlePrintHistoricalSalarySlip(selectedProfileEmployee, slip)}
-                              className="px-2.5 py-1 bg-white dark:bg-slate-900 text-[10px] border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 font-bold dark:hover:bg-slate-800"
-                            >
-                              Print
-                            </button>
-                          </div>
-                        );
-                      })
+                  <h5 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Personal & Professional Information</h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-950/30 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Employee ID</span>
+                      <span className="font-mono font-bold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.employeeId || 'Not Available'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Full Name</span>
+                      <span className="font-bold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.name || 'Not Available'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Designation</span>
+                      <span className="font-semibold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.designation || selectedProfileEmployee.role || 'Not Available'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Department</span>
+                      <span className="font-semibold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.department || 'Not Available'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Role / Access</span>
+                      <span className="font-semibold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.role || 'Staff'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Status</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">{selectedProfileEmployee.status || 'Active'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Mobile Number</span>
+                      <span className="font-mono text-slate-850 dark:text-slate-200">{selectedProfileEmployee.phone || 'Not Available'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Email Address</span>
+                      <span className="text-slate-850 dark:text-slate-200 font-mono">{selectedProfileEmployee.email || 'Not Available'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Date of Joining</span>
+                      <span className="text-slate-850 dark:text-slate-200">
+                        {selectedProfileEmployee.dateOfJoining ? new Date(selectedProfileEmployee.dateOfJoining).toLocaleDateString('en-IN') : 'Not Available'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Date of Birth</span>
+                      <span className="text-slate-850 dark:text-slate-200">
+                        {selectedProfileEmployee.dateOfBirth ? new Date(selectedProfileEmployee.dateOfBirth).toLocaleDateString('en-IN') : 'Not Available'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Base Salary</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {selectedProfileEmployee.salaries?.[0]?.basicSalary ? `₹ ${selectedProfileEmployee.salaries[0].basicSalary.toLocaleString('en-IN')}` : (selectedProfileEmployee.salary ? `₹ ${Number(selectedProfileEmployee.salary).toLocaleString('en-IN')}` : 'Not Available')}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">PAN Number</span>
+                      <span className="font-mono uppercase text-slate-850 dark:text-slate-200">{selectedProfileEmployee.panNumber || 'Not Available'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Aadhaar Number</span>
+                      <span className="font-mono text-slate-850 dark:text-slate-200">{selectedProfileEmployee.aadharNumber || 'Not Available'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Emergency Contact</span>
+                      <span className="text-slate-850 dark:text-slate-200">{selectedProfileEmployee.emergencyContact || selectedProfileEmployee.basicDetails || 'Not Available'}</span>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <span className="text-[10px] text-slate-400 font-bold block">Address</span>
+                      <span className="text-slate-850 dark:text-slate-200">{selectedProfileEmployee.address || 'Not Available'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Created Date</span>
+                      <span className="text-slate-500 font-mono text-[11px]">
+                        {selectedProfileEmployee.createdAt ? new Date(selectedProfileEmployee.createdAt).toLocaleString('en-IN') : 'Not Available'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Last Updated</span>
+                      <span className="text-slate-500 font-mono text-[11px]">
+                        {selectedProfileEmployee.updatedAt ? new Date(selectedProfileEmployee.updatedAt).toLocaleString('en-IN') : 'Not Available'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Document Downloads */}
+                <div className="space-y-3">
+                  <h5 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Verification Documents</h5>
+                  <div className="flex flex-wrap gap-3">
+                    {selectedProfileEmployee.resumeUrl ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDownloadResume(e, selectedProfileEmployee.resumeUrl)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-650 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30 rounded-xl hover:bg-indigo-100/50 text-xs font-bold"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download Resume
+                      </button>
                     ) : (
-                      <span className="text-slate-400 italic block py-4 text-center">No statements generated.</span>
+                      <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 text-slate-400 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs font-semibold">
+                        No Resume Uploaded
+                      </div>
                     )}
+
+                    {selectedProfileEmployee.aadharDocUrl ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDownloadResume(e, selectedProfileEmployee.aadharDocUrl)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-650 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl hover:bg-emerald-100/50 text-xs font-bold"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download Aadhaar Doc
+                      </button>
+                    ) : (
+                      <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 text-slate-400 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs font-semibold">
+                        No Aadhaar Doc Uploaded
+                      </div>
+                    )}
+
+                    {selectedProfileEmployee.photoUrl ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDownloadResume(e, selectedProfileEmployee.photoUrl)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-650 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30 rounded-xl hover:bg-indigo-100/50 text-xs font-bold"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download Profile Photo
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* History & Logs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {/* Attendance Summary */}
+                  <div className="space-y-3">
+                    <h5 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Attendance Breakdown</h5>
+                    <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2 text-xs font-bold">
+                      <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Present Days</span>
+                        <span>{Array.isArray(selectedProfileEmployee.attendance) ? selectedProfileEmployee.attendance.filter(a => a?.status === 'Present').length : 0} days</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" /> Absent Days</span>
+                        <span>{Array.isArray(selectedProfileEmployee.attendance) ? selectedProfileEmployee.attendance.filter(a => a?.status === 'Absent').length : 0} days</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" /> Half Days</span>
+                        <span>{Array.isArray(selectedProfileEmployee.attendance) ? selectedProfileEmployee.attendance.filter(a => a?.status === 'Half Day').length : 0} days</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" /> Leave Days</span>
+                        <span>{Array.isArray(selectedProfileEmployee.attendance) ? selectedProfileEmployee.attendance.filter(a => a?.status === 'Leave').length : 0} days</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Salary slip Timeline archives */}
+                  <div className="space-y-3">
+                    <h5 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Salary Statement Logs</h5>
+                    <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2.5 max-h-[160px] overflow-y-auto text-xs font-semibold">
+                      {Array.isArray(selectedProfileEmployee.salaries) && selectedProfileEmployee.salaries.length > 0 ? (
+                        selectedProfileEmployee.salaries.slice().sort((a,b) => (b?.monthYear || '').localeCompare(a?.monthYear || '')).map((slip, index) => {
+                          if (!slip || !slip.monthYear || !slip.monthYear.includes('-')) return null;
+                          const [year, month] = slip.monthYear.split('-');
+                          const monthName = new Date(Number(year), Number(month) - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+                          return (
+                            <div key={index} className="flex justify-between items-center border-b border-slate-100 dark:border-slate-900 pb-2 last:border-b-0 last:pb-0">
+                              <div>
+                                <span className="block font-bold text-slate-850 dark:text-slate-200">{monthName}</span>
+                                <span className="block text-[10px] text-emerald-600 font-bold">₹{(slip.netSalary || 0).toLocaleString('en-IN')}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handlePrintHistoricalSalarySlip(selectedProfileEmployee, slip)}
+                                className="px-2.5 py-1 bg-white dark:bg-slate-900 text-[10px] border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 font-bold dark:hover:bg-slate-800"
+                              >
+                                Print
+                              </button>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <span className="text-slate-400 italic block py-4 text-center">No statements generated.</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Read-Only Modal Footer */}
             <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/80 flex justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setSelectedProfileEmployee(null)}
-                className="px-5 py-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                className="px-5 py-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
               >
                 Close Details
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
