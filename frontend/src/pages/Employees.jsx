@@ -1463,9 +1463,9 @@ export default function Employees({ token, user }) {
           className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50 animate-fade-in select-none overflow-hidden"
           onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}
         >
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col relative overflow-hidden my-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-[1100px] h-[90vh] max-h-[90vh] flex flex-col relative overflow-hidden my-auto">
             {/* Header - Fixed Sticky */}
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/70 dark:bg-slate-950/70 backdrop-blur-md z-10">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md z-10">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-800/40 flex items-center justify-center shrink-0">
                   <UserPlus className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -1485,9 +1485,9 @@ export default function Employees({ token, user }) {
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+            <form onSubmit={handleAddSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Form Body - Scrollable Inside Modal Only */}
-              <div className="p-5 sm:p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-130px)] flex-1">
+              <div className="p-5 sm:p-7 space-y-6 overflow-y-auto flex-1 min-h-0">
                 {errorMsg && (
                   <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl p-3.5 flex gap-2.5 text-xs text-red-650 dark:text-red-400">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -1496,8 +1496,8 @@ export default function Employees({ token, user }) {
                 )}
 
                 {/* Section 1: Basic Information */}
-                <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3.5 flex items-center gap-1.5">
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800/80 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 border-b border-slate-200/60 dark:border-slate-800/60 pb-2.5">
                     <span className="w-2 h-2 rounded-full bg-indigo-500 block" />
                     1. Personal & Contact Details
                   </h4>
@@ -1511,7 +1511,7 @@ export default function Employees({ token, user }) {
                         value={addForm.name}
                         onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                         placeholder="e.g. John Doe"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1535,7 +1535,7 @@ export default function Employees({ token, user }) {
                         value={addForm.email}
                         onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
                         placeholder="john@autoworkshop.com"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1547,7 +1547,7 @@ export default function Employees({ token, user }) {
                         value={addForm.aadharNumber}
                         onChange={(e) => handleAadharChange(e, addForm, setAddForm)}
                         placeholder="e.g. 1234 5678 9012"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1558,7 +1558,7 @@ export default function Employees({ token, user }) {
                         value={addForm.panNumber}
                         onChange={(e) => setAddForm({ ...addForm, panNumber: e.target.value.toUpperCase().slice(0, 10) })}
                         placeholder="e.g. ABCDE1234F"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1568,15 +1568,15 @@ export default function Employees({ token, user }) {
                         type="date"
                         value={addForm.dateOfBirth}
                         onChange={(e) => setAddForm({ ...addForm, dateOfBirth: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Section 2: Employment Details */}
-                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5">
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3.5 flex items-center gap-1.5">
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800/80 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 border-b border-slate-200/60 dark:border-slate-800/60 pb-2.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 block" />
                     2. Employment & Role Details
                   </h4>
@@ -1588,7 +1588,7 @@ export default function Employees({ token, user }) {
                         required
                         value={addForm.dateOfJoining}
                         onChange={(e) => setAddForm({ ...addForm, dateOfJoining: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1597,7 +1597,7 @@ export default function Employees({ token, user }) {
                       <select
                         value={addForm.department}
                         onChange={(e) => setAddForm({ ...addForm, department: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       >
                         <option value="Service">Service</option>
                         <option value="Spares">Spares</option>
@@ -1615,7 +1615,7 @@ export default function Employees({ token, user }) {
                         value={addForm.role}
                         onChange={(e) => setAddForm({ ...addForm, role: e.target.value })}
                         placeholder="e.g. Advisor, Mechanic, Painter"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1626,7 +1626,7 @@ export default function Employees({ token, user }) {
                         value={addForm.designation}
                         onChange={(e) => setAddForm({ ...addForm, designation: e.target.value })}
                         placeholder="e.g. Senior Technician"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1635,7 +1635,7 @@ export default function Employees({ token, user }) {
                       <select
                         value={addForm.status}
                         onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       >
                         <option value="Active">Active</option>
                         <option value="Inactive">Inactive</option>
@@ -1644,11 +1644,11 @@ export default function Employees({ token, user }) {
                   </div>
                 </div>
 
-                {/* Section 3: Address & Extra Info */}
-                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5 space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                {/* Section 3: Address & Emergency Contacts */}
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800/80 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5 border-b border-slate-200/60 dark:border-slate-800/60 pb-2.5">
                     <span className="w-2 h-2 rounded-full bg-amber-500 block" />
-                    3. Address & Documents
+                    3. Address & Emergency Contacts
                   </h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1660,7 +1660,7 @@ export default function Employees({ token, user }) {
                         value={addForm.address}
                         onChange={(e) => setAddForm({ ...addForm, address: e.target.value })}
                         placeholder="House No, Street, Landmark, City, Pincode"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1671,12 +1671,20 @@ export default function Employees({ token, user }) {
                         value={addForm.basicDetails}
                         onChange={(e) => setAddForm({ ...addForm, basicDetails: e.target.value })}
                         placeholder="Emergency contact info, references..."
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                {/* Section 4: Identity & Profile Documents */}
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800/80 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1.5 border-b border-slate-200/60 dark:border-slate-800/60 pb-2.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 block" />
+                    4. Profile & Identity Documents
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Profile Photo (Image)</label>
                       <input
@@ -1734,8 +1742,8 @@ export default function Employees({ token, user }) {
                 </div>
               </div>
 
-              {/* Sticky Footer */}
-              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end items-center gap-3 shrink-0 rounded-b-3xl">
+              {/* Sticky Footer - Always Fixed at Bottom */}
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end items-center gap-3 shrink-0 rounded-b-3xl z-10">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
@@ -1762,9 +1770,9 @@ export default function Employees({ token, user }) {
           className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50 animate-fade-in select-none overflow-hidden"
           onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false); }}
         >
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col relative overflow-hidden my-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-[1100px] h-[90vh] max-h-[90vh] flex flex-col relative overflow-hidden my-auto">
             {/* Header - Fixed Sticky */}
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/70 dark:bg-slate-950/70 backdrop-blur-md z-10">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md z-10">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-800/40 flex items-center justify-center shrink-0">
                   <Edit2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -1789,9 +1797,9 @@ export default function Employees({ token, user }) {
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Form Body - Scrollable Inside Modal Only */}
-              <div className="p-5 sm:p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-130px)] flex-1">
+              <div className="p-5 sm:p-7 space-y-6 overflow-y-auto flex-1 min-h-0">
                 {errorMsg && (
                   <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl p-3.5 flex gap-2.5 text-xs text-red-650 dark:text-red-400">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -1800,8 +1808,8 @@ export default function Employees({ token, user }) {
                 )}
 
                 {/* Section 1: Personal Details */}
-                <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3.5 flex items-center gap-1.5">
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800/80 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 border-b border-slate-200/60 dark:border-slate-800/60 pb-2.5">
                     <span className="w-2 h-2 rounded-full bg-indigo-500 block" />
                     1. Personal & Contact Details
                   </h4>
@@ -1814,7 +1822,7 @@ export default function Employees({ token, user }) {
                         required
                         value={editForm.name}
                         onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1838,7 +1846,7 @@ export default function Employees({ token, user }) {
                         value={editForm.email}
                         onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                         placeholder="john@autoworkshop.com"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1849,7 +1857,7 @@ export default function Employees({ token, user }) {
                         required
                         value={editForm.aadharNumber}
                         onChange={(e) => handleAadharChange(e, editForm, setEditForm)}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1860,7 +1868,7 @@ export default function Employees({ token, user }) {
                         value={editForm.panNumber}
                         onChange={(e) => setEditForm({ ...editForm, panNumber: e.target.value.toUpperCase().slice(0, 10) })}
                         placeholder="e.g. ABCDE1234F"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1870,15 +1878,15 @@ export default function Employees({ token, user }) {
                         type="date"
                         value={editForm.dateOfBirth}
                         onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Section 2: Employment Details */}
-                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5">
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3.5 flex items-center gap-1.5">
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800/80 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 border-b border-slate-200/60 dark:border-slate-800/60 pb-2.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 block" />
                     2. Employment & Role Details
                   </h4>
@@ -1890,7 +1898,7 @@ export default function Employees({ token, user }) {
                         required
                         value={editForm.dateOfJoining}
                         onChange={(e) => setEditForm({ ...editForm, dateOfJoining: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1899,7 +1907,7 @@ export default function Employees({ token, user }) {
                       <select
                         value={editForm.department}
                         onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       >
                         <option value="Service">Service</option>
                         <option value="Spares">Spares</option>
@@ -1917,7 +1925,7 @@ export default function Employees({ token, user }) {
                         value={editForm.role}
                         onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                         placeholder="e.g. Advisor, Mechanic, Painter"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1928,7 +1936,7 @@ export default function Employees({ token, user }) {
                         value={editForm.designation}
                         onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}
                         placeholder="e.g. Senior Technician"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1937,7 +1945,7 @@ export default function Employees({ token, user }) {
                       <select
                         value={editForm.status}
                         onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       >
                         <option value="Active">Active</option>
                         <option value="Inactive">Inactive</option>
@@ -1946,11 +1954,11 @@ export default function Employees({ token, user }) {
                   </div>
                 </div>
 
-                {/* Section 3: Address & Extra Info */}
-                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5 space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                {/* Section 3: Address & Emergency Contacts */}
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800/80 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5 border-b border-slate-200/60 dark:border-slate-800/60 pb-2.5">
                     <span className="w-2 h-2 rounded-full bg-amber-500 block" />
-                    3. Address & Documents
+                    3. Address & Emergency Contacts
                   </h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1961,7 +1969,7 @@ export default function Employees({ token, user }) {
                         required
                         value={editForm.address}
                         onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
 
@@ -1972,12 +1980,20 @@ export default function Employees({ token, user }) {
                         value={editForm.basicDetails}
                         onChange={(e) => setEditForm({ ...editForm, basicDetails: e.target.value })}
                         placeholder="Emergency contact info, references..."
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                {/* Section 4: Identity & Profile Documents */}
+                <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800/80 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1.5 border-b border-slate-200/60 dark:border-slate-800/60 pb-2.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 block" />
+                    4. Profile & Identity Documents
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Profile Photo (Image) <span className="text-slate-400 font-normal lowercase">(optional update)</span></label>
                       <input
@@ -2035,8 +2051,8 @@ export default function Employees({ token, user }) {
                 </div>
               </div>
 
-              {/* Sticky Footer */}
-              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end items-center gap-3 shrink-0 rounded-b-3xl">
+              {/* Sticky Footer - Always Fixed at Bottom */}
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end items-center gap-3 shrink-0 rounded-b-3xl z-10">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
