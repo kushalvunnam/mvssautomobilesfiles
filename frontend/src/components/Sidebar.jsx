@@ -68,23 +68,18 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
           isCollapsed ? 'w-60 md:w-16' : 'w-60'
         } border-r border-slate-800`}
       >
-        {/* Brand Logo Section */}
-        <div className={`p-4 border-b border-slate-800 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} relative transition-all duration-300`}>
-          <div className="flex items-center gap-2.5 px-1 py-1 min-w-0">
-            <div className="shrink-0 p-0.5 flex items-center justify-center overflow-hidden transition-transform duration-350 hover:scale-105">
-              <img 
-                src="/logo.png" 
-                alt="MVSS Logo" 
-                className="h-8 w-auto max-w-[100px] object-contain block"
-              />
+        {/* Brand Header Section */}
+        <div className={`px-4.5 py-4 border-b border-slate-800 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} relative transition-all duration-300`}>
+          {isCollapsed ? (
+            <div className="text-white font-black text-xs tracking-wider bg-indigo-600/80 px-2 py-1 rounded-md shadow-sm">
+              MVSS
             </div>
-            {!isCollapsed && (
-              <div className="animate-fade-in whitespace-nowrap overflow-hidden">
-                <h2 className="text-white font-black text-sm tracking-wide leading-none">MVSS Automobiles</h2>
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">Workshop ERP</span>
-              </div>
-            )}
-          </div>
+          ) : (
+            <div className="animate-fade-in whitespace-nowrap overflow-hidden">
+              <h2 className="text-white font-black text-sm tracking-wide leading-none uppercase">MVSS Automobiles</h2>
+              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mt-1">Workshop ERP</span>
+            </div>
+          )}
           {/* Close button on mobile */}
           <button 
             onClick={() => setIsOpen(false)}
