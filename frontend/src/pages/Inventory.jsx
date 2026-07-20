@@ -823,7 +823,9 @@ function PartsMasterBillingModal({
     sellingPrice: initialData?.sellingPrice !== undefined && initialData?.sellingPrice !== null ? initialData.sellingPrice.toString() : '',
     mrp: initialData?.mrp !== undefined && initialData?.mrp !== null ? initialData.mrp.toString() : '',
     marginPercent: initialData?.marginPercent !== undefined && initialData?.marginPercent !== null ? initialData.marginPercent.toString() : '',
+    quantity: initialData?.quantity !== undefined && initialData?.quantity !== null ? initialData.quantity.toString() : '1',
     discountPercent: initialData?.discountPercent !== undefined && initialData?.discountPercent !== null ? initialData.discountPercent.toString() : '0',
+    discountAmount: initialData?.discountAmount !== undefined && initialData?.discountAmount !== null ? initialData.discountAmount.toString() : '0',
     gstPercent: initialData?.gstPercent !== undefined && initialData?.gstPercent !== null ? initialData.gstPercent.toString() : '18',
     chargeAmount: initialData?.chargeAmount !== undefined && initialData?.chargeAmount !== null ? initialData.chargeAmount.toString() : '',
     unit: initialData?.unit || 'Pcs',
@@ -831,20 +833,36 @@ function PartsMasterBillingModal({
     locationRack: initialData?.locationRack || '',
     supplier: initialData?.supplier || '',
     barcode: initialData?.barcode || '',
-    notes: initialData?.notes || ''
+    notes: initialData?.notes || '',
+    lastDiscountEdited: 'percent'
   }));
 
   // Automatic Calculation Utilities
   const cost = parseFloat(form.purchasePrice) || 0;
   const sell = parseFloat(form.sellingPrice) || 0;
+  const qty = Math.max(1, parseFloat(form.quantity) || 1);
   const gstP = parseFloat(form.gstPercent) || 0;
+  const discPercent = parseFloat(form.discountPercent) || 0;
+  const discAmtInput = parseFloat(form.discountAmount) || 0;
 
-  // Derived Values
+  // Calculation Engine
+  const grossAmount = Math.round((qty * sell + Number.EPSILON) * 100) / 100;
+
+  let discAmount = discAmtInput;
+  if (form.lastDiscountEdited === 'percent' || !form.discountAmount) {
+    discAmount = Math.round((grossAmount * (discPercent / 100) + Number.EPSILON) * 100) / 100;
+  }
+  if (discAmount > grossAmount) discAmount = grossAmount;
+  if (discAmount < 0) discAmount = 0;
+
+  const taxableAmount = Math.max(0, Math.round((grossAmount - discAmount + Number.EPSILON) * 100) / 100);
+  const gstAmount = Math.round((taxableAmount * (gstP / 100) + Number.EPSILON) * 100) / 100;
+  const finalTotalAmount = Math.round((taxableAmount + gstAmount + Number.EPSILON) * 100) / 100;
+  const unitChargeRate = qty > 0 ? Math.round((finalTotalAmount / qty + Number.EPSILON) * 100) / 100 : 0;
+
   const marginP = cost > 0 && sell > 0 ? Math.round(((sell - cost) / cost) * 100 * 100) / 100 : (parseFloat(form.marginPercent) || 0);
   const profitVal = Math.max(0, sell - cost);
-  const gstAmount = Math.round((sell * (gstP / 100)) * 100) / 100;
-  const chargeAmount = Math.round((sell + gstAmount) * 100) / 100;
-  const mrpVal = parseFloat(form.mrp) || Math.ceil(chargeAmount);
+  const mrpVal = parseFloat(form.mrp) || Math.ceil(unitChargeRate || (sell + Math.round((sell * (gstP / 100)) * 100) / 100));
 
   // Input Handlers with Real-Time Dynamic Sync
   const handlePurchasePriceChange = (val) => {
@@ -854,10 +872,13 @@ function PartsMasterBillingModal({
     if (newCost > 0 && currentMargin > 0) {
       newSell = (newCost * (1 + currentMargin / 100)).toFixed(2);
     }
+    const newGross = qty * (parseFloat(newSell) || 0);
+    const newDiscAmt = (newGross * (discPercent / 100)).toFixed(2);
     setForm(prev => ({
       ...prev,
       purchasePrice: val,
-      sellingPrice: newSell
+      sellingPrice: newSell,
+      discountAmount: newDiscAmt
     }));
   };
 
@@ -868,10 +889,13 @@ function PartsMasterBillingModal({
     if (currentCost > 0 && newSell >= 0) {
       newMargin = (((newSell - currentCost) / currentCost) * 100).toFixed(2);
     }
+    const newGross = qty * newSell;
+    const newDiscAmt = (newGross * (discPercent / 100)).toFixed(2);
     setForm(prev => ({
       ...prev,
       sellingPrice: val,
-      marginPercent: newMargin
+      marginPercent: newMargin,
+      discountAmount: newDiscAmt
     }));
   };
 
@@ -882,10 +906,48 @@ function PartsMasterBillingModal({
     if (currentCost > 0) {
       newSell = (currentCost * (1 + newMargin / 100)).toFixed(2);
     }
+    const newGross = qty * (parseFloat(newSell) || 0);
+    const newDiscAmt = (newGross * (discPercent / 100)).toFixed(2);
     setForm(prev => ({
       ...prev,
       marginPercent: val,
-      sellingPrice: newSell
+      sellingPrice: newSell,
+      discountAmount: newDiscAmt
+    }));
+  };
+
+  const handleQuantityChange = (val) => {
+    const newQty = Math.max(1, parseFloat(val) || 1);
+    const newGross = newQty * (parseFloat(form.sellingPrice) || 0);
+    const newDiscAmt = (newGross * (discPercent / 100)).toFixed(2);
+    setForm(prev => ({
+      ...prev,
+      quantity: val,
+      discountAmount: newDiscAmt
+    }));
+  };
+
+  const handleDiscountPercentChange = (val) => {
+    const p = parseFloat(val) || 0;
+    const currentGross = qty * (parseFloat(form.sellingPrice) || 0);
+    const calculatedAmt = (currentGross * (p / 100)).toFixed(2);
+    setForm(prev => ({
+      ...prev,
+      discountPercent: val,
+      discountAmount: calculatedAmt,
+      lastDiscountEdited: 'percent'
+    }));
+  };
+
+  const handleDiscountAmountChange = (val) => {
+    const amt = parseFloat(val) || 0;
+    const currentGross = qty * (parseFloat(form.sellingPrice) || 0);
+    const calculatedPercent = currentGross > 0 ? ((amt / currentGross) * 100).toFixed(2) : '0';
+    setForm(prev => ({
+      ...prev,
+      discountAmount: val,
+      discountPercent: calculatedPercent,
+      lastDiscountEdited: 'amount'
     }));
   };
 
@@ -905,10 +967,14 @@ function PartsMasterBillingModal({
       reorderLevel: Number(form.reorderLevel) || 0,
       purchasePrice: Number(form.purchasePrice) || 0,
       sellingPrice: Number(form.sellingPrice) || 0,
+      quantity: Number(form.quantity) || 1,
+      discountPercent: Number(form.discountPercent) || 0,
+      discountAmount: Number(form.discountAmount) || 0,
       mrp: Number(form.mrp) || mrpVal,
       marginPercent: Number(form.marginPercent) || marginP,
       gstPercent: Number(form.gstPercent) || 0,
-      chargeAmount: Number(chargeAmount) || 0
+      chargeAmount: Number(unitChargeRate) || 0,
+      finalTotalAmount: Number(finalTotalAmount) || 0
     });
   };
 
@@ -936,7 +1002,7 @@ function PartsMasterBillingModal({
                 </span>
               </div>
               <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
-                Configure part identification, HSN, automatic GST tax rates, profit margins & inventory stock
+                Configure part identification, HSN, automatic GST tax rates, quantity, dual synchronized discounts & stock
               </p>
             </div>
           </div>
@@ -952,7 +1018,7 @@ function PartsMasterBillingModal({
 
         {/* Real-Time Billing Live Summary Bar */}
         <div className="bg-slate-900 text-white px-5 py-3 border-b border-slate-800 shrink-0">
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center sm:text-left">
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 text-center sm:text-left">
             <div className="border-r border-slate-800 pr-2">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Cost Price</span>
               <span className="text-sm font-black font-mono text-slate-200">₹{cost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
@@ -964,16 +1030,20 @@ function PartsMasterBillingModal({
               </span>
             </div>
             <div className="border-r border-slate-800 pr-2">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Basic Rate (Excl. Tax)</span>
-              <span className="text-sm font-black font-mono text-blue-400">₹{sell.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Qty / Selling</span>
+              <span className="text-sm font-black font-mono text-blue-400">{qty} × ₹{sell.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="border-r border-slate-800 pr-2">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Discount</span>
+              <span className="text-sm font-black font-mono text-amber-400">-₹{discAmount.toFixed(2)} <span className="text-[10px] font-semibold">({discPercent}%)</span></span>
             </div>
             <div className="border-r border-slate-800 pr-2">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">GST ({gstP}%)</span>
               <span className="text-sm font-black font-mono text-purple-400">+₹{gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
             <div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Net Rate (Incl. GST)</span>
-              <span className="text-base font-black font-mono text-emerald-300">₹{chargeAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Final Total</span>
+              <span className="text-base font-black font-mono text-emerald-300">₹{finalTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
         </div>
@@ -1192,6 +1262,53 @@ function PartsMasterBillingModal({
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
+                  Quantity *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  value={form.quantity}
+                  onChange={(e) => handleQuantityChange(e.target.value)}
+                  placeholder="1"
+                  className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-slate-900 dark:text-white font-bold focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
+                  Discount %
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={form.discountPercent}
+                    onChange={(e) => handleDiscountPercentChange(e.target.value)}
+                    placeholder="0"
+                    className="w-full px-3.5 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-amber-600 dark:text-amber-400 font-bold focus:outline-none focus:border-indigo-500"
+                  />
+                  <Percent className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-3" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
+                  Discount Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.discountAmount}
+                  onChange={(e) => handleDiscountAmountChange(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-amber-600 dark:text-amber-400 font-bold focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
                   GST Rate (%)
                 </label>
                 <select
@@ -1221,13 +1338,25 @@ function PartsMasterBillingModal({
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
-                  Charge Rate (Incl. GST)
+                  Net Charge Rate (Per Unit)
                 </label>
                 <input
                   type="text"
                   readOnly
-                  value={`₹ ${chargeAmount.toFixed(2)}`}
-                  className="w-full px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl font-mono text-emerald-700 dark:text-emerald-300 font-black text-sm"
+                  value={`₹ ${unitChargeRate.toFixed(2)}`}
+                  className="w-full px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl font-mono text-emerald-700 dark:text-emerald-300 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
+                  Final Total Amount (₹)
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={`₹ ${finalTotalAmount.toFixed(2)}`}
+                  className="w-full px-3.5 py-2 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 rounded-xl font-mono text-emerald-800 dark:text-emerald-200 font-black text-sm"
                 />
               </div>
 
@@ -1240,22 +1369,8 @@ function PartsMasterBillingModal({
                   step="0.01"
                   value={form.mrp}
                   onChange={(e) => setForm({ ...form, mrp: e.target.value })}
-                  placeholder={chargeAmount ? chargeAmount.toString() : '0.00'}
+                  placeholder={mrpVal ? mrpVal.toString() : '0.00'}
                   className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-slate-900 dark:text-white font-bold focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
-                  Discount %
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={form.discountPercent}
-                  onChange={(e) => setForm({ ...form, discountPercent: e.target.value })}
-                  placeholder="0"
-                  className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
