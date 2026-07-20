@@ -534,13 +534,14 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3.5 flex justify-between items-center w-full">
           <a 
             href="/" 
+            aria-label="MVSS Automobiles Homepage"
             onClick={(e) => { e.preventDefault(); window.location.href = '/'; }} 
             className="flex items-center gap-2 sm:gap-3 select-none shrink-0 group"
           >
             <div className="shrink-0 transition-transform duration-350 group-hover:scale-105 p-0.5 flex items-center justify-center overflow-hidden">
               <img 
                 src="/logo.png" 
-                alt="Auto4M Logo" 
+                alt="MVSS Automobiles Logo" 
                 className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto max-w-[180px] object-contain block"
               />
             </div>
@@ -555,7 +556,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
           </a>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-x-8 text-xs font-bold text-slate-500 uppercase tracking-widest">
+          <nav className="hidden lg:flex items-center gap-x-8 text-xs font-bold text-slate-700 uppercase tracking-widest">
             <a href="#home" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">Home</a>
             <a href="#services" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">Services</a>
             <a href="#why-choose" className="hover:text-[#C1121F] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-[#C1121F] hover:after:w-full after:transition-all">Why Choose us</a>
@@ -567,6 +568,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
               to="/login"
+              aria-label="Staff Login"
               onClick={(e) => {
                 e.preventDefault();
                 if (onStaffLoginClick) {
@@ -585,7 +587,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
             <button
               ref={mobileMenuButtonRef}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="flex lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg md:rounded-xl transition-all"
+              className="flex lg:hidden p-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg md:rounded-xl transition-all"
               aria-label="Toggle Mobile Menu"
             >
               <Menu className="w-5 h-5" />
@@ -1150,10 +1152,11 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
               
               {/* Name Field */}
               <div className="space-y-1 relative">
-                <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Customer Name</label>
+                <label htmlFor="booking-customer-name" className="block text-[8px] font-black text-slate-600 uppercase tracking-widest">Customer Name</label>
                 <div className="relative flex items-center">
                   <User className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
                   <input 
+                    id="booking-customer-name"
                     type="text" 
                     value={customerName}
                     disabled={isSubmitting}
@@ -1178,7 +1181,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                         className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col gap-0.5 transition-colors"
                       >
                         <span className="font-bold text-slate-900 dark:text-white text-xs">{s.customerName}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">
+                        <span className="text-[10px] text-slate-500 font-medium">
                           {s.mobile} {s.vehicleNumber ? `• ${s.vehicleNumber} (${s.vehicleModel || 'No Model'})` : ''}
                         </span>
                       </button>
@@ -1189,7 +1192,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
 
               {/* Phone Field */}
               <div className="space-y-1 relative">
-                <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Contact Phone</label>
+                <label htmlFor="booking-contact-phone" className="block text-[8px] font-black text-slate-600 uppercase tracking-widest">Contact Phone</label>
                 <InternationalPhoneInput
                   value={contactPhone}
                   onChange={handlePhoneChange}
@@ -1197,6 +1200,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                   disabled={isSubmitting}
                   error={!!errors.contactPhone}
                   name="contactPhone"
+                  id="booking-contact-phone"
                   required={true}
                   country="IN"
                   ariaLabel="Contact phone number"
@@ -1217,7 +1221,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                         className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col gap-0.5 transition-colors"
                       >
                         <span className="font-bold text-slate-900 dark:text-white text-xs">{s.mobile}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">
+                        <span className="text-[10px] text-slate-500 font-medium">
                           {s.customerName} {s.vehicleNumber ? `• ${s.vehicleNumber} (${s.vehicleModel || 'No Model'})` : ''}
                         </span>
                       </button>
@@ -1229,10 +1233,11 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
               <div className="grid grid-cols-2 gap-4 relative">
                 {/* Plate Field */}
                 <div className="space-y-1 relative">
-                  <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Vehicle Reg No</label>
+                  <label htmlFor="booking-vehicle-plate" className="block text-[8px] font-black text-slate-600 uppercase tracking-widest">Vehicle Reg No</label>
                   <div className="relative flex items-center">
                     <Hash className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
                     <input 
+                      id="booking-vehicle-plate"
                       type="text" 
                       value={vehiclePlate}
                       disabled={isSubmitting}
@@ -1257,7 +1262,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
                           className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col gap-0.5 transition-colors"
                         >
                           <span className="font-bold text-slate-900 dark:text-white text-xs">{s.vehicleNumber}</span>
-                          <span className="text-[10px] text-slate-400 font-medium">
+                          <span className="text-[10px] text-slate-500 font-medium">
                             {s.customerName} • {s.mobile} {s.vehicleModel ? `• ${s.vehicleModel}` : ''}
                           </span>
                         </button>
@@ -1268,10 +1273,11 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
 
                 {/* Date Picker */}
                 <div className="space-y-1">
-                  <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Service Date</label>
+                  <label htmlFor="booking-preferred-date" className="block text-[8px] font-black text-slate-600 uppercase tracking-widest">Service Date</label>
                   <div className="relative flex items-center">
                     <Calendar className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
                     <input 
+                      id="booking-preferred-date"
                       type="date" 
                       value={preferredDate}
                       min={getTodayString()}
@@ -1288,10 +1294,11 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
 
               {/* Vehicle Model Field */}
               <div className="space-y-1">
-                <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Vehicle Model</label>
+                <label htmlFor="booking-vehicle-model" className="block text-[8px] font-black text-slate-600 uppercase tracking-widest">Vehicle Model</label>
                 <div className="relative flex items-center">
                   <Car className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
                   <input 
+                    id="booking-vehicle-model"
                     type="text" 
                     value={vehicleModel}
                     disabled={isSubmitting}
@@ -1304,10 +1311,11 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
 
               {/* Stream Select */}
               <div className="space-y-1">
-                <label className="block text-[8px] font-black text-slate-450 uppercase tracking-widest">Service Category</label>
+                <label htmlFor="booking-service-category" className="block text-[8px] font-black text-slate-600 uppercase tracking-widest">Service Category</label>
                 <div className="relative flex items-center">
                   <Wrench className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
                   <select 
+                    id="booking-service-category"
                     value={preferredStream}
                     disabled={isSubmitting}
                     onChange={handleStreamChange}
