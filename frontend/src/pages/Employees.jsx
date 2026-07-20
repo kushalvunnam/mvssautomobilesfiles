@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import InternationalPhoneInput from '../components/InternationalPhoneInput';
 import { Search, Plus, Calendar, Receipt, Download, FileText, CheckCircle2, XCircle, AlertCircle, Save, Edit2, Trash2, Eye, X, UserPlus } from 'lucide-react';
@@ -1457,13 +1458,13 @@ export default function Employees({ token, user }) {
         </div>
       )}
 
-      {/* Add Employee Modal */}
-      {showAddModal && (
+      {/* Add Employee Modal (React Portal to document.body) */}
+      {showAddModal && createPortal(
         <div 
-          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50 animate-fade-in select-none overflow-hidden"
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-[99999] animate-fade-in select-none overflow-hidden"
           onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}
         >
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-[1100px] h-[90vh] max-h-[90vh] flex flex-col relative overflow-hidden my-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-[min(1100px,95vw)] h-[90vh] max-h-[90vh] flex flex-col relative overflow-hidden my-auto">
             {/* Header - Fixed Sticky */}
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md z-10">
               <div className="flex items-center gap-3">
@@ -1743,7 +1744,7 @@ export default function Employees({ token, user }) {
               </div>
 
               {/* Sticky Footer - Always Fixed at Bottom */}
-              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end items-center gap-3 shrink-0 rounded-b-3xl z-10">
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end items-center gap-3 shrink-0 rounded-b-2xl z-10">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
@@ -1761,16 +1762,17 @@ export default function Employees({ token, user }) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Edit Employee Modal */}
-      {showEditModal && (
+      {/* Edit Employee Modal (React Portal to document.body) */}
+      {showEditModal && createPortal(
         <div 
-          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50 animate-fade-in select-none overflow-hidden"
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-[99999] animate-fade-in select-none overflow-hidden"
           onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false); }}
         >
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-[1100px] h-[90vh] max-h-[90vh] flex flex-col relative overflow-hidden my-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-[min(1100px,95vw)] h-[90vh] max-h-[90vh] flex flex-col relative overflow-hidden my-auto">
             {/* Header - Fixed Sticky */}
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md z-10">
               <div className="flex items-center gap-3">
@@ -2052,7 +2054,7 @@ export default function Employees({ token, user }) {
               </div>
 
               {/* Sticky Footer - Always Fixed at Bottom */}
-              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end items-center gap-3 shrink-0 rounded-b-3xl z-10">
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end items-center gap-3 shrink-0 rounded-b-2xl z-10">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
@@ -2070,24 +2072,26 @@ export default function Employees({ token, user }) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Employee History & Profile Modal */}
-      {selectedProfileEmployee && (
-        <div className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in select-none">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
+      {/* Employee History & Profile Modal (React Portal to document.body) */}
+      {selectedProfileEmployee && createPortal(
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 z-[99999] animate-fade-in select-none">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-[min(800px,95vw)] max-h-[90vh] overflow-hidden flex flex-col my-auto">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md">
               <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Employee History & Profile</h3>
               <button
                 onClick={() => setSelectedProfileEmployee(null)}
-                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-650 transition-colors text-xs font-bold"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center text-slate-400 transition-all duration-200 shadow-xs hover:scale-105 cursor-pointer shrink-0"
+                title="Close Modal (ESC)"
               >
-                Close
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-6">
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 min-h-0">
               {/* Header profile summary card */}
               <div className="flex flex-col sm:flex-row items-center gap-6 bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
                 {selectedProfileEmployee.photoUrl ? (
@@ -2195,7 +2199,7 @@ export default function Employees({ token, user }) {
                   {selectedProfileEmployee.aadharDocUrl ? (
                     <button
                       onClick={(e) => handleDownloadResume(e, selectedProfileEmployee.aadharDocUrl)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-650 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30 rounded-xl hover:bg-indigo-100/50 text-xs font-bold"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-650 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl hover:bg-emerald-100/50 text-xs font-bold"
                     >
                       <Download className="w-3.5 h-3.5" />
                       Download Aadhaar Doc
