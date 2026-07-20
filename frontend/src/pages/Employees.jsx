@@ -2133,48 +2133,88 @@ export default function Employees({ token, user }) {
                 </div>
               </div>
 
-              {/* Personal Details */}
+              {/* Personal & Professional Info Grid */}
               <div className="space-y-3">
-                <h5 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Personal & Professional Info</h5>
+                <h5 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Personal & Professional Information</h5>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-950/30 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs">
                   <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Employee ID</span>
+                    <span className="font-mono font-bold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.employeeId || 'Not Available'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Full Name</span>
+                    <span className="font-bold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.name || 'Not Available'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Designation</span>
+                    <span className="font-semibold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.designation || selectedProfileEmployee.role || 'Not Available'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Department</span>
+                    <span className="font-semibold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.department || 'Not Available'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Role / Access</span>
+                    <span className="font-semibold text-slate-850 dark:text-slate-200">{selectedProfileEmployee.role || 'Staff'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Status</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{selectedProfileEmployee.status || 'Active'}</span>
+                  </div>
+                  <div>
                     <span className="text-[10px] text-slate-400 font-bold block">Mobile Number</span>
-                    <span className="font-mono text-slate-850 dark:text-slate-200">{selectedProfileEmployee.phone}</span>
+                    <span className="font-mono text-slate-850 dark:text-slate-200">{selectedProfileEmployee.phone || 'Not Available'}</span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold block">Email Address</span>
-                    <span className="text-slate-850 dark:text-slate-200 font-mono">{selectedProfileEmployee.email}</span>
+                    <span className="text-slate-850 dark:text-slate-200 font-mono">{selectedProfileEmployee.email || 'Not Available'}</span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold block">Date of Joining</span>
                     <span className="text-slate-850 dark:text-slate-200">
-                      {selectedProfileEmployee.dateOfJoining ? new Date(selectedProfileEmployee.dateOfJoining).toLocaleDateString() : 'N/A'}
+                      {selectedProfileEmployee.dateOfJoining ? new Date(selectedProfileEmployee.dateOfJoining).toLocaleDateString('en-IN') : 'Not Available'}
                     </span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold block">Date of Birth</span>
                     <span className="text-slate-850 dark:text-slate-200">
-                      {selectedProfileEmployee.dateOfBirth ? new Date(selectedProfileEmployee.dateOfBirth).toLocaleDateString() : 'N/A'}
+                      {selectedProfileEmployee.dateOfBirth ? new Date(selectedProfileEmployee.dateOfBirth).toLocaleDateString('en-IN') : 'Not Available'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Base Salary</span>
+                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      {selectedProfileEmployee.salaries?.[0]?.basicSalary ? `₹ ${selectedProfileEmployee.salaries[0].basicSalary.toLocaleString('en-IN')}` : (selectedProfileEmployee.salary ? `₹ ${Number(selectedProfileEmployee.salary).toLocaleString('en-IN')}` : 'Not Available')}
                     </span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold block">PAN Number</span>
-                    <span className="font-mono uppercase text-slate-850 dark:text-slate-200">{selectedProfileEmployee.panNumber || 'N/A'}</span>
+                    <span className="font-mono uppercase text-slate-850 dark:text-slate-200">{selectedProfileEmployee.panNumber || 'Not Available'}</span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold block">Aadhaar Number</span>
-                    <span className="font-mono text-slate-850 dark:text-slate-200">{selectedProfileEmployee.aadharNumber || 'N/A'}</span>
+                    <span className="font-mono text-slate-850 dark:text-slate-200">{selectedProfileEmployee.aadharNumber || 'Not Available'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Emergency Contact</span>
+                    <span className="text-slate-850 dark:text-slate-200">{selectedProfileEmployee.emergencyContact || selectedProfileEmployee.basicDetails || 'Not Available'}</span>
                   </div>
                   <div className="sm:col-span-2">
                     <span className="text-[10px] text-slate-400 font-bold block">Address</span>
-                    <span className="text-slate-850 dark:text-slate-200">{selectedProfileEmployee.address || 'N/A'}</span>
+                    <span className="text-slate-850 dark:text-slate-200">{selectedProfileEmployee.address || 'Not Available'}</span>
                   </div>
-                  {selectedProfileEmployee.basicDetails && (
-                    <div className="sm:col-span-2">
-                      <span className="text-[10px] text-slate-400 font-bold block">Basic Details / References</span>
-                      <span className="text-slate-800 dark:text-slate-300 whitespace-pre-line">{selectedProfileEmployee.basicDetails}</span>
-                    </div>
-                  )}
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Created Date</span>
+                    <span className="text-slate-500 font-mono text-[11px]">
+                      {selectedProfileEmployee.createdAt ? new Date(selectedProfileEmployee.createdAt).toLocaleString('en-IN') : 'Not Available'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Last Updated</span>
+                    <span className="text-slate-500 font-mono text-[11px]">
+                      {selectedProfileEmployee.updatedAt ? new Date(selectedProfileEmployee.updatedAt).toLocaleString('en-IN') : 'Not Available'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -2276,6 +2316,17 @@ export default function Employees({ token, user }) {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Read-Only Modal Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/80 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedProfileEmployee(null)}
+                className="px-5 py-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+              >
+                Close Details
+              </button>
             </div>
           </div>
         </div>
