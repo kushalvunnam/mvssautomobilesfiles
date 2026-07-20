@@ -4,7 +4,7 @@ import { Search, Wrench, ShieldCheck, Clock, Phone, MapPin, Car, FileText, Chevr
 import { FaWhatsapp } from 'react-icons/fa';
 import Login from './Login';
 import InternationalPhoneInput from '../components/InternationalPhoneInput';
-import { API_BASE_URL, OWNER_SUPPORT_NUMBER } from '../config';
+import { API_BASE_URL, OWNER_SUPPORT_NUMBER, BRANCHES, getBranchDirectionsUrl } from '../config';
 
 export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
   const [heroIdx, setHeroIdx] = useState(0);
@@ -1073,58 +1073,35 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              {/* Outlet 1 */}
-              <div className="bg-slate-55/40 border border-slate-200 p-6 rounded-2xl space-y-4 hover:border-[#C1121F]/20 hover:shadow-md transition-all duration-300">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-[#C1121F]/5 text-[#C1121F] rounded-xl shrink-0 mt-0.5">
-                    <MapPin className="w-4 h-4" />
+              {BRANCHES.map((branch) => {
+                const directionsUrl = getBranchDirectionsUrl(branch);
+                return (
+                  <div key={branch.id} className="bg-slate-55/40 border border-slate-200 p-6 rounded-2xl space-y-4 hover:border-[#C1121F]/20 hover:shadow-md transition-all duration-300">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-[#C1121F]/5 text-[#C1121F] rounded-xl shrink-0 mt-0.5">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide">{branch.name}</h4>
+                        <p className="text-[11px] text-slate-400 font-semibold leading-relaxed mt-1.5">
+                          {branch.address}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="pt-2">
+                      <a 
+                        href={directionsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                      >
+                        <Navigation className="w-3.5 h-3.5" />
+                        Get Directions
+                      </a>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide">Branch 1 - Petbasheerabad</h4>
-                    <p className="text-[11px] text-slate-400 font-semibold leading-relaxed mt-1.5">
-                      Survey No. 25/1, Opp. Cine Planet, Beside PSR Convention, Petbasheerabad, Hyderabad - 500067
-                    </p>
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <a 
-                    href="https://www.google.com/maps/dir/?api=1&destination=MVSS+Automobiles+Petbasheerabad+Hyderabad"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
-                  >
-                    <Navigation className="w-3.5 h-3.5" />
-                    Get Directions
-                  </a>
-                </div>
-              </div>
-
-              {/* Outlet 2 */}
-              <div className="bg-slate-55/40 border border-slate-200 p-6 rounded-2xl space-y-4 hover:border-[#C1121F]/20 hover:shadow-md transition-all duration-300">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-[#C1121F]/5 text-[#C1121F] rounded-xl shrink-0 mt-0.5">
-                    <MapPin className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide">Branch 2 - Gundlapochampally</h4>
-                    <p className="text-[11px] text-slate-400 font-semibold leading-relaxed mt-1.5">
-                      Survey No. 48/5, Near Anthem Villas, Gundlapochampally Village & Municipality, NH-44, Medchal-Malkajgiri - 500014
-                    </p>
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <a 
-                    href="https://www.google.com/maps/dir/?api=1&destination=MVSS+Automobiles,+Survey+No.+48/5,+Near+Anthem+Villas,+Gundlapochampally,+NH-44,+Medchal-Malkajgiri+-+500014"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#0B1528] hover:bg-[#C1121F] text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
-                  >
-                    <Navigation className="w-3.5 h-3.5" />
-                    Get Directions
-                  </a>
-                </div>
-              </div>
+                );
+              })}
             </div>
 
             {/* Quick Contacts */}

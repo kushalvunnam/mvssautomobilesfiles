@@ -90,6 +90,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database connection health check middleware to prevent 504 gateway timeouts when offline
 app.use('/api', (req, res, next) => {
+  if (req.originalUrl.startsWith('/api/branches')) return next();
   if (!global.isInMemoryFallback && mongoose.connection.readyState !== 1) {
     console.warn(`[Database Offline] Request to ${req.originalUrl} failed: mongoose connection state is ${mongoose.connection.readyState}`);
     return res.status(503).send({ error: 'Database is currently offline. Please ensure MongoDB is running and MONGODB_URI is correct.' });
@@ -116,6 +117,7 @@ app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/gatepasses', require('./routes/gatepasses'));
+app.use('/api/branches', require('./routes/branches'));
 
 // Resend Email Diagnostic Endpoint
 app.get('/api/test-email', async (req, res) => {
