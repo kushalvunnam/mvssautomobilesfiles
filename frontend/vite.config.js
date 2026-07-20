@@ -22,6 +22,8 @@ export default defineConfig({
     }
   },
   build: {
+    target: 'es2020',
+    cssCodeSplit: true,
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
@@ -30,7 +32,7 @@ export default defineConfig({
             if (id.includes('lucide-react')) {
               return 'lucide';
             }
-            if (id.includes('react') || id.includes('scheduler')) {
+            if (id.includes('react') || id.includes('scheduler') || id.includes('react-router')) {
               return 'react-core';
             }
             return 'vendor';
