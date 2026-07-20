@@ -93,7 +93,9 @@ export default function Login({ onLoginSuccess }) {
           <div className="p-1 flex items-center justify-center overflow-hidden shrink-0">
             <img 
               src="/logo.png" 
-              alt="Auto4M Logo" 
+              alt="MVSS Logo" 
+              decoding="async"
+              fetchPriority="high"
               className="h-20 sm:h-24 w-auto max-w-[220px] object-contain"
             />
           </div>
