@@ -698,6 +698,9 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
               <img 
                 src={slide.src}
                 alt={slide.label}
+                loading={idx === 0 ? 'eager' : 'lazy'}
+                decoding="async"
+                fetchPriority={idx === 0 ? 'high' : 'low'}
                 className="w-full h-full object-cover object-center"
               />
             </div>
