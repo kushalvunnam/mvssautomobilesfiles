@@ -14,16 +14,32 @@ router.get('/version', (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email, active: true });
+    if (!email || !password) {
+      return res.status(400).send({ error: 'Email and password are required.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail, active: true });
     
     if (!user || !(await user.comparePassword(password))) {
       return res.status(400).send({ error: 'Invalid email or password.' });
     }
 
-    const token = jwt.sign({ _id: user._id.toString() }, JWT_SECRET, { expiresIn: '7d' });
-    await logAction(user, 'USER_LOGIN', `User ${user.email} logged in successfully`, req);
+    const token = jwt.sign(
+      { _id: user._id.toString(), email: user.email, role: user.role }, 
+      JWT_SECRET, 
+      { expiresIn: '7d' }
+    );
     
-    res.send({ user: { id: user._id, name: user.name, email: user.email, role: user.role }, token });
+    // Log login activity asynchronously without delaying the user HTTP response
+    logAction(user, 'USER_LOGIN', `User ${user.email} logged in successfully`, req).catch(err => {
+      console.warn('Non-blocking audit log warning:', err.message);
+    });
+    
+    res.send({ 
+      user: { id: user._id, name: user.name, email: user.email, role: user.role }, 
+      token 
+    });
   } catch (error) {
     res.status(500).send({ error: 'Server error during login.' });
   }

@@ -31,6 +31,9 @@ const userSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+// Indexes for high performance authentication queries
+userSchema.index({ email: 1, active: 1 });
+
 // Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();

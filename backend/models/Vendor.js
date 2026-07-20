@@ -95,4 +95,8 @@ const vendorSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+vendorSchema.index({ mobile: 1 });
+vendorSchema.index({ name: 1 });
+vendorSchema.index({ status: 1 });
+
 module.exports = mongoose.model('Vendor', vendorSchema);

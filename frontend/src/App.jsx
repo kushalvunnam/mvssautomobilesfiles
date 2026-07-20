@@ -1,27 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from './config';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Customers from './pages/Customers';
-import Vehicles from './pages/Vehicles';
-import JobCards from './pages/JobCards';
-import Estimates from './pages/Estimates';
-import Invoices from './pages/Invoices';
-import Inventory from './pages/Inventory';
-import Claims from './pages/Claims';
-import AuditLogs from './pages/AuditLogs';
-import Employees from './pages/Employees';
-import LandingPage from './pages/LandingPage';
-import BodyShop from './pages/BodyShop';
-import Reports from './pages/Reports';
-import GatePasses from './pages/GatePasses';
-import Vendors from './pages/Vendors';
-import StockAdjustment from './pages/StockAdjustment';
-import StockStatement from './pages/StockStatement';
-import InventoryReports from './pages/InventoryReports';
+
+// Lazy loaded page components for fast initial bundle loading
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Customers = lazy(() => import('./pages/Customers'));
+const Vehicles = lazy(() => import('./pages/Vehicles'));
+const JobCards = lazy(() => import('./pages/JobCards'));
+const Estimates = lazy(() => import('./pages/Estimates'));
+const Invoices = lazy(() => import('./pages/Invoices'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const Claims = lazy(() => import('./pages/Claims'));
+const AuditLogs = lazy(() => import('./pages/AuditLogs'));
+const Employees = lazy(() => import('./pages/Employees'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const BodyShop = lazy(() => import('./pages/BodyShop'));
+const Reports = lazy(() => import('./pages/Reports'));
+const GatePasses = lazy(() => import('./pages/GatePasses'));
+const Vendors = lazy(() => import('./pages/Vendors'));
+const StockAdjustment = lazy(() => import('./pages/StockAdjustment'));
+const StockStatement = lazy(() => import('./pages/StockStatement'));
+const InventoryReports = lazy(() => import('./pages/InventoryReports'));
+
+const PageSkeletonLoader = () => (
+  <div className="p-6 space-y-4 animate-pulse select-none">
+    <div className="h-7 bg-slate-200 dark:bg-slate-800 rounded-xl w-1/4"></div>
+    <div className="h-28 bg-slate-100 dark:bg-slate-900 rounded-2xl w-full"></div>
+    <div className="h-64 bg-slate-100 dark:bg-slate-900 rounded-2xl w-full"></div>
+  </div>
+);
 import { 
   ShieldAlert, 
   LayoutDashboard, 
@@ -1803,38 +1813,40 @@ function ERPShell({
               </div>
             </div>
           ) : (
-            <Routes>
-              <Route path="/dashboard" element={<Dashboard token={token} user={user} setActiveTab={(tab) => {
-                setActiveTab(tab);
-                setViewJcId(null);
-                if (tab === 'jobcards') navigate('/job-cards');
-                else if (tab === 'bodyshop') navigate('/body-shop');
-                else if (tab === 'gatepass') navigate('/gate-pass');
-                else if (tab === 'auditlogs') navigate('/audit-logs');
-                else navigate(`/${tab}`);
-              }} />} />
-              <Route path="/customers" element={<Customers token={token} user={user} />} />
-              <Route path="/vehicles" element={<Vehicles token={token} user={user} />} />
-              <Route path="/body-shop" element={<BodyShop token={token} user={user} onNavigateToJobCard={handleNavigateToJobCard} />} />
-              <Route path="/job-cards" element={<JobCards token={token} user={user} setActiveTab={setActiveTab} viewJcId={viewJcId} setViewJcId={setViewJcId} />} />
-              <Route path="/estimates" element={<Estimates token={token} user={user} setActiveTab={setActiveTab} />} />
-              <Route path="/invoices" element={<Invoices token={token} user={user} setActiveTab={setActiveTab} />} />
-              <Route path="/inventory" element={<Inventory token={token} user={user} />} />
-              <Route path="/inventory/statement" element={<StockStatement token={token} user={user} />} />
-              <Route path="/inventory/vendors" element={<Vendors token={token} user={user} />} />
-              <Route path="/inventory/adjustments" element={<StockAdjustment token={token} user={user} />} />
-              <Route path="/inventory/reports" element={<InventoryReports token={token} user={user} />} />
-              <Route path="/stockstatement" element={<StockStatement token={token} user={user} />} />
-              <Route path="/vendors" element={<Vendors token={token} user={user} />} />
-              <Route path="/adjustments" element={<StockAdjustment token={token} user={user} />} />
-              <Route path="/inventoryreports" element={<InventoryReports token={token} user={user} />} />
-              <Route path="/employees" element={<Employees token={token} user={user} />} />
-              <Route path="/claims" element={<Claims token={token} user={user} />} />
-              <Route path="/reports" element={<Reports token={token} user={user} />} />
-              <Route path="/audit-logs" element={<AuditLogs token={token} />} />
-              <Route path="/gate-pass" element={<GatePasses token={token} user={user} />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
+            <Suspense fallback={<PageSkeletonLoader />}>
+              <Routes>
+                <Route path="/dashboard" element={<Dashboard token={token} user={user} setActiveTab={(tab) => {
+                  setActiveTab(tab);
+                  setViewJcId(null);
+                  if (tab === 'jobcards') navigate('/job-cards');
+                  else if (tab === 'bodyshop') navigate('/body-shop');
+                  else if (tab === 'gatepass') navigate('/gate-pass');
+                  else if (tab === 'auditlogs') navigate('/audit-logs');
+                  else navigate(`/${tab}`);
+                }} />} />
+                <Route path="/customers" element={<Customers token={token} user={user} />} />
+                <Route path="/vehicles" element={<Vehicles token={token} user={user} />} />
+                <Route path="/body-shop" element={<BodyShop token={token} user={user} onNavigateToJobCard={handleNavigateToJobCard} />} />
+                <Route path="/job-cards" element={<JobCards token={token} user={user} setActiveTab={setActiveTab} viewJcId={viewJcId} setViewJcId={setViewJcId} />} />
+                <Route path="/estimates" element={<Estimates token={token} user={user} setActiveTab={setActiveTab} />} />
+                <Route path="/invoices" element={<Invoices token={token} user={user} setActiveTab={setActiveTab} />} />
+                <Route path="/inventory" element={<Inventory token={token} user={user} />} />
+                <Route path="/inventory/statement" element={<StockStatement token={token} user={user} />} />
+                <Route path="/inventory/vendors" element={<Vendors token={token} user={user} />} />
+                <Route path="/inventory/adjustments" element={<StockAdjustment token={token} user={user} />} />
+                <Route path="/inventory/reports" element={<InventoryReports token={token} user={user} />} />
+                <Route path="/stockstatement" element={<StockStatement token={token} user={user} />} />
+                <Route path="/vendors" element={<Vendors token={token} user={user} />} />
+                <Route path="/adjustments" element={<StockAdjustment token={token} user={user} />} />
+                <Route path="/inventoryreports" element={<InventoryReports token={token} user={user} />} />
+                <Route path="/employees" element={<Employees token={token} user={user} />} />
+                <Route path="/claims" element={<Claims token={token} user={user} />} />
+                <Route path="/reports" element={<Reports token={token} user={user} />} />
+                <Route path="/audit-logs" element={<AuditLogs token={token} />} />
+                <Route path="/gate-pass" element={<GatePasses token={token} user={user} />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </Suspense>
           )}
         </main>
 

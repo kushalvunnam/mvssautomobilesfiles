@@ -30,6 +30,8 @@ export default function Login({ onLoginSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
+
     setError('');
     setLoading(true);
 
@@ -45,14 +47,17 @@ export default function Login({ onLoginSuccess }) {
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.error || 'Login failed. Please check credentials.');
+        throw new Error(data.error || 'Invalid email or password.');
       }
+
+      // Pre-cache user profile & session token to eliminate roundtrip delays
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
 
       onLoginSuccess(data.user, data.token);
     } catch (err) {
       console.error('Authentication error:', err);
-      setError(err.message || 'Network error: Unable to connect to authorization servers.');
-    } finally {
+      setError(err.message || 'Unable to connect to authorization server.');
       setLoading(false);
     }
   };

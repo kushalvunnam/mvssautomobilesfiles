@@ -77,16 +77,28 @@ if (!process.env.JWT_SECRET) {
   console.warn('====================================================');
 }
 
+const compression = require('compression');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middlewares
+// Enable HTTP Response Compression (Gzip / Brotli)
+app.use(compression());
+
+// Enable CORS & Request Parsing
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static uploaded photos
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Set Performance & Keep-Alive Headers
+app.use((req, res, next) => {
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=15, max=100');
+  next();
+});
+
+// Serve static uploaded photos with caching
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
 
 // Database connection health check middleware to prevent 504 gateway timeouts when offline
 app.use('/api', (req, res, next) => {

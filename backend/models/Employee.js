@@ -103,4 +103,8 @@ employeeSchema.pre('save', async function(next) {
   }
 });
 
+employeeSchema.index({ phone: 1 });
+employeeSchema.index({ email: 1 });
+employeeSchema.index({ status: 1 });
+
 module.exports = mongoose.model('Employee', employeeSchema);
