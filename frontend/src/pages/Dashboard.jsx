@@ -20,9 +20,11 @@ import {
 } from 'lucide-react';
 import StatsCard from '../components/StatsCard';
 
+import { getCachedData, setCachedData } from '../utils/apiCache';
+
 export default function Dashboard({ token, user, setActiveTab }) {
-  // 1. Restore the original stats cards state fields
-  const [stats, setStats] = useState({
+  // 1. Restore the original stats cards state fields with cached fallback
+  const [stats, setStats] = useState(() => getCachedData(`${API_BASE_URL}/dashboard/stats`) || {
     totalCustomers: 0,
     totalVehicles: 0,
     activeJobCards: 0,
@@ -37,31 +39,36 @@ export default function Dashboard({ token, user, setActiveTab }) {
     bodyShopJobs: 0
   });
 
-  // 2. Restore the original charts state bindings
-  const [charts, setCharts] = useState({
+  // 2. Restore the original charts state bindings with cached fallback
+  const [charts, setCharts] = useState(() => getCachedData(`${API_BASE_URL}/dashboard/charts`) || {
     revenueChart: [],
     serviceTypeChart: [],
     topPartsChart: [],
     billingBreakdown: { spareParts: 0, labour: 0, gst: 0 }
   });
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    return !getCachedData(`${API_BASE_URL}/dashboard/stats`);
+  });
 
-
-
-  // 3. Restore the original Promise.all backend data fetch logic
+  // 3. Restore the original Promise.all backend data fetch logic with SWR caching
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
+        const statsUrl = `${API_BASE_URL}/dashboard/stats`;
+        const chartsUrl = `${API_BASE_URL}/dashboard/charts`;
+
         const [statsRes, chartsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/dashboard/stats`, { headers }),
-          fetch(`${API_BASE_URL}/dashboard/charts`, { headers }),
+          fetch(statsUrl, { headers }),
+          fetch(chartsUrl, { headers }),
         ]);
 
         if (statsRes.ok && chartsRes.ok) {
           const statsData = await statsRes.json();
           const chartsData = await chartsRes.json();
+          setCachedData(statsUrl, statsData);
+          setCachedData(chartsUrl, chartsData);
           setStats(statsData);
           setCharts(chartsData);
         }
@@ -73,14 +80,14 @@ export default function Dashboard({ token, user, setActiveTab }) {
     };
 
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 5000);
+    const interval = setInterval(fetchDashboardData, 10000);
     return () => clearInterval(interval);
   }, [token]);
 
   if (loading) {
     return (
       <div className="flex-1 flex justify-center items-center h-full min-h-[400px] text-sm font-semibold text-slate-400">
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-ping mr-2" />
+        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping mr-2" />
         Loading analytics dashboard...
       </div>
     );

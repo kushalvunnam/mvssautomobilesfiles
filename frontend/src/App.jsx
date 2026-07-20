@@ -5,25 +5,24 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Login from './pages/Login';
 
-// Lazy loaded page components for fast initial bundle loading
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Customers = lazy(() => import('./pages/Customers'));
-const Vehicles = lazy(() => import('./pages/Vehicles'));
-const JobCards = lazy(() => import('./pages/JobCards'));
-const Estimates = lazy(() => import('./pages/Estimates'));
-const Invoices = lazy(() => import('./pages/Invoices'));
-const Inventory = lazy(() => import('./pages/Inventory'));
-const Claims = lazy(() => import('./pages/Claims'));
-const AuditLogs = lazy(() => import('./pages/AuditLogs'));
-const Employees = lazy(() => import('./pages/Employees'));
-const LandingPage = lazy(() => import('./pages/LandingPage'));
-const BodyShop = lazy(() => import('./pages/BodyShop'));
-const Reports = lazy(() => import('./pages/Reports'));
-const GatePasses = lazy(() => import('./pages/GatePasses'));
-const Vendors = lazy(() => import('./pages/Vendors'));
-const StockAdjustment = lazy(() => import('./pages/StockAdjustment'));
-const StockStatement = lazy(() => import('./pages/StockStatement'));
-const InventoryReports = lazy(() => import('./pages/InventoryReports'));
+import Dashboard from './pages/Dashboard';
+import Customers from './pages/Customers';
+import Vehicles from './pages/Vehicles';
+import JobCards from './pages/JobCards';
+import Estimates from './pages/Estimates';
+import Invoices from './pages/Invoices';
+import Inventory from './pages/Inventory';
+import Claims from './pages/Claims';
+import AuditLogs from './pages/AuditLogs';
+import Employees from './pages/Employees';
+import LandingPage from './pages/LandingPage';
+import BodyShop from './pages/BodyShop';
+import Reports from './pages/Reports';
+import GatePasses from './pages/GatePasses';
+import Vendors from './pages/Vendors';
+import StockAdjustment from './pages/StockAdjustment';
+import StockStatement from './pages/StockStatement';
+import InventoryReports from './pages/InventoryReports';
 
 const PageSkeletonLoader = () => (
   <div className="p-6 space-y-4 animate-pulse select-none">

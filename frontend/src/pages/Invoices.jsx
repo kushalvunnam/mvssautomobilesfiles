@@ -3,8 +3,10 @@ import { API_BASE_URL, OWNER_SUPPORT_NUMBER } from '../config';
 import { Search, Plus, Receipt, Download, Share2, Mail, CheckCircle2, Printer, Edit2, Eye, Trash2, Copy, Link, ChevronDown, MessageSquare } from 'lucide-react';
 import InvoiceForm from './InvoiceForm';
 
+import { getCachedData, setCachedData } from '../utils/apiCache';
+
 export default function Invoices({ token, user, setActiveTab }) {
-  const [invoices, setInvoices] = useState([]);
+  const [invoices, setInvoices] = useState(() => getCachedData(`${API_BASE_URL}/invoices?status=`) || []);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'edit'
@@ -18,12 +20,19 @@ export default function Invoices({ token, user, setActiveTab }) {
   const [shareSuccess, setShareSuccess] = useState(false);
 
   const fetchInvoices = async () => {
+    const url = `${API_BASE_URL}/invoices?status=${statusFilter}`;
+    const cached = getCachedData(url);
+    if (cached && invoices.length === 0) {
+      setInvoices(cached);
+    }
+
     try {
-      const res = await fetch(`${API_BASE_URL}/invoices?status=${statusFilter}`, {
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
+        setCachedData(url, data);
         
         // Filter search locally for robustness
         const filtered = data.filter(inv => {

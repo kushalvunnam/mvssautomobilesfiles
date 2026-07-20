@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
 import { Search, Plus, Edit2, Calendar, FileText, ClipboardList, Trash2 } from 'lucide-react';
 
+import { getCachedData, setCachedData } from '../utils/apiCache';
+
 export default function Vehicles({ token, user }) {
-  const [vehicles, setVehicles] = useState([]);
+  const [vehicles, setVehicles] = useState(() => getCachedData(`${API_BASE_URL}/vehicles?search=`) || []);
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState('');
   
@@ -30,12 +32,17 @@ export default function Vehicles({ token, user }) {
   });
 
   const fetchVehicles = async () => {
+    const url = `${API_BASE_URL}/vehicles?search=${encodeURIComponent(search)}`;
+    const cached = getCachedData(url);
+    if (cached && vehicles.length === 0) setVehicles(cached);
+
     try {
-      const res = await fetch(`${API_BASE_URL}/vehicles?search=${encodeURIComponent(search)}`, {
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
+        setCachedData(url, data);
         setVehicles(data);
       }
     } catch (err) {

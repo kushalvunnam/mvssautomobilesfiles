@@ -4,8 +4,10 @@ import { Search, Plus, Edit2, FileText, ChevronRight, Eye, Trash2 } from 'lucide
 import JobCardForm from './JobCardForm';
 import JobCardDetails from './JobCardDetails';
 
+import { getCachedData, setCachedData } from '../utils/apiCache';
+
 export default function JobCards({ token, user, setActiveTab, viewJcId = null, setViewJcId = null }) {
-  const [jobCards, setJobCards] = useState([]);
+  const [jobCards, setJobCards] = useState(() => getCachedData(`${API_BASE_URL}/jobcards?search=&status=`) || []);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'edit', 'details'
@@ -20,12 +22,17 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
   }, [viewJcId]);
 
   const fetchJobCards = async () => {
+    const url = `${API_BASE_URL}/jobcards?search=${encodeURIComponent(search)}&status=${statusFilter}`;
+    const cached = getCachedData(url);
+    if (cached && jobCards.length === 0) setJobCards(cached);
+
     try {
-      const res = await fetch(`${API_BASE_URL}/jobcards?search=${encodeURIComponent(search)}&status=${statusFilter}`, {
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
+        setCachedData(url, data);
         setJobCards(data);
       }
     } catch (err) {

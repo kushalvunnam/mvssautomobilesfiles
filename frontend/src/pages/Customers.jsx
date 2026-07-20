@@ -3,8 +3,10 @@ import { API_BASE_URL } from '../config';
 import InternationalPhoneInput from '../components/InternationalPhoneInput';
 import { Search, Plus, Edit2, Calendar, FileText, Receipt, ShieldAlert, Trash2 } from 'lucide-react';
 
+import { getCachedData, setCachedData } from '../utils/apiCache';
+
 export default function Customers({ token, user }) {
-  const [customers, setCustomers] = useState([]);
+  const [customers, setCustomers] = useState(() => getCachedData(`${API_BASE_URL}/customers?search=&type=`) || []);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   
@@ -27,12 +29,17 @@ export default function Customers({ token, user }) {
   });
 
   const fetchCustomers = async () => {
+    const url = `${API_BASE_URL}/customers?search=${encodeURIComponent(search)}&type=${typeFilter}`;
+    const cached = getCachedData(url);
+    if (cached && customers.length === 0) setCustomers(cached);
+
     try {
-      const res = await fetch(`${API_BASE_URL}/customers?search=${encodeURIComponent(search)}&type=${typeFilter}`, {
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
+        setCachedData(url, data);
         setCustomers(data);
       }
     } catch (err) {

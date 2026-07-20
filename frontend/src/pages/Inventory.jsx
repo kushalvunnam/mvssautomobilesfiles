@@ -22,9 +22,10 @@ import {
   TrendingUp,
   Boxes
 } from 'lucide-react';
+import { getCachedData, setCachedData } from '../utils/apiCache';
 
 export default function Inventory({ token, user }) {
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(() => getCachedData(`${API_BASE_URL}/inventory?search=&lowStock=false&category=`) || []);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [lowStockFilter, setLowStockFilter] = useState(false);
@@ -133,12 +134,17 @@ export default function Inventory({ token, user }) {
   };
 
   const fetchInventory = async () => {
+    const url = `${API_BASE_URL}/inventory?search=${encodeURIComponent(search)}&lowStock=${lowStockFilter}&category=${encodeURIComponent(categoryFilter)}`;
+    const cached = getCachedData(url);
+    if (cached && items.length === 0) setItems(cached);
+
     try {
-      const res = await fetch(`${API_BASE_URL}/inventory?search=${encodeURIComponent(search)}&lowStock=${lowStockFilter}&category=${encodeURIComponent(categoryFilter)}`, {
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
+        setCachedData(url, data);
         setItems(data);
       }
     } catch (err) {
