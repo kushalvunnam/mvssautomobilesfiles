@@ -933,6 +933,7 @@ export default function Invoices({ token, user, setActiveTab }) {
                     <th className="p-4">Grand Total</th>
                     <th className="p-4">Billing type</th>
                     <th className="p-4">Status</th>
+                    <th className="p-4 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
@@ -971,12 +972,48 @@ export default function Invoices({ token, user, setActiveTab }) {
                               {inv.status}
                             </span>
                           </td>
+                          <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleViewInvoice(inv, e); }}
+                                title="View Invoice"
+                                className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50 rounded-lg transition-colors border border-blue-200/50 dark:border-blue-800/50 flex items-center justify-center"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handlePrintInvoice(inv, e); }}
+                                title="Download PDF"
+                                className="p-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50 rounded-lg transition-colors border border-emerald-200/50 dark:border-emerald-800/50 flex items-center justify-center"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setSelectedInvoiceId(inv._id); setViewMode('edit'); }}
+                                title="Edit Invoice"
+                                className="p-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/50 rounded-lg transition-colors border border-amber-200/50 dark:border-amber-800/50 flex items-center justify-center"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteInvoice(inv._id, e); }}
+                                title="Delete Invoice"
+                                className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50 rounded-lg transition-colors border border-red-200/50 dark:border-red-800/50 flex items-center justify-center"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })
                   ) : (
                     <tr>
-                      <td colSpan="8" className="p-8 text-center text-slate-400 dark:text-slate-500 font-semibold">
+                      <td colSpan="9" className="p-8 text-center text-slate-400 dark:text-slate-500 font-semibold">
                         No GST tax invoices billed.
                       </td>
                     </tr>
