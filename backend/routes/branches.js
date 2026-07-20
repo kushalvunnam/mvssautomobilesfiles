@@ -29,16 +29,26 @@ const BRANCHES_DATA = [
       latitude: 17.5764,
       longitude: 78.4812
     },
-    googleMapsUrl: 'https://www.google.com/maps/dir/?api=1&destination=17.5764,78.4812'
+    googleMapsUrl: 'https://maps.app.goo.gl/67ighFJZMzyM2yi19?g_st=iw'
   }
 ];
+
+function getBranchDirectionsUrl(branch) {
+  if (branch && branch.googleMapsUrl) {
+    return branch.googleMapsUrl;
+  }
+  if (branch && branch.coordinates && branch.coordinates.latitude && branch.coordinates.longitude) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${branch.coordinates.latitude},${branch.coordinates.longitude}`;
+  }
+  return 'https://www.google.com/maps';
+}
 
 // GET /api/branches - Public list of workshop branch locations and navigation URLs
 router.get('/', (req, res) => {
   try {
     const formattedBranches = BRANCHES_DATA.map(branch => ({
       ...branch,
-      directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${branch.coordinates.latitude},${branch.coordinates.longitude}`
+      directionsUrl: getBranchDirectionsUrl(branch)
     }));
     res.json(formattedBranches);
   } catch (err) {
@@ -56,7 +66,7 @@ router.get('/:id', (req, res) => {
     }
     res.json({
       ...branch,
-      directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${branch.coordinates.latitude},${branch.coordinates.longitude}`
+      directionsUrl: getBranchDirectionsUrl(branch)
     });
   } catch (err) {
     console.error('Error fetching branch details:', err);

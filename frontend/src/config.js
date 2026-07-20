@@ -40,19 +40,19 @@ export const BRANCHES = [
       latitude: 17.5764,
       longitude: 78.4812
     },
-    googleMapsUrl: 'https://www.google.com/maps/dir/?api=1&destination=17.5764,78.4812'
+    googleMapsUrl: 'https://maps.app.goo.gl/67ighFJZMzyM2yi19?g_st=iw'
   }
 ];
 
 /**
- * Helper to generate standard Google Maps directions URL for a given branch using GPS coordinates
+ * Helper to generate standard Google Maps directions URL for a given branch
  */
 export function getBranchDirectionsUrl(branch) {
-  if (branch && branch.coordinates && branch.coordinates.latitude && branch.coordinates.longitude) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${branch.coordinates.latitude},${branch.coordinates.longitude}`;
-  }
   if (branch && branch.googleMapsUrl) {
     return branch.googleMapsUrl;
+  }
+  if (branch && branch.coordinates && branch.coordinates.latitude && branch.coordinates.longitude) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${branch.coordinates.latitude},${branch.coordinates.longitude}`;
   }
   return 'https://www.google.com/maps';
 }
