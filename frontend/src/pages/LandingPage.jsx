@@ -616,7 +616,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
           <div className="flex items-center gap-2">
             <div className="p-0.5 bg-[#030712] rounded-full border border-[#C1121F]/30 overflow-hidden shrink-0">
               <img 
-                src="/workshop/auto4m_logo_v1.svg" 
+                src="/logo.png" 
                 alt="MVSS Logo" 
                 className="h-8 w-8 object-cover rounded-full"
               />
@@ -1383,7 +1383,7 @@ export default function LandingPage({ onLoginSuccess, onStaffLoginClick }) {
             <div className="flex items-center gap-3">
               <div className="p-1.5 bg-[#030712] rounded-full border-2 border-[#C1121F]/40 shrink-0 shadow-lg overflow-hidden">
                 <img 
-                  src="/workshop/auto4m_logo_v1.svg" 
+                  src="/logo.png" 
                   alt="MVSS Logo" 
                   className="h-24 w-24 object-cover rounded-full"
                 />
