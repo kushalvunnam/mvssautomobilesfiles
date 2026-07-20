@@ -59,17 +59,26 @@ export default function Employees({ token, user }) {
   const addNameInputRef = useRef(null);
   const editNameInputRef = useRef(null);
 
-  // Keyboard shortcut listener (ESC closes modals)
+  // Keyboard shortcut listener (ESC closes modals) & Body scroll lock
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         if (showAddModal) setShowAddModal(false);
         if (showEditModal) setShowEditModal(false);
+        if (selectedProfileEmployee) setSelectedProfileEmployee(null);
       }
     };
+    if (showAddModal || showEditModal || selectedProfileEmployee) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showAddModal, showEditModal]);
+    return () => {
+      document.body.style.overflow = 'unset';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showAddModal, showEditModal, selectedProfileEmployee]);
 
   // Auto-focus first input field when modal opens
   useEffect(() => {
@@ -1451,34 +1460,34 @@ export default function Employees({ token, user }) {
       {/* Add Employee Modal */}
       {showAddModal && (
         <div 
-          className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 animate-fade-in select-none overflow-hidden"
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50 animate-fade-in select-none overflow-hidden"
           onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}
         >
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden max-h-[90vh] flex flex-col relative">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/50 dark:bg-slate-950/50">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-800/40 flex items-center justify-center">
-                  <UserPlus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col relative overflow-hidden my-auto">
+            {/* Header - Fixed Sticky */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/70 dark:bg-slate-950/70 backdrop-blur-md z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-800/40 flex items-center justify-center shrink-0">
+                  <UserPlus className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Register New Employee</h3>
-                  <p className="text-[10px] text-slate-400 font-semibold">Enter staff personal, contact, and employment details</p>
+                  <h3 className="text-sm sm:text-base font-black text-slate-800 dark:text-white uppercase tracking-wide">Register New Employee</h3>
+                  <p className="text-[10px] sm:text-xs text-slate-400 font-semibold">Enter staff personal, contact, and employment details</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center text-slate-400 transition-all duration-200 shadow-xs hover:scale-105 cursor-pointer shrink-0"
                 title="Close Modal (ESC)"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} className="flex flex-col flex-1 overflow-hidden">
-              {/* Form Body - Scrollable */}
-              <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-130px)] flex-1">
+            <form onSubmit={handleAddSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+              {/* Form Body - Scrollable Inside Modal Only */}
+              <div className="p-5 sm:p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-130px)] flex-1">
                 {errorMsg && (
                   <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl p-3.5 flex gap-2.5 text-xs text-red-650 dark:text-red-400">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -1488,8 +1497,11 @@ export default function Employees({ token, user }) {
 
                 {/* Section 1: Basic Information */}
                 <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3">1. Personal & Contact Details</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500 block" />
+                    1. Personal & Contact Details
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name *</label>
                       <input
@@ -1563,9 +1575,12 @@ export default function Employees({ token, user }) {
                 </div>
 
                 {/* Section 2: Employment Details */}
-                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3">2. Employment & Role Details</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 block" />
+                    2. Employment & Role Details
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Joining *</label>
                       <input
@@ -1630,8 +1645,11 @@ export default function Employees({ token, user }) {
                 </div>
 
                 {/* Section 3: Address & Extra Info */}
-                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">3. Address & Documents</h4>
+                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5 space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 block" />
+                    3. Address & Documents
+                  </h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -1741,39 +1759,39 @@ export default function Employees({ token, user }) {
       {/* Edit Employee Modal */}
       {showEditModal && (
         <div 
-          className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 animate-fade-in select-none overflow-hidden"
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50 animate-fade-in select-none overflow-hidden"
           onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false); }}
         >
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden max-h-[90vh] flex flex-col relative">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/50 dark:bg-slate-950/50">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-800/40 flex items-center justify-center">
-                  <Edit2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col relative overflow-hidden my-auto">
+            {/* Header - Fixed Sticky */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-slate-50/70 dark:bg-slate-950/70 backdrop-blur-md z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-800/40 flex items-center justify-center shrink-0">
+                  <Edit2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-black text-slate-800 dark:text-white uppercase tracking-wide flex items-center gap-2">
                     Edit Employee Profile
                     <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950/50 text-indigo-650 dark:text-indigo-400 font-bold border border-indigo-200 dark:border-indigo-800/60">
                       {editForm.employeeId || 'N/A'}
                     </span>
                   </h3>
-                  <p className="text-[10px] text-slate-400 font-semibold">Update employee details, contact info, and documents</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400 font-semibold">Update employee details, contact info, and documents</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center text-slate-400 transition-all duration-200 shadow-xs hover:scale-105 cursor-pointer shrink-0"
                 title="Close Modal (ESC)"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 overflow-hidden">
-              {/* Form Body - Scrollable */}
-              <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-130px)] flex-1">
+            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+              {/* Form Body - Scrollable Inside Modal Only */}
+              <div className="p-5 sm:p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-130px)] flex-1">
                 {errorMsg && (
                   <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl p-3.5 flex gap-2.5 text-xs text-red-650 dark:text-red-400">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -1783,8 +1801,11 @@ export default function Employees({ token, user }) {
 
                 {/* Section 1: Personal Details */}
                 <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3">1. Personal & Contact Details</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500 block" />
+                    1. Personal & Contact Details
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name *</label>
                       <input
@@ -1856,9 +1877,12 @@ export default function Employees({ token, user }) {
                 </div>
 
                 {/* Section 2: Employment Details */}
-                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3">2. Employment & Role Details</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 block" />
+                    2. Employment & Role Details
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Joining *</label>
                       <input
@@ -1923,8 +1947,11 @@ export default function Employees({ token, user }) {
                 </div>
 
                 {/* Section 3: Address & Extra Info */}
-                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">3. Address & Documents</h4>
+                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5 space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 block" />
+                    3. Address & Documents
+                  </h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
