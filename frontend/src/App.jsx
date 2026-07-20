@@ -18,6 +18,10 @@ import LandingPage from './pages/LandingPage';
 import BodyShop from './pages/BodyShop';
 import Reports from './pages/Reports';
 import GatePasses from './pages/GatePasses';
+import Vendors from './pages/Vendors';
+import StockAdjustment from './pages/StockAdjustment';
+import StockStatement from './pages/StockStatement';
+import InventoryReports from './pages/InventoryReports';
 import { 
   ShieldAlert, 
   LayoutDashboard, 
@@ -43,7 +47,11 @@ const tabPermissions = {
   jobcards: ['Admin', 'Service', 'Spares', 'Body Shop'],
   estimates: ['Admin', 'Service', 'Spares'],
   invoices: ['Admin', 'Accounts'],
-  inventory: ['Admin', 'Spares'],
+  inventory: ['Admin', 'Spares', 'Accounts'],
+  stockstatement: ['Admin', 'Spares', 'Accounts'],
+  vendors: ['Admin', 'Spares', 'Accounts'],
+  adjustments: ['Admin', 'Spares', 'Accounts'],
+  inventoryreports: ['Admin', 'Spares', 'Accounts'],
   employees: ['Admin', 'Accounts'],
   claims: ['Admin', 'Accounts', 'Service', 'Body Shop'],
   reports: ['Admin', 'Accounts', 'Service', 'Spares'],
@@ -1812,6 +1820,14 @@ function ERPShell({
               <Route path="/estimates" element={<Estimates token={token} user={user} setActiveTab={setActiveTab} />} />
               <Route path="/invoices" element={<Invoices token={token} user={user} setActiveTab={setActiveTab} />} />
               <Route path="/inventory" element={<Inventory token={token} user={user} />} />
+              <Route path="/inventory/statement" element={<StockStatement token={token} user={user} />} />
+              <Route path="/inventory/vendors" element={<Vendors token={token} user={user} />} />
+              <Route path="/inventory/adjustments" element={<StockAdjustment token={token} user={user} />} />
+              <Route path="/inventory/reports" element={<InventoryReports token={token} user={user} />} />
+              <Route path="/stockstatement" element={<StockStatement token={token} user={user} />} />
+              <Route path="/vendors" element={<Vendors token={token} user={user} />} />
+              <Route path="/adjustments" element={<StockAdjustment token={token} user={user} />} />
+              <Route path="/inventoryreports" element={<InventoryReports token={token} user={user} />} />
               <Route path="/employees" element={<Employees token={token} user={user} />} />
               <Route path="/claims" element={<Claims token={token} user={user} />} />
               <Route path="/reports" element={<Reports token={token} user={user} />} />

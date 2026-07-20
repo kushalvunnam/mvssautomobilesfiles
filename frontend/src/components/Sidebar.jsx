@@ -20,7 +20,7 @@ import {
 export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isOpen, setIsOpen, isCollapsed }) {
   const role = user?.role || 'Guest';
 
-  // Navigation Items matching the original codebase's 12 actual tabs
+  // Navigation Items matching the original codebase's tabs + new inventory sub-modules
   const navigationItems = [
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Accounts'] },
     { id: 'bodyshop', name: 'Body Shop', icon: Wrench, roles: ['Admin', 'Body Shop'] },
@@ -29,7 +29,11 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
     { id: 'jobcards', name: 'Job Cards', icon: FileText, roles: ['Admin', 'Service', 'Spares', 'Body Shop'] },
     { id: 'estimates', name: 'Estimates', icon: FileCheck, roles: ['Admin', 'Service', 'Spares'] },
     { id: 'invoices', name: 'Invoices', icon: Receipt, roles: ['Admin', 'Accounts'] },
-    { id: 'inventory', name: 'Inventory Parts', icon: Package, roles: ['Admin', 'Spares'] },
+    { id: 'inventory', name: 'Parts Master', icon: Package, roles: ['Admin', 'Spares', 'Accounts'] },
+    { id: 'stockstatement', name: 'Stock Statement', icon: FileText, roles: ['Admin', 'Spares', 'Accounts'] },
+    { id: 'vendors', name: 'Vendors', icon: Users, roles: ['Admin', 'Spares', 'Accounts'] },
+    { id: 'adjustments', name: 'Stock Adjustments', icon: Wrench, roles: ['Admin', 'Spares', 'Accounts'] },
+    { id: 'inventoryreports', name: 'Inventory Reports', icon: TrendingUp, roles: ['Admin', 'Spares', 'Accounts'] },
     { id: 'employees', name: 'Employees', icon: Users, roles: ['Admin', 'Accounts'] },
     { id: 'claims', name: 'Insurance Claims', icon: ShieldCheck, roles: ['Admin', 'Accounts', 'Service', 'Body Shop'] },
     { id: 'reports', name: 'Reports', icon: TrendingUp, roles: ['Admin', 'Accounts', 'Service', 'Spares'] },

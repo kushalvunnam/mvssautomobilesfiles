@@ -6,21 +6,38 @@ const router = express.Router();
 
 const { checkLowStockAlerts } = require('../utils/alerts');
 
-// List spare parts with search & low stock alerts
+// Barcode Lookup Route
+router.get('/barcode/:barcode', auth, async (req, res) => {
+  try {
+    const { barcode } = req.params;
+    const item = await Inventory.findOne({ barcode: barcode.trim() });
+    if (!item) {
+      return res.status(404).send({ error: `No part found with barcode ${barcode}` });
+    }
+    res.send(item);
+  } catch (error) {
+    res.status(500).send({ error: 'Barcode lookup failed.' });
+  }
+});
+
+// List spare parts & labour items with enhanced search, category, brand, type, and alerts
 router.get('/', auth, async (req, res) => {
   try {
     await checkLowStockAlerts();
-    const { search, lowStock, category } = req.query;
+    const { search, lowStock, category, brand, type, warehouse } = req.query;
     let query = {};
 
-    if (category) {
-      query.category = { $regex: category, $options: 'i' };
-    }
+    if (type) query.type = type;
+    if (category) query.category = { $regex: category, $options: 'i' };
+    if (brand) query.brand = { $regex: brand, $options: 'i' };
+    if (warehouse) query.warehouse = warehouse;
 
     if (search) {
       query.$or = [
         { partName: { $regex: search, $options: 'i' } },
         { partNumber: { $regex: search, $options: 'i' } },
+        { partCode: { $regex: search, $options: 'i' } },
+        { barcode: { $regex: search, $options: 'i' } },
         { hsnCode: { $regex: search, $options: 'i' } },
         { brand: { $regex: search, $options: 'i' } },
         { model: { $regex: search, $options: 'i' } },
@@ -55,52 +72,83 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// Create new spare part (purchase entry)
+// Create new spare part / labour master
 router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
   try {
-    const { partNumber } = req.body;
-    const existing = await Inventory.findOne({ partNumber });
-    if (existing) {
-      return res.status(400).send({ error: 'Part number already exists. Please restock instead.' });
+    const { partNumber, barcode, partCode } = req.body;
+    if (partNumber) {
+      const existing = await Inventory.findOne({ partNumber: partNumber.trim() });
+      if (existing) {
+        return res.status(400).send({ error: `Part number "${partNumber}" already exists.` });
+      }
+    }
+
+    if (barcode && barcode.trim() !== '') {
+      const existingBarcode = await Inventory.findOne({ barcode: barcode.trim() });
+      if (existingBarcode) {
+        return res.status(400).send({ error: `Barcode "${barcode}" is already assigned to ${existingBarcode.partName}.` });
+      }
+    }
+
+    if (partCode && partCode.trim() !== '') {
+      const existingCode = await Inventory.findOne({ partCode: partCode.trim() });
+      if (existingCode) {
+        return res.status(400).send({ error: `Part code "${partCode}" already exists.` });
+      }
     }
 
     const item = new Inventory(req.body);
     await item.save();
-    await logAction(req.user, 'INVENTORY_CREATE', `Added new spare part ${item.partName} (${item.partNumber})`, req);
+    await logAction(req.user, 'INVENTORY_CREATE', `Added master entry ${item.partName} (${item.partNumber})`, req);
     res.status(201).send(item);
   } catch (error) {
-    res.status(400).send({ error: 'Failed to create inventory item.' });
+    res.status(400).send({ error: 'Failed to create inventory item: ' + error.message });
   }
 });
 
 // Restock purchase entry (add quantity to existing stock)
 router.post('/purchase', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
   try {
-    const { partNumber, quantityToAdd, purchasePrice, sellingPrice } = req.body;
-    const item = await Inventory.findOne({ partNumber });
+    const { partNumber, quantityToAdd, purchasePrice, sellingPrice, mrp } = req.body;
+    const item = await Inventory.findOne({ partNumber: partNumber.trim() });
     if (!item) return res.status(404).send({ error: 'Part not found. Create it first.' });
 
     item.stockQuantity += Number(quantityToAdd);
-    if (purchasePrice) item.purchasePrice = purchasePrice;
-    if (sellingPrice) item.sellingPrice = sellingPrice;
+    if (purchasePrice !== undefined) item.purchasePrice = Number(purchasePrice);
+    if (sellingPrice !== undefined) item.sellingPrice = Number(sellingPrice);
+    if (mrp !== undefined) item.mrp = Number(mrp);
 
     await item.save();
     await logAction(req.user, 'INVENTORY_RESTOCK', `Restocked ${quantityToAdd} units of ${item.partName}. Current stock: ${item.stockQuantity}`, req);
     res.send(item);
   } catch (error) {
-    res.status(400).send({ error: 'Restock failed.' });
+    res.status(400).send({ error: 'Restock failed: ' + error.message });
   }
 });
 
 // Edit details of a part
-router.put('/:id', auth, restrictTo('Admin'), async (req, res) => {
+router.put('/:id', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
   try {
     const item = await Inventory.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!item) return res.status(404).send({ error: 'Part not found.' });
     await logAction(req.user, 'INVENTORY_UPDATE', `Updated details for ${item.partName}`, req);
     res.send(item);
   } catch (error) {
-    res.status(400).send({ error: 'Failed to update part.' });
+    res.status(400).send({ error: 'Failed to update part: ' + error.message });
+  }
+});
+
+// Delete part / master entry
+router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
+  try {
+    const item = await Inventory.findById(req.params.id);
+    if (!item) return res.status(404).send({ error: 'Part not found.' });
+
+    await Inventory.findByIdAndDelete(req.params.id);
+    await logAction(req.user, 'INVENTORY_DELETE', `Deleted master entry ${item.partName} (${item.partNumber})`, req);
+    res.send({ message: 'Item deleted successfully.' });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to delete part: ' + error.message });
   }
 });
 
@@ -108,7 +156,7 @@ router.put('/:id', auth, restrictTo('Admin'), async (req, res) => {
 router.post('/reduce', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
   try {
     const { partNumber, quantityToReduce, reason } = req.body;
-    const item = await Inventory.findOne({ partNumber });
+    const item = await Inventory.findOne({ partNumber: partNumber.trim() });
     if (!item) return res.status(404).send({ error: 'Part not found.' });
     
     if (item.stockQuantity < Number(quantityToReduce)) {
@@ -130,7 +178,7 @@ router.get('/history/:partNumber?', auth, async (req, res) => {
     const mongoose = require('mongoose');
     const AuditLog = mongoose.model('AuditLog');
     let query = {
-      action: { $in: ['INVENTORY_CREATE', 'INVENTORY_RESTOCK', 'INVENTORY_UPDATE', 'INVENTORY_REDUCE'] }
+      action: { $in: ['INVENTORY_CREATE', 'INVENTORY_RESTOCK', 'INVENTORY_UPDATE', 'INVENTORY_REDUCE', 'STOCK_ADJUSTMENT', 'INVENTORY_DELETE'] }
     };
     if (req.params.partNumber) {
       query.description = { $regex: req.params.partNumber, $options: 'i' };

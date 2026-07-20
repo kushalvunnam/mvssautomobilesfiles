@@ -1,0 +1,390 @@
+import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
+import { 
+  Wrench, 
+  Plus, 
+  Search, 
+  Filter, 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  Package, 
+  AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
+  FileText,
+  X
+} from 'lucide-react';
+
+export default function StockAdjustment({ token, user }) {
+  const [adjustments, setAdjustments] = useState([]);
+  const [inventory, setInventory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [showModal, setShowModal] = useState(false);
+
+  const [formData, setFormData] = useState({
+    partId: '',
+    type: 'Stock Increase',
+    qty: '1',
+    reason: 'Manual Stock Correction',
+    comments: '',
+    reference: ''
+  });
+
+  const isWritable = user?.role === 'Admin' || user?.role === 'Accounts' || user?.role === 'Spares';
+
+  useEffect(() => {
+    fetchData();
+  }, [token, typeFilter]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      let url = `${API_BASE_URL}/adjustments?`;
+      if (typeFilter) url += `type=${encodeURIComponent(typeFilter)}&`;
+
+      const [adjRes, invRes] = await Promise.all([
+        fetch(url, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/inventory`, { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+
+      if (adjRes.ok) {
+        const data = await adjRes.json();
+        setAdjustments(data);
+      }
+      if (invRes.ok) {
+        const data = await invRes.json();
+        setInventory(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch adjustments:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenCreate = () => {
+    setFormData({
+      partId: inventory.length > 0 ? inventory[0]._id : '',
+      type: 'Stock Increase',
+      qty: '1',
+      reason: 'Manual Stock Correction',
+      comments: '',
+      reference: ''
+    });
+    setShowModal(true);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!formData.partId || !formData.qty || !formData.reason) {
+      alert('Part, Quantity, and Reason are required.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/adjustments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (res.ok) {
+        setShowModal(false);
+        fetchData();
+      } else {
+        const errData = await res.json();
+        alert(`Error: ${errData.error || 'Failed to submit stock adjustment'}`);
+      }
+    } catch (err) {
+      alert('Failed to connect to server.');
+    }
+  };
+
+  const handleApprove = async (id) => {
+    if (!window.confirm('Approve this stock adjustment and update inventory quantities immediately?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/adjustments/${id}/approve`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        fetchData();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to approve adjustment.');
+      }
+    } catch (err) {
+      alert('Failed to approve adjustment.');
+    }
+  };
+
+  const filteredAdjustments = adjustments.filter(adj => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      adj.adjustmentNo?.toLowerCase().includes(term) ||
+      adj.partName?.toLowerCase().includes(term) ||
+      adj.partNumber?.toLowerCase().includes(term) ||
+      adj.reason?.toLowerCase().includes(term) ||
+      adj.createdBy?.toLowerCase().includes(term)
+    );
+  });
+
+  return (
+    <div className="space-y-6 animate-fade-in p-1">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
+            <Wrench className="w-7 h-7 text-indigo-500" /> Stock Adjustments
+          </h1>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
+            Log damaged parts, inventory audits, stock increases/decreases & manual corrections
+          </p>
+        </div>
+
+        {isWritable && (
+          <button
+            onClick={handleOpenCreate}
+            className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> New Stock Adjustment
+          </button>
+        )}
+      </div>
+
+      {/* Search and Filters */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search adjustment number, part name, part number, reason..."
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
+          />
+        </div>
+
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none md:w-56"
+        >
+          <option value="">All Adjustment Types</option>
+          <option value="Stock Increase">Stock Increase</option>
+          <option value="Stock Decrease">Stock Decrease</option>
+          <option value="Damaged Items">Damaged Items</option>
+          <option value="Missing Items">Missing Items</option>
+          <option value="Returned Items">Returned Items</option>
+          <option value="Manual Correction">Manual Correction</option>
+        </select>
+      </div>
+
+      {/* Adjustments Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center text-slate-400 text-xs font-semibold">Loading stock adjustments...</div>
+        ) : filteredAdjustments.length === 0 ? (
+          <div className="p-12 text-center space-y-2">
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-300">No stock adjustments logged</p>
+            <p className="text-xs text-slate-400">Click "New Stock Adjustment" to record an audit entry.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                  <th className="p-4">Adjustment No & Date</th>
+                  <th className="p-4">Spare Part</th>
+                  <th className="p-4">Adjustment Type</th>
+                  <th className="p-4 text-center">Qty Change</th>
+                  <th className="p-4 text-center">Previous ➔ New Stock</th>
+                  <th className="p-4">Reason & Created By</th>
+                  <th className="p-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs font-medium">
+                {filteredAdjustments.map(adj => {
+                  const isAdd = adj.type === 'Stock Increase' || adj.type === 'Returned Items';
+                  return (
+                    <tr key={adj._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="p-4">
+                        <div className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{adj.adjustmentNo}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {new Date(adj.createdAt || adj.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </div>
+                      </td>
+
+                      <td className="p-4">
+                        <div className="font-bold text-slate-900 dark:text-white">{adj.partName}</div>
+                        <div className="text-[10px] font-mono text-slate-400">{adj.partNumber}</div>
+                      </td>
+
+                      <td className="p-4">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          isAdd 
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' 
+                            : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
+                        }`}>
+                          {isAdd ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                          {adj.type}
+                        </span>
+                      </td>
+
+                      <td className="p-4 text-center font-mono font-bold text-sm">
+                        <span className={isAdd ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
+                          {isAdd ? `+${adj.qty}` : `-${adj.qty}`}
+                        </span>
+                      </td>
+
+                      <td className="p-4 text-center font-mono font-semibold text-slate-600 dark:text-slate-300">
+                        {adj.previousStock} ➔ <span className="font-bold text-slate-900 dark:text-white">{adj.newStock}</span>
+                      </td>
+
+                      <td className="p-4">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200">{adj.reason}</div>
+                        <div className="text-[10px] text-slate-400">By: {adj.createdBy}</div>
+                        {adj.comments && <div className="text-[10px] text-slate-400 italic mt-0.5">"{adj.comments}"</div>}
+                      </td>
+
+                      <td className="p-4 text-center">
+                        {adj.status === 'Pending' ? (
+                          user?.role === 'Admin' ? (
+                            <button
+                              onClick={() => handleApprove(adj._id)}
+                              className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold rounded-lg shadow-sm"
+                            >
+                              Approve Adjustment
+                            </button>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 text-[10px] font-bold rounded-full">
+                              Pending Approval
+                            </span>
+                          )
+                        ) : (
+                          <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-full">
+                            Approved
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* New Adjustment Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-5 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-indigo-500" /> New Stock Adjustment Entry
+              </h3>
+              <button onClick={() => setShowModal(false)} className="p-1 rounded-lg text-slate-400 hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Spare Part *</label>
+                <select
+                  required
+                  value={formData.partId}
+                  onChange={(e) => setFormData({ ...formData, partId: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
+                >
+                  {inventory.map(item => (
+                    <option key={item._id} value={item._id}>
+                      {item.partName} ({item.partNumber}) - Stock: {item.stockQuantity} {item.unit || 'Pcs'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjustment Type *</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
+                  >
+                    <option value="Stock Increase">Stock Increase (+)</option>
+                    <option value="Returned Items">Returned Items (+)</option>
+                    <option value="Stock Decrease">Stock Decrease (-)</option>
+                    <option value="Damaged Items">Damaged Items (-)</option>
+                    <option value="Missing Items">Missing Items (-)</option>
+                    <option value="Manual Correction">Manual Correction (-)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Quantity *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={formData.qty}
+                    onChange={(e) => setFormData({ ...formData, qty: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Reason for Adjustment *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.reason}
+                  onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                  placeholder="e.g. Physical inventory audit discrepancy, damaged in warehouse..."
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Comments / Notes</label>
+                <textarea
+                  rows="2"
+                  value={formData.comments}
+                  onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
+                  placeholder="Additional audit details or verification comments..."
+                  className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-md shadow-indigo-600/20"
+                >
+                  Record Adjustment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -56,10 +56,16 @@ router.get('/stats', auth, async (req, res) => {
     });
     const pendingPayments = unpaidInvoices.reduce((sum, inv) => sum + inv.totals.grandTotal, 0);
 
-    // Inventory Value and Low Stock Items
+    // Inventory Value, Vendors, and Stock Items
+    const VendorModel = require('../models/Vendor');
+    const PurchaseModel = require('../models/Purchase');
     const allInventory = await Inventory.find({});
     const inventoryValue = allInventory.reduce((sum, item) => sum + ((item.stockQuantity || 0) * (item.purchasePrice || 0)), 0);
-    const lowStockItems = allInventory.filter(item => (item.stockQuantity || 0) <= (item.lowStockThreshold || 5)).length;
+    const sellingValuation = allInventory.reduce((sum, item) => sum + ((item.stockQuantity || 0) * (item.sellingPrice || 0)), 0);
+    const lowStockItems = allInventory.filter(item => (item.stockQuantity || 0) <= (item.lowStockThreshold || 5) && (item.stockQuantity || 0) > 0).length;
+    const outOfStockItems = allInventory.filter(item => (item.stockQuantity || 0) <= 0).length;
+    const totalVendors = await VendorModel.countDocuments();
+    const recentPurchases = await PurchaseModel.find().sort({ createdAt: -1 }).limit(5);
 
     // Insurance Claims
     const insuranceClaims = await InsuranceClaim.countDocuments();
@@ -113,7 +119,11 @@ router.get('/stats', auth, async (req, res) => {
       revenueThisYear: Math.round(revenueThisYear * 100) / 100,
       pendingPayments: Math.round(pendingPayments * 100) / 100,
       inventoryValue: Math.round(inventoryValue * 100) / 100,
+      sellingValuation: Math.round(sellingValuation * 100) / 100,
       lowStockItems,
+      outOfStockItems,
+      totalVendors,
+      recentPurchases,
       lowStockItemsList,
       latestAuditLogs,
       insuranceClaims,
