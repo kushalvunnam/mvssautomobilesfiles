@@ -384,7 +384,7 @@ export default function Header({ user, token, currentTab, onMenuClick, onLogout,
       <div className="w-full flex justify-between items-center md:contents">
         
         {/* Left Side: Hamburger, Logo, Company Name */}
-        <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0 md:order-1">
+        <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 md:order-1 shrink-0">
           <button
             onClick={() => {
               setShowNotificationsMenu(false);
@@ -392,27 +392,30 @@ export default function Header({ user, token, currentTab, onMenuClick, onLogout,
               setShowAlertsMenu(false);
               onMenuClick();
             }}
-            className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg transition-colors shrink-0"
+            className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-colors shrink-0 flex items-center justify-center"
+            title="Toggle Sidebar"
           >
-            <Menu className="w-4.5 h-4.5" />
+            <Menu className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2 min-w-0">
-            {/* Brand Logo replaced with actual brand logo */}
-            <div className="shrink-0 p-0.5 flex items-center justify-center overflow-hidden">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            {/* Brand Logo */}
+            <div className="shrink-0 flex items-center justify-center overflow-hidden">
               <img 
                 src="/logo.png" 
                 alt="MVSS Logo" 
-                className="h-8 w-auto max-w-[100px] object-contain block"
+                className="h-7 sm:h-8.5 w-auto max-w-[75px] sm:max-w-[100px] object-contain block shrink-0"
+                decoding="async"
+                fetchPriority="high"
               />
             </div>
             
             <div className="min-w-0 flex flex-col justify-center">
-              <h1 className="text-xs md:text-sm font-bold text-slate-900 dark:text-white truncate leading-none">
+              <h1 className="text-xs sm:text-sm md:text-base font-black text-slate-900 dark:text-white leading-tight tracking-tight whitespace-nowrap">
                 MVSS Automobiles
               </h1>
-              <span className="hidden md:block text-[8px] text-slate-400 dark:text-slate-500 font-bold tracking-wider mt-0.5 uppercase">
-                Workshop Management System
+              <span className="text-[8px] sm:text-[9.5px] text-slate-500 dark:text-slate-400 font-bold tracking-wider uppercase leading-none mt-0.5 whitespace-nowrap block">
+                WORKSHOP MANAGEMENT SYSTEM
               </span>
             </div>
           </div>

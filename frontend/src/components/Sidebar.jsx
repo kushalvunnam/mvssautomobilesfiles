@@ -76,8 +76,8 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
             </div>
           ) : (
             <div className="animate-fade-in whitespace-nowrap overflow-hidden">
-              <h2 className="text-white font-black text-sm tracking-wide leading-none uppercase">MVSS Automobiles</h2>
-              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mt-1">Workshop ERP</span>
+              <h2 className="text-white font-black text-sm tracking-wide leading-tight uppercase">MVSS Automobiles</h2>
+              <span className="text-[8.5px] text-slate-400 font-bold uppercase tracking-wider block mt-1">WORKSHOP MANAGEMENT SYSTEM</span>
             </div>
           )}
           {/* Close button on mobile */}
