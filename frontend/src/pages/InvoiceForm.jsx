@@ -83,6 +83,7 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
     const selectionStart = input.selectionStart;
     
     const updatedList = [...list];
+    delete updatedList[idx].totalCustom;
     updatedList[idx] = { ...updatedList[idx], [field]: processedValue };
     setter(updatedList);
 
@@ -90,6 +91,54 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
       if (input && input.setSelectionRange) {
         const beforeCursor = originalValue.slice(0, selectionStart);
         const cleanBeforeCursor = cleanNumberInput(beforeCursor, allowDecimal, maxVal);
+        const newCursorPos = cleanBeforeCursor.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    });
+  };
+
+  const handleTotalChange = (e, list, setter, idx) => {
+    const input = e.target;
+    const originalValue = input.value;
+    const processedValue = cleanNumberInput(originalValue, true);
+    const selectionStart = input.selectionStart;
+
+    const updatedList = [...list];
+    const item = { ...updatedList[idx], totalCustom: processedValue };
+
+    if (processedValue !== '') {
+      const totalNum = parseFloat(processedValue);
+      if (!isNaN(totalNum)) {
+        const qty = Math.max(1, Number(item.qty) || 1);
+        const gstPercent = Number(item.gstPercent) || 0;
+        const discountPercent = Number(item.discountPercent) || 0;
+        const discountAmount = Number(item.discountAmount) || 0;
+
+        const taxableVal = totalNum / (1 + (gstPercent / 100));
+        let calcRate = 0;
+        if (item.discountType === 'Fixed') {
+          const gross = taxableVal + discountAmount;
+          calcRate = gross / qty;
+        } else {
+          const multiplier = 1 - (discountPercent / 100);
+          if (multiplier > 0) {
+            const gross = taxableVal / multiplier;
+            calcRate = gross / qty;
+          }
+        }
+        if (calcRate >= 0) {
+          item.rate = (Math.round((calcRate + Number.EPSILON) * 100) / 100).toString();
+        }
+      }
+    }
+
+    updatedList[idx] = item;
+    setter(updatedList);
+
+    requestAnimationFrame(() => {
+      if (input && input.setSelectionRange) {
+        const beforeCursor = originalValue.slice(0, selectionStart);
+        const cleanBeforeCursor = cleanNumberInput(beforeCursor, true);
         const newCursorPos = cleanBeforeCursor.length;
         input.setSelectionRange(newCursorPos, newCursorPos);
       }
@@ -1012,11 +1061,14 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                   />
                 </div>
 
-                <div className="w-24 text-right pr-2">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Total (₹)</span>
-                  <span className="text-xs font-black text-slate-800 dark:text-slate-200 h-[28px] flex items-center justify-end font-mono">
-                    {(() => {
-                      const qty = Number(part.qty) || 0;
+                <div className="w-24">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total (₹)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={(() => {
+                      if (part.totalCustom !== undefined) return part.totalCustom;
+                      const qty = Math.max(1, Number(part.qty) || 1);
                       const rate = Number(part.rate) || 0;
                       const gstPercent = Number(part.gstPercent) || 0;
                       const gross = Math.round((qty * rate + Number.EPSILON) * 100) / 100;
@@ -1031,9 +1083,12 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                       const amount = Math.round((gross - discAmt + Number.EPSILON) * 100) / 100;
                       const gstAmt = Math.round((amount * (gstPercent / 100) + Number.EPSILON) * 100) / 100;
                       const rowTotal = Math.round((amount + gstAmt + Number.EPSILON) * 100) / 100;
-                      return rowTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      return rowTotal ? rowTotal.toString() : '';
                     })()}
-                  </span>
+                    onChange={(e) => handleTotalChange(e, partsList, setPartsList, idx)}
+                    placeholder="Total"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono text-right font-bold text-indigo-600 focus:border-indigo-500"
+                  />
                 </div>
 
                 <button
@@ -1182,11 +1237,14 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                   />
                 </div>
 
-                <div className="w-28 text-right pr-2">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Total (₹)</span>
-                  <span className="text-xs font-black text-slate-800 dark:text-slate-200 h-[28px] flex items-center justify-end font-mono">
-                    {(() => {
-                      const qty = Number(lab.qty) !== undefined && lab.qty !== null && lab.qty !== '' ? Number(lab.qty) : 1;
+                <div className="w-28">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total (₹)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={(() => {
+                      if (lab.totalCustom !== undefined) return lab.totalCustom;
+                      const qty = Math.max(1, Number(lab.qty) || 1);
                       const rate = Number(lab.rate) || 0;
                       const gstPercent = Number(lab.gstPercent) || 0;
                       const gross = Math.round((qty * rate + Number.EPSILON) * 100) / 100;
@@ -1201,9 +1259,12 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
                       const amount = Math.round((gross - discAmt + Number.EPSILON) * 100) / 100;
                       const gstAmt = Math.round((amount * (gstPercent / 100) + Number.EPSILON) * 100) / 100;
                       const rowTotal = Math.round((amount + gstAmt + Number.EPSILON) * 100) / 100;
-                      return rowTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      return rowTotal ? rowTotal.toString() : '';
                     })()}
-                  </span>
+                    onChange={(e) => handleTotalChange(e, labourList, setLabourList, idx)}
+                    placeholder="Total"
+                    className="w-full px-3.5 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono text-right font-bold text-indigo-600 focus:border-indigo-500"
+                  />
                 </div>
 
                 <button
