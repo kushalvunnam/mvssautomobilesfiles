@@ -253,56 +253,88 @@ router.post('/', async (req, res) => {
 
 
     // ==========================================
-    // 7. SEND ADMIN EMAIL NOTIFICATION
+    // 7. SEND ADMIN EMAIL NOTIFICATION (RESEND SDK)
     // ==========================================
 
     let emailSent = false;
     let emailError = null;
+    let emailId = null;
     let emailLogs = [];
 
     try {
-      const adminEmail = 'accounts@auto4m.in';
+      const resendApiKey = process.env.RESEND_API_KEY;
+      const recipientEmail = 'accounts@auto4m.in';
+      const senderEmail = process.env.RESEND_FROM_EMAIL || 'MVSS Automobiles <onboarding@resend.dev>';
 
-      const htmlBodyAdmin = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-          <h2 style="color: #4f46e5; margin-top: 0;">New Service Booking Received</h2>
-          <p>A new service appointment has been booked via the MVSS Automobiles portal.</p>
-          <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold; width: 40%;">Customer Name:</td><td style="padding: 8px 0;">${customerName}</td></tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Phone Number:</td><td style="padding: 8px 0;">${mobile}</td></tr>
-            ${customerEmail ? `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Customer Email:</td><td style="padding: 8px 0;">${customerEmail}</td></tr>` : ''}
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Vehicle Number:</td><td style="padding: 8px 0;">${vehicleNumber}</td></tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Vehicle Model:</td><td style="padding: 8px 0;">${vehicleModel || 'N/A'}</td></tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Service Type:</td><td style="padding: 8px 0;">${serviceType}</td></tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Preferred Date:</td><td style="padding: 8px 0;">${preferredDate || 'Not provided'}</td></tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Remarks:</td><td style="padding: 8px 0;">${remarks || 'None'}</td></tr>
-          </table>
-          <p style="font-size: 11px; color: #94a3b8; margin-bottom: 0;">Submitted on ${bDate} at ${bTime}</p>
-        </div>
-      `;
+      console.log(`[BOOKING ROUTE] Booking saved with ID: ${booking._id}`);
+      console.log(`[BOOKING ROUTE] Calling Resend...`);
+      console.log(`[BOOKING ROUTE] Recipient email: ${recipientEmail}`);
+      console.log(`[BOOKING ROUTE] Sender email: ${senderEmail}`);
 
-      // Dispatch admin email notification to verified accounts@auto4m.in
-      console.log(`[BOOKING ROUTE] Sending email to ${adminEmail}...`);
-      const adminResult = await sendEmail({
-        to: adminEmail,
-        subject: `New Service Booking Notification - MVSS Automobiles`,
-        html: htmlBodyAdmin,
-      });
-
-      console.log('[BOOKING ROUTE] Resend API response:', JSON.stringify(adminResult, null, 2));
-
-      if (adminResult.success) {
-        emailSent = true;
-        console.log(`[BOOKING ROUTE] Email sent successfully to ${adminEmail}`);
-        emailLogs.push(`Admin email sent successfully to ${adminEmail}`);
+      if (!resendApiKey) {
+        emailError = 'RESEND_API_KEY environment variable is not defined in backend runtime environment.';
+        console.error(`[BOOKING ROUTE ERROR] Error message if sending fails: ${emailError}`);
+        emailLogs.push(emailError);
       } else {
-        emailError = adminResult.error;
-        console.error('[BOOKING ROUTE] Full error message if sending fails:', adminResult.error);
-        emailLogs.push(`Admin email failed: ${typeof adminResult.error === 'object' ? JSON.stringify(adminResult.error) : adminResult.error}`);
+        const { Resend } = require('resend');
+        const resend = new Resend(resendApiKey);
+
+        const htmlBodyAdmin = `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <h2 style="color: #4f46e5; margin-top: 0;">New Service Booking Received</h2>
+            <p>A new service appointment has been booked via the MVSS Automobiles portal.</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">
+              <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold; width: 40%;">Customer Name:</td><td style="padding: 8px 0;">${customerName}</td></tr>
+              <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Phone Number:</td><td style="padding: 8px 0;">${mobile}</td></tr>
+              ${customerEmail ? `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Customer Email:</td><td style="padding: 8px 0;">${customerEmail}</td></tr>` : ''}
+              <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Vehicle Number:</td><td style="padding: 8px 0;">${vehicleNumber}</td></tr>
+              <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Vehicle Model:</td><td style="padding: 8px 0;">${vehicleModel || 'N/A'}</td></tr>
+              <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Service Type:</td><td style="padding: 8px 0;">${serviceType}</td></tr>
+              <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Preferred Date:</td><td style="padding: 8px 0;">${preferredDate || 'Not provided'}</td></tr>
+              <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Remarks:</td><td style="padding: 8px 0;">${remarks || 'None'}</td></tr>
+            </table>
+            <p style="font-size: 11px; color: #94a3b8; margin-bottom: 0;">Submitted on ${bDate} at ${bTime}</p>
+          </div>
+        `;
+
+        let resendResponse = await resend.emails.send({
+          from: senderEmail,
+          to: recipientEmail,
+          subject: `New Service Booking Notification - MVSS Automobiles`,
+          html: htmlBodyAdmin,
+        });
+
+        console.log('[BOOKING ROUTE] Full Resend response:', JSON.stringify(resendResponse, null, 2));
+
+        if (resendResponse.error) {
+          console.error('[BOOKING ROUTE ERROR] Error message if sending fails:', resendResponse.error);
+
+          const errMsg = (resendResponse.error.message || '').toLowerCase();
+          if ((errMsg.includes('domain') || errMsg.includes('not verified') || errMsg.includes('validation')) && !senderEmail.includes('onboarding@resend.dev')) {
+            console.warn('[BOOKING ROUTE WARN] Custom sender unverified. Retrying with onboarding@resend.dev...');
+            resendResponse = await resend.emails.send({
+              from: 'MVSS Automobiles <onboarding@resend.dev>',
+              to: recipientEmail,
+              subject: `New Service Booking Notification - MVSS Automobiles`,
+              html: htmlBodyAdmin,
+            });
+            console.log('[BOOKING ROUTE FALLBACK] Full Resend response:', JSON.stringify(resendResponse, null, 2));
+          }
+        }
+
+        if (resendResponse.data && resendResponse.data.id) {
+          emailSent = true;
+          emailId = resendResponse.data.id;
+          console.log(`[BOOKING ROUTE SUCCESS] Email ID: ${emailId}`);
+          emailLogs.push(`Admin email sent successfully to ${recipientEmail} (ID: ${emailId})`);
+        } else if (resendResponse.error) {
+          emailError = resendResponse.error.message || JSON.stringify(resendResponse.error);
+          emailLogs.push(`Admin email failed: ${emailError}`);
+        }
       }
     } catch (emailErr) {
-      emailError = emailErr.message || emailErr;
-      console.error('[BOOKING ROUTE] Full error message if sending fails:', emailErr);
+      emailError = emailErr.message || String(emailErr);
+      console.error('[BOOKING ROUTE EXCEPTION] Error message if sending fails:', emailErr);
     }
 
 
@@ -318,7 +350,8 @@ router.post('/', async (req, res) => {
       webhookError,
       webhookUrl: BOOKING_WEBHOOK_URL,
       emailSent,
-      emailError: emailError ? (typeof emailError === 'object' ? JSON.stringify(emailError) : emailError) : null,
+      emailId,
+      emailError,
       emailLogs,
       booking,
     });
