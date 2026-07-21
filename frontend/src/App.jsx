@@ -24,6 +24,7 @@ import StockAdjustment from './pages/StockAdjustment';
 import StockStatement from './pages/StockStatement';
 import InventoryReports from './pages/InventoryReports';
 import PurchaseReport from './pages/PurchaseReport';
+import Expenses from './pages/Expenses';
 
 const PageSkeletonLoader = () => (
   <div className="p-6 space-y-4 animate-pulse select-none">
@@ -62,6 +63,8 @@ const tabPermissions = {
   vendors: ['Admin', 'Spares', 'Accounts'],
   adjustments: ['Admin', 'Spares', 'Accounts'],
   inventoryreports: ['Admin', 'Spares', 'Accounts'],
+  purchasereport: ['Admin', 'Spares', 'Accounts'],
+  expenses: ['Admin', 'Accounts', 'Service', 'Spares', 'Body Shop'],
   employees: ['Admin', 'Accounts'],
   claims: ['Admin', 'Accounts', 'Service', 'Body Shop'],
   reports: ['Admin', 'Accounts', 'Service', 'Spares'],
@@ -1697,6 +1700,7 @@ function ERPShell({
     else if (path === '/estimates') setActiveTab('estimates');
     else if (path === '/invoices') setActiveTab('invoices');
     else if (path === '/purchasereport' || path === '/inventory/purchase-report') setActiveTab('purchasereport');
+    else if (path === '/expenses' || path === '/inventory/expenses') setActiveTab('expenses');
     else if (path === '/employees') setActiveTab('employees');
     else if (path === '/claims') setActiveTab('claims');
     else if (path === '/reports') setActiveTab('reports');
@@ -1841,6 +1845,8 @@ function ERPShell({
                 <Route path="/adjustments" element={<StockAdjustment token={token} user={user} />} />
                 <Route path="/inventoryreports" element={<InventoryReports token={token} user={user} />} />
                 <Route path="/purchasereport" element={<PurchaseReport token={token} user={user} />} />
+                <Route path="/inventory/expenses" element={<Expenses token={token} user={user} />} />
+                <Route path="/expenses" element={<Expenses token={token} user={user} />} />
                 <Route path="/employees" element={<Employees token={token} user={user} />} />
                 <Route path="/claims" element={<Claims token={token} user={user} />} />
                 <Route path="/reports" element={<Reports token={token} user={user} />} />
