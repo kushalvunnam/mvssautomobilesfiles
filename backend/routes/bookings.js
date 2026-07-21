@@ -113,13 +113,20 @@ router.post('/', async (req, res) => {
       bookingTime || new Date().toLocaleTimeString('en-IN');
 
 
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.WORKSHOP_EMAIL || 'accounts@auto4m.in';
+    const customerEmail = req.body.email ? String(req.body.email).trim() : '';
+
     // ==========================================
-    // 1. PREPARE DATA FOR N8N
+    // 1. PREPARE DATA FOR N8N WEBHOOK
     // ==========================================
 
     const bookingPayload = {
       customerName,
       mobile,
+      email: customerEmail,
+      customerEmail: customerEmail,
+      adminEmail: adminEmail,
+      workshopEmail: adminEmail,
       vehicleNumber,
       vehicleModel: vehicleModel || '',
       serviceType,
@@ -131,8 +138,8 @@ router.post('/', async (req, res) => {
     };
 
     const BOOKING_WEBHOOK_URL = process.env.BOOKING_WEBHOOK_URL || DEFAULT_BOOKING_WEBHOOK_URL;
-    console.log('WEBHOOK URL:', BOOKING_WEBHOOK_URL);
-    console.log('WEBHOOK PAYLOAD:', bookingPayload);
+    console.log('[BOOKING ROUTE] N8N WEBHOOK URL:', BOOKING_WEBHOOK_URL);
+    console.log('[BOOKING ROUTE] N8N WEBHOOK PAYLOAD:', bookingPayload);
 
 
     // ==========================================
