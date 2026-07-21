@@ -273,6 +273,7 @@ router.get('/purchase-history', auth, async (req, res) => {
             partName: pName,
             partNumber: pNum,
             category: pCat,
+            hsnCode: item.hsnCode || invItem.hsnCode || '8708',
             qty,
             purchasePrice,
             gstPercent: item.gstPercent || 18,

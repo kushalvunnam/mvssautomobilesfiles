@@ -125,6 +125,8 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
         partId,
         partNumber: inventoryItem.partNumber,
         partName: inventoryItem.partName,
+        hsnCode: item.hsnCode || inventoryItem.hsnCode || '8708',
+        warehouse: item.warehouse || inventoryItem.warehouse || 'Main Store',
         qty,
         purchasePrice,
         sellingPrice,

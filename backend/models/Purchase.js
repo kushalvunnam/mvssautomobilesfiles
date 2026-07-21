@@ -32,6 +32,14 @@ const purchaseItemSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  hsnCode: {
+    type: String,
+    default: '8708',
+  },
+  warehouse: {
+    type: String,
+    default: 'Main Store',
+  },
   gstPercent: {
     type: Number,
     default: 18,

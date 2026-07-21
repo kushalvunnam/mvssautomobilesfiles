@@ -15,7 +15,11 @@ import {
   Package, 
   Receipt,
   RotateCcw,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  X,
+  Check,
+  CheckCircle
 } from 'lucide-react';
 
 export default function PurchaseReport({ token, user }) {
@@ -29,6 +33,7 @@ export default function PurchaseReport({ token, user }) {
 
   // Data states
   const [vendorsList, setVendorsList] = useState([]);
+  const [inventoryList, setInventoryList] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,9 +42,38 @@ export default function PurchaseReport({ token, user }) {
   const [sortField, setSortField] = useState('purchaseDate');
   const [sortDirection, setSortDirection] = useState('desc');
 
-  // Load vendors list on mount
+  // Purchase Entry Modal State
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [purchaseSubmitting, setPurchaseSubmitting] = useState(false);
+  const [purchaseSuccess, setPurchaseSuccess] = useState('');
+  const [purchaseFormError, setPurchaseFormError] = useState('');
+
+  // Purchase Form fields
+  const [purchaseForm, setPurchaseForm] = useState({
+    vendorId: '',
+    invoiceNo: '',
+    invoiceDate: new Date().toISOString().slice(0, 10),
+    paymentStatus: 'Paid',
+    amountPaid: '',
+    notes: '',
+    // Single item fields
+    selectedPartId: '',
+    partName: '',
+    partNumber: '',
+    hsnCode: '8708',
+    qty: 1,
+    purchasePrice: '',
+    sellingPrice: '',
+    mrp: '',
+    gstPercent: 18,
+    warehouse: 'Main Store'
+  });
+
+  // Load initial datasets on mount
   useEffect(() => {
     fetchVendors();
+    fetchInventoryList();
+    fetchPurchaseReport();
   }, [token]);
 
   const fetchVendors = async () => {
@@ -49,23 +83,26 @@ export default function PurchaseReport({ token, user }) {
       });
       if (res.ok) {
         const data = await res.json();
-        let list = [];
-        if (Array.isArray(data)) {
-          list = data;
-        } else if (data && Array.isArray(data.reports)) {
-          list = data.reports;
-        } else if (data && Array.isArray(data.data)) {
-          list = data.data;
-        } else if (data && Array.isArray(data.vendors)) {
-          list = data.vendors;
-        }
+        let list = Array.isArray(data) ? data : (data.vendors || data.data || []);
         setVendorsList(Array.isArray(list) ? list : []);
-      } else {
-        setVendorsList([]);
       }
     } catch (err) {
       console.error('Failed to fetch vendors:', err);
       setVendorsList([]);
+    }
+  };
+
+  const fetchInventoryList = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/inventory`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setInventoryList(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch inventory:', err);
     }
   };
 
@@ -113,11 +150,6 @@ export default function PurchaseReport({ token, user }) {
     }
   };
 
-  // Automatically load report data on initial mount
-  useEffect(() => {
-    fetchPurchaseReport();
-  }, [token]);
-
   const handleReset = () => {
     setFromDate('');
     setToDate('');
@@ -136,6 +168,128 @@ export default function PurchaseReport({ token, user }) {
     }
   };
 
+  // Auto-fill form when selecting existing inventory part
+  const handleSelectPart = (partId) => {
+    const selected = inventoryList.find(p => p._id === partId);
+    if (selected) {
+      setPurchaseForm(prev => ({
+        ...prev,
+        selectedPartId: selected._id,
+        partName: selected.partName || '',
+        partNumber: selected.partNumber || '',
+        hsnCode: selected.hsnCode || '8708',
+        purchasePrice: selected.purchasePrice !== undefined ? selected.purchasePrice.toString() : '',
+        sellingPrice: selected.sellingPrice !== undefined ? selected.sellingPrice.toString() : '',
+        mrp: selected.mrp !== undefined ? selected.mrp.toString() : '',
+        gstPercent: selected.gstPercent || 18,
+        warehouse: selected.warehouse || 'Main Store',
+        vendorId: prev.vendorId || selected.vendorId || ''
+      }));
+    } else {
+      setPurchaseForm(prev => ({
+        ...prev,
+        selectedPartId: ''
+      }));
+    }
+  };
+
+  // Submit Purchase Entry Form
+  const handlePurchaseSubmit = async (e) => {
+    e.preventDefault();
+    setPurchaseFormError('');
+    setPurchaseSuccess('');
+
+    if (!purchaseForm.vendorId) {
+      setPurchaseFormError('Please select a Supplier / Vendor.');
+      return;
+    }
+    if (!purchaseForm.partName || !purchaseForm.partNumber) {
+      setPurchaseFormError('Part Name and Part Number are required.');
+      return;
+    }
+    if (!purchaseForm.qty || Number(purchaseForm.qty) <= 0) {
+      setPurchaseFormError('Quantity purchased must be at least 1.');
+      return;
+    }
+
+    const qty = Number(purchaseForm.qty) || 1;
+    const rate = Number(purchaseForm.purchasePrice) || 0;
+    const gstPercent = Number(purchaseForm.gstPercent) || 18;
+    const itemTaxable = qty * rate;
+    const itemGst = itemTaxable * (gstPercent / 100);
+    const itemTotal = itemTaxable + itemGst;
+
+    const payload = {
+      vendorId: purchaseForm.vendorId,
+      invoiceNo: purchaseForm.invoiceNo || `INV-${Date.now().toString().slice(-6)}`,
+      invoiceDate: purchaseForm.invoiceDate || new Date().toISOString(),
+      paymentStatus: purchaseForm.paymentStatus,
+      amountPaid: purchaseForm.paymentStatus === 'Paid' ? itemTotal : (Number(purchaseForm.amountPaid) || 0),
+      notes: purchaseForm.notes,
+      items: [{
+        partId: purchaseForm.selectedPartId || undefined,
+        partName: purchaseForm.partName,
+        partNumber: purchaseForm.partNumber,
+        hsnCode: purchaseForm.hsnCode || '8708',
+        qty,
+        purchasePrice: rate,
+        sellingPrice: Number(purchaseForm.sellingPrice) || rate,
+        mrp: Number(purchaseForm.mrp) || rate,
+        gstPercent,
+        warehouse: purchaseForm.warehouse || 'Main Store'
+      }]
+    };
+
+    setPurchaseSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/purchases`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setPurchaseSuccess('Purchase Entry saved successfully! Stock updated.');
+        setTimeout(() => {
+          setShowPurchaseModal(false);
+          setPurchaseSuccess('');
+          // Reset form
+          setPurchaseForm({
+            vendorId: '',
+            invoiceNo: '',
+            invoiceDate: new Date().toISOString().slice(0, 10),
+            paymentStatus: 'Paid',
+            amountPaid: '',
+            notes: '',
+            selectedPartId: '',
+            partName: '',
+            partNumber: '',
+            hsnCode: '8708',
+            qty: 1,
+            purchasePrice: '',
+            sellingPrice: '',
+            mrp: '',
+            gstPercent: 18,
+            warehouse: 'Main Store'
+          });
+          fetchPurchaseReport();
+          fetchInventoryList();
+        }, 1200);
+      } else {
+        const err = await res.json();
+        setPurchaseFormError(err.error || 'Failed to save purchase entry.');
+      }
+    } catch (err) {
+      console.error(err);
+      setPurchaseFormError('Network error while saving purchase entry.');
+    } finally {
+      setPurchaseSubmitting(false);
+    }
+  };
+
   // Ensure reports is always an array before filtering/sorting
   const safeReports = Array.isArray(reports) ? reports : [];
 
@@ -148,6 +302,7 @@ export default function PurchaseReport({ token, user }) {
         (item.partNumber && item.partNumber.toLowerCase().includes(s)) ||
         (item.vendorName && item.vendorName.toLowerCase().includes(s)) ||
         (item.invoiceNo && item.invoiceNo.toLowerCase().includes(s)) ||
+        (item.hsnCode && item.hsnCode.toLowerCase().includes(s)) ||
         (item.warehouse && item.warehouse.toLowerCase().includes(s))
       );
     })
@@ -173,6 +328,14 @@ export default function PurchaseReport({ token, user }) {
   const totalQuantityPurchased = safeReports.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
   const transactionCount = new Set(safeReports.map(item => item.purchaseId || item.purchaseNo || item.invoiceNo || item._id)).size;
 
+  // Calculated form preview values
+  const formQty = Number(purchaseForm.qty) || 0;
+  const formRate = Number(purchaseForm.purchasePrice) || 0;
+  const formGst = Number(purchaseForm.gstPercent) || 0;
+  const formTaxable = formQty * formRate;
+  const formGstAmt = formTaxable * (formGst / 100);
+  const formTotalAmt = formTaxable + formGstAmt;
+
   // Export handlers
   const handleExportExcel = () => {
     const headers = [
@@ -181,11 +344,13 @@ export default function PurchaseReport({ token, user }) {
       'Vendor Name',
       'Part Name',
       'Part Number',
+      'HSN Code',
       'Category',
       'Qty Purchased',
       'Purchase Price (INR)',
       'GST Amount (INR)',
       'Total Amount (INR)',
+      'Payment Status',
       'Warehouse / Location'
     ];
 
@@ -195,11 +360,13 @@ export default function PurchaseReport({ token, user }) {
       `"${(item.vendorName || '').replace(/"/g, '""')}"`,
       `"${(item.partName || '').replace(/"/g, '""')}"`,
       `"${item.partNumber || ''}"`,
+      `"${item.hsnCode || '8708'}"`,
       `"${item.category || 'General'}"`,
       item.qty || 0,
       (item.purchasePrice || 0).toFixed(2),
       (item.gstAmount || 0).toFixed(2),
       (item.total || 0).toFixed(2),
+      `"${item.paymentStatus || 'Paid'}"`,
       `"${(item.warehouse || 'Main Store').replace(/"/g, '""')} ${item.locationRack ? `(${item.locationRack})` : ''}"`
     ]);
 
@@ -232,8 +399,19 @@ export default function PurchaseReport({ token, user }) {
           </p>
         </div>
 
-        {/* Export Buttons */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => {
+              setShowPurchaseModal(true);
+              setPurchaseFormError('');
+              setPurchaseSuccess('');
+            }}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-indigo-600/20 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> New Purchase Entry
+          </button>
+
           <button
             onClick={handleExportExcel}
             className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm shadow-emerald-600/20"
@@ -466,7 +644,7 @@ export default function PurchaseReport({ token, user }) {
                     className="p-3.5 cursor-pointer hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                   >
                     <div className="flex items-center gap-1">
-                      Part Number
+                      Part No & HSN
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </th>
@@ -484,7 +662,7 @@ export default function PurchaseReport({ token, user }) {
                     className="p-3.5 text-right cursor-pointer hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                   >
                     <div className="flex items-center justify-end gap-1">
-                      Purchase Price
+                      Purchase Rate
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </th>
@@ -506,7 +684,7 @@ export default function PurchaseReport({ token, user }) {
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </th>
-                  <th className="p-3.5">Warehouse / Location</th>
+                  <th className="p-3.5">Warehouse / Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-700 dark:text-slate-300">
@@ -527,8 +705,9 @@ export default function PurchaseReport({ token, user }) {
                         <div className="text-[10px] text-indigo-500 font-bold uppercase">{item.category}</div>
                       )}
                     </td>
-                    <td className="p-3.5 font-mono font-bold text-slate-600 dark:text-slate-400">
-                      {item.partNumber || '—'}
+                    <td className="p-3.5 font-mono">
+                      <div className="font-bold text-slate-800 dark:text-slate-200">{item.partNumber || '—'}</div>
+                      <div className="text-[10px] text-slate-400">HSN: {item.hsnCode || '8708'}</div>
                     </td>
                     <td className="p-3.5 text-center font-mono font-bold text-slate-900 dark:text-white">
                       {item.qty || 0}
@@ -542,8 +721,15 @@ export default function PurchaseReport({ token, user }) {
                     <td className="p-3.5 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
                       ₹{(Number(item.total) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-3.5 font-mono text-[11px] text-slate-500">
-                      {item.warehouse || 'Main Store'} {item.locationRack ? `(${item.locationRack})` : ''}
+                    <td className="p-3.5 font-mono text-[11px]">
+                      <div className="font-bold text-slate-700 dark:text-slate-300">{item.warehouse || 'Main Store'}</div>
+                      <span className={`inline-block px-1.5 py-0.5 text-[9px] font-black rounded uppercase tracking-wider ${
+                        item.paymentStatus === 'Paid' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' :
+                        item.paymentStatus === 'Partially Paid' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400' :
+                        'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400'
+                      }`}>
+                        {item.paymentStatus || 'Paid'}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -556,6 +742,262 @@ export default function PurchaseReport({ token, user }) {
           )}
         </div>
       </div>
+
+      {/* Dedicated Purchase Entry Modal */}
+      {showPurchaseModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex justify-center items-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <ShoppingBag className="w-5 h-5 text-indigo-400" />
+                <h3 className="font-black text-sm uppercase tracking-wider">New Purchase Entry</h3>
+              </div>
+              <button
+                onClick={() => setShowPurchaseModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form onSubmit={handlePurchaseSubmit} className="p-6 space-y-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              {purchaseFormError && (
+                <div className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/80 text-rose-600 dark:text-rose-300 rounded-xl text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{purchaseFormError}</span>
+                </div>
+              )}
+
+              {purchaseSuccess && (
+                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  <span>{purchaseSuccess}</span>
+                </div>
+              )}
+
+              {/* Vendor & Invoice Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div className="sm:col-span-1">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Supplier / Vendor *</label>
+                  <select
+                    value={purchaseForm.vendorId}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, vendorId: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    required
+                  >
+                    <option value="">Select Supplier / Vendor</option>
+                    {Array.isArray(vendorsList) && vendorsList.map(v => (
+                      <option key={v._id} value={v._id}>{v.name} ({v.vendorCode || 'Vendor'})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Purchase Invoice / Bill No *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. INV-9842"
+                    value={purchaseForm.invoiceNo}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, invoiceNo: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono focus:outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Purchase Date *</label>
+                  <input
+                    type="date"
+                    value={purchaseForm.invoiceDate}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Select Existing Part or Custom Entry */}
+              <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 p-3.5 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase text-indigo-900 dark:text-indigo-300">Part Procurement Details</span>
+                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Select existing SKU to auto-fill</span>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Existing Part SKU (Optional Auto-fill)</label>
+                  <select
+                    value={purchaseForm.selectedPartId}
+                    onChange={(e) => handleSelectPart(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="">Custom Part / Search Existing Inventory...</option>
+                    {Array.isArray(inventoryList) && inventoryList.map(item => (
+                      <option key={item._id} value={item._id}>
+                        {item.partName} — ({item.partNumber}) | Stock: {item.stockQuantity}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Part Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Engine Oil 5W30"
+                      value={purchaseForm.partName}
+                      onChange={(e) => setPurchaseForm(prev => ({ ...prev, partName: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Part Number *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. EO-5W30-1L"
+                      value={purchaseForm.partNumber}
+                      onChange={(e) => setPurchaseForm(prev => ({ ...prev, partNumber: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono focus:outline-none focus:border-indigo-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">HSN Code</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 8708"
+                      value={purchaseForm.hsnCode}
+                      onChange={(e) => setPurchaseForm(prev => ({ ...prev, hsnCode: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quantity, Rate & Calculations */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Quantity Purchased *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={purchaseForm.qty}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, qty: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono font-bold focus:outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Purchase Rate (₹) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={purchaseForm.purchasePrice}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, purchasePrice: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono font-bold focus:outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">GST %</label>
+                  <select
+                    value={purchaseForm.gstPercent}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, gstPercent: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="0">0% (Exempted)</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                    <option value="28">28%</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Warehouse / Location</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Main Store"
+                    value={purchaseForm.warehouse}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, warehouse: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Price calculations preview */}
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-4 font-mono text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Taxable Subtotal</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">₹{formTaxable.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">GST Amount</span>
+                  <span className="font-bold text-purple-600 dark:text-purple-400">₹{formGstAmt.toFixed(2)} ({formGst}%)</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Total Amount</span>
+                  <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">₹{formTotalAmt.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Payment Status & Notes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Payment Status</label>
+                  <select
+                    value={purchaseForm.paymentStatus}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, paymentStatus: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="Paid">Paid</option>
+                    <option value="Partially Paid">Partially Paid</option>
+                    <option value="Unpaid">Unpaid</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Notes / Remarks (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Batch #4092, Supplier Bill Copy Received"
+                    value={purchaseForm.notes}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end items-center gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowPurchaseModal(false)}
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={purchaseSubmitting}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+                >
+                  {purchaseSubmitting ? 'Saving Entry...' : 'Save Purchase Entry'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

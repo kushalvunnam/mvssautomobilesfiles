@@ -111,21 +111,69 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
   }
 });
 
-// Restock purchase entry (add quantity to existing stock)
+// Restock purchase entry (add quantity to existing stock & record purchase transaction)
 router.post('/purchase', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
   try {
-    const { partNumber, quantityToAdd, purchasePrice, sellingPrice, mrp } = req.body;
+    const { partNumber, quantityToAdd, purchasePrice, sellingPrice, mrp, invoiceNo, vendorName, vendorId, notes } = req.body;
     const item = await Inventory.findOne({ partNumber: partNumber.trim() });
     if (!item) return res.status(404).send({ error: 'Part not found. Create it first.' });
 
-    item.stockQuantity += Number(quantityToAdd);
+    const qty = Number(quantityToAdd) || 0;
+    const rate = purchasePrice !== undefined ? Number(purchasePrice) : item.purchasePrice;
+
+    item.stockQuantity += qty;
     if (purchasePrice !== undefined) item.purchasePrice = Number(purchasePrice);
     if (sellingPrice !== undefined) item.sellingPrice = Number(sellingPrice);
     if (mrp !== undefined) item.mrp = Number(mrp);
 
     await item.save();
-    await logAction(req.user, 'INVENTORY_RESTOCK', `Restocked ${quantityToAdd} units of ${item.partName}. Current stock: ${item.stockQuantity}`, req);
-    res.send(item);
+
+    // Generate dedicated Purchase document entry
+    const roundToTwo = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
+    const count = await Purchase.countDocuments();
+    const purchaseNo = `PUR-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(count + 1).padStart(4, '0')}`;
+    const gstPercent = item.gstPercent || 18;
+    const taxable = roundToTwo(qty * rate);
+    const gstAmt = roundToTwo(taxable * (gstPercent / 100));
+    const totalAmt = roundToTwo(taxable + gstAmt);
+
+    const purchaseEntry = new Purchase({
+      purchaseNo,
+      vendorId: vendorId || item.vendorId || item._id,
+      vendorName: vendorName || item.vendorName || item.supplier || 'General Supplier',
+      date: new Date(),
+      invoiceNo: invoiceNo || `INV-${Date.now().toString().slice(-6)}`,
+      invoiceDate: new Date(),
+      items: [{
+        partId: item._id,
+        partNumber: item.partNumber,
+        partName: item.partName,
+        hsnCode: item.hsnCode || '8708',
+        warehouse: item.warehouse || 'Main Store',
+        qty,
+        purchasePrice: rate,
+        sellingPrice: item.sellingPrice,
+        mrp: item.mrp || item.sellingPrice,
+        gstPercent,
+        taxableAmount: taxable,
+        gstAmount: gstAmt,
+        total: totalAmt
+      }],
+      totals: {
+        subtotal: taxable,
+        taxableAmount: taxable,
+        gstTotal: gstAmt,
+        grandTotal: totalAmt
+      },
+      paymentStatus: 'Paid',
+      amountPaid: totalAmt,
+      notes: notes || 'Restock Purchase Entry',
+      createdBy: req.user ? req.user.name : 'Staff'
+    });
+    await purchaseEntry.save();
+
+    await logAction(req.user, 'INVENTORY_RESTOCK', `Restocked ${qty} units of ${item.partName}. Current stock: ${item.stockQuantity}`, req);
+    res.send({ item, purchase: purchaseEntry });
   } catch (error) {
     res.status(400).send({ error: 'Restock failed: ' + error.message });
   }
