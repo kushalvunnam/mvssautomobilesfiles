@@ -83,7 +83,7 @@ function postToBookingWebhook(payload) {
 // Create new booking (Public)
 router.post('/', async (req, res) => {
   try {
-    console.log('BOOKING ROUTE HIT');
+    console.log(`[BOOKING ROUTE] Booking received for ${customerName} (${vehicleNumber})`);
     console.log('REQUEST BODY:', req.body);
 
     const {
@@ -182,6 +182,7 @@ router.post('/', async (req, res) => {
     });
 
     await booking.save();
+    console.log(`[BOOKING ROUTE] Booking saved with ID: ${booking._id}`);
 
 
     // ==========================================
@@ -260,9 +261,6 @@ router.post('/', async (req, res) => {
     let emailLogs = [];
 
     try {
-      const adminEmail = process.env.ADMIN_EMAIL || process.env.WORKSHOP_EMAIL || 'accounts@auto4m.in';
-      const customerEmail = req.body.email ? String(req.body.email).trim() : null;
-
       const htmlBodyAdmin = `
         <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px;">
           <h2 style="color: #4f46e5; margin-top: 0;">New Service Booking Received</h2>
@@ -281,21 +279,23 @@ router.post('/', async (req, res) => {
         </div>
       `;
 
-      // 1. Send Admin / Workshop Notification Email
-      console.log(`[BOOKING ROUTE] Dispatching admin notification email to ${adminEmail}...`);
+      // 1. Send Admin / Workshop Notification Email to verified address accounts@auto4m.in
+      console.log(`[BOOKING ROUTE] Sending email to ${adminEmail}...`);
       const adminResult = await sendEmail({
         to: adminEmail,
+        from: 'MVSS Automobiles <accounts@auto4m.in>',
         subject: `New Service Booking: ${customerName} (${vehicleNumber})`,
         html: htmlBodyAdmin,
       });
 
       if (adminResult.success) {
         emailSent = true;
+        console.log(`[BOOKING ROUTE] Email sent successfully to ${adminEmail}`);
         emailLogs.push(`Admin email sent successfully to ${adminEmail}`);
       } else {
         emailError = adminResult.error;
+        console.error('[BOOKING ROUTE] Full error message if sending fails:', adminResult.error);
         emailLogs.push(`Admin email failed: ${typeof adminResult.error === 'object' ? JSON.stringify(adminResult.error) : adminResult.error}`);
-        console.error('[BOOKING ROUTE] Admin notification email failed:', adminResult.error);
       }
 
       // 2. Send Customer Confirmation Email (if customer provided an email address)
@@ -316,24 +316,26 @@ router.post('/', async (req, res) => {
           </div>
         `;
 
-        console.log(`[BOOKING ROUTE] Dispatching customer confirmation email to ${customerEmail}...`);
+        console.log(`[BOOKING ROUTE] Sending email to customer ${customerEmail}...`);
         const custResult = await sendEmail({
           to: customerEmail,
+          from: 'MVSS Automobiles <accounts@auto4m.in>',
           subject: 'Service Booking Confirmation - MVSS Automobiles',
           html: htmlBodyCustomer,
         });
 
         if (custResult.success) {
           emailSent = true;
+          console.log(`[BOOKING ROUTE] Email sent successfully to ${customerEmail}`);
           emailLogs.push(`Customer email sent successfully to ${customerEmail}`);
         } else {
+          console.error('[BOOKING ROUTE] Full error message if sending fails:', custResult.error);
           emailLogs.push(`Customer email failed: ${typeof custResult.error === 'object' ? JSON.stringify(custResult.error) : custResult.error}`);
-          console.error('[BOOKING ROUTE] Customer confirmation email failed:', custResult.error);
         }
       }
     } catch (emailErr) {
       emailError = emailErr.message || emailErr;
-      console.error('[BOOKING ROUTE] Exception in email notification dispatch:', emailErr);
+      console.error('[BOOKING ROUTE] Full error message if sending fails:', emailErr);
     }
 
 
