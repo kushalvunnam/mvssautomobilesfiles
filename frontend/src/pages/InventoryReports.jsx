@@ -9,8 +9,10 @@ import {
   FileSpreadsheet, 
   Printer, 
   Search,
-  DollarSign
+  DollarSign,
+  ShoppingBag
 } from 'lucide-react';
+import PurchaseReport from './PurchaseReport';
 
 export default function InventoryReports({ token, user }) {
   const [activeTab, setActiveTab] = useState('statement');
@@ -108,11 +110,25 @@ export default function InventoryReports({ token, user }) {
         >
           <Wrench className="w-4 h-4" /> Movement & Audit Logs
         </button>
+
+        <button
+          onClick={() => setActiveTab('purchase')}
+          className={`pb-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${
+            activeTab === 'purchase'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" /> Purchase History Report
+        </button>
       </div>
 
       {/* Report Content */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm">
-        {loading ? (
+      {activeTab === 'purchase' ? (
+        <PurchaseReport token={token} user={user} />
+      ) : (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm">
+          {loading ? (
           <div className="p-12 text-center text-slate-400 text-xs font-semibold">Generating report...</div>
         ) : activeTab === 'statement' ? (
           <div className="space-y-4">
@@ -236,6 +252,7 @@ export default function InventoryReports({ token, user }) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

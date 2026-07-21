@@ -188,4 +188,117 @@ router.get('/inventory-movement', auth, async (req, res) => {
   }
 });
 
+// 4. Purchase History Report
+router.get('/purchase-history', auth, async (req, res) => {
+  try {
+    const { fromDate, toDate, vendorId, partName, category, search } = req.query;
+    let query = {};
+
+    if (vendorId) {
+      query.vendorId = vendorId;
+    }
+
+    if (fromDate || toDate) {
+      query.date = {};
+      if (fromDate) {
+        const start = new Date(fromDate);
+        start.setHours(0, 0, 0, 0);
+        query.date.$gte = start;
+      }
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        query.date.$lte = end;
+      }
+    }
+
+    const purchases = await Purchase.find(query)
+      .populate('items.partId')
+      .sort({ date: -1, createdAt: -1 });
+
+    const roundToTwo = num => Math.round(((num || 0) + Number.EPSILON) * 100) / 100;
+    const itemsList = [];
+    let totalPurchaseAmount = 0;
+    let totalQuantityPurchased = 0;
+
+    for (const p of purchases) {
+      if (p.items && Array.isArray(p.items)) {
+        for (const item of p.items) {
+          const invItem = item.partId || {};
+          const pName = item.partName || invItem.partName || '';
+          const pNum = item.partNumber || invItem.partNumber || '';
+          const pCat = invItem.category || 'General Spares';
+          const pWarehouse = invItem.warehouse || 'Main Store';
+          const pRack = invItem.locationRack || '';
+
+          // Filter by partName if provided
+          if (partName && !pName.toLowerCase().includes(partName.toLowerCase()) && !pNum.toLowerCase().includes(partName.toLowerCase())) {
+            continue;
+          }
+
+          // Filter by category if provided
+          if (category && pCat.toLowerCase() !== category.toLowerCase()) {
+            continue;
+          }
+
+          // Filter by general search if provided
+          if (search) {
+            const sLower = search.toLowerCase();
+            const matches = pName.toLowerCase().includes(sLower) ||
+                            pNum.toLowerCase().includes(sLower) ||
+                            (p.vendorName && p.vendorName.toLowerCase().includes(sLower)) ||
+                            (p.invoiceNo && p.invoiceNo.toLowerCase().includes(sLower)) ||
+                            (p.purchaseNo && p.purchaseNo.toLowerCase().includes(sLower));
+            if (!matches) continue;
+          }
+
+          const qty = Number(item.qty) || 0;
+          const purchasePrice = Number(item.purchasePrice) || 0;
+          const gstAmount = Number(item.gstAmount) || 0;
+          const total = Number(item.total) || roundToTwo(qty * purchasePrice + gstAmount);
+
+          totalPurchaseAmount += total;
+          totalQuantityPurchased += qty;
+
+          itemsList.push({
+            _id: `${p._id}_${item._id || item.partNumber}`,
+            purchaseId: p._id,
+            purchaseNo: p.purchaseNo,
+            invoiceNo: p.invoiceNo || p.purchaseNo,
+            purchaseDate: p.invoiceDate || p.date,
+            createdAt: p.createdAt || p.date,
+            vendorId: p.vendorId,
+            vendorName: p.vendorName,
+            partId: item.partId ? item.partId._id : null,
+            partName: pName,
+            partNumber: pNum,
+            category: pCat,
+            qty,
+            purchasePrice,
+            gstPercent: item.gstPercent || 18,
+            gstAmount,
+            total,
+            warehouse: pWarehouse,
+            locationRack: pRack,
+            paymentStatus: p.paymentStatus,
+            createdBy: p.createdBy
+          });
+        }
+      }
+    }
+
+    res.send({
+      summary: {
+        totalPurchaseAmount: roundToTwo(totalPurchaseAmount),
+        totalQuantityPurchased,
+        transactionCount: purchases.length,
+        itemsCount: itemsList.length
+      },
+      items: itemsList
+    });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to generate purchase history report: ' + error.message });
+  }
+});
+
 module.exports = router;
