@@ -414,7 +414,7 @@ export default function PurchaseReport({ token, user }) {
 
           <button
             onClick={handleExportExcel}
-            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm shadow-emerald-600/20"
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 cursor-pointer"
             title="Export report to Excel / CSV"
           >
             <FileSpreadsheet className="w-4 h-4" /> Export Excel
@@ -422,7 +422,7 @@ export default function PurchaseReport({ token, user }) {
 
           <button
             onClick={handlePrint}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
             title="Print or Save as PDF"
           >
             <Printer className="w-4 h-4" /> Print / Export PDF
@@ -441,7 +441,7 @@ export default function PurchaseReport({ token, user }) {
           </div>
           <button
             onClick={handleReset}
-            className="text-[11px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center gap-1 transition-colors"
+            className="text-[11px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center gap-1 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3 h-3" /> Reset Filters
           </button>
@@ -519,7 +519,7 @@ export default function PurchaseReport({ token, user }) {
         <div className="flex justify-end pt-2">
           <button
             onClick={fetchPurchaseReport}
-            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/10"
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/10 cursor-pointer"
           >
             Generate Report
           </button>
@@ -743,12 +743,13 @@ export default function PurchaseReport({ token, user }) {
         </div>
       </div>
 
-      {/* Dedicated Purchase Entry Modal */}
+      {/* Desktop-Optimized Fixed/Sticky Purchase Entry Modal */}
       {showPurchaseModal && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex justify-center items-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95">
-            {/* Modal Header */}
-            <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex justify-center items-center z-50 p-3 sm:p-6 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-5xl max-h-[92vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            
+            {/* Modal Header (Fixed at Top) */}
+            <div className="flex-none p-4 px-6 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
               <div className="flex items-center gap-2.5">
                 <ShoppingBag className="w-5 h-5 text-indigo-400" />
                 <h3 className="font-black text-sm uppercase tracking-wider">New Purchase Entry</h3>
@@ -761,30 +762,30 @@ export default function PurchaseReport({ token, user }) {
               </button>
             </div>
 
-            {/* Modal Body / Form */}
-            <form onSubmit={handlePurchaseSubmit} className="p-6 space-y-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
+            {/* Modal Body / Scrollable Form Area */}
+            <form id="purchase-entry-form" onSubmit={handlePurchaseSubmit} className="flex-1 overflow-y-auto p-5 px-6 space-y-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
               {purchaseFormError && (
-                <div className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/80 text-rose-600 dark:text-rose-300 rounded-xl text-xs flex items-center gap-2">
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/80 text-rose-600 dark:text-rose-300 rounded-xl text-xs flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   <span>{purchaseFormError}</span>
                 </div>
               )}
 
               {purchaseSuccess && (
-                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs flex items-center gap-2">
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 shrink-0" />
                   <span>{purchaseSuccess}</span>
                 </div>
               )}
 
-              {/* Vendor & Invoice Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                <div className="sm:col-span-1">
+              {/* Row 1: Vendor & Invoice Info (Responsive 4 Columns on Desktop) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Supplier / Vendor *</label>
                   <select
                     value={purchaseForm.vendorId}
                     onChange={(e) => setPurchaseForm(prev => ({ ...prev, vendorId: e.target.value }))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer text-xs"
                     required
                   >
                     <option value="">Select Supplier / Vendor</option>
@@ -801,7 +802,7 @@ export default function PurchaseReport({ token, user }) {
                     placeholder="e.g. INV-9842"
                     value={purchaseForm.invoiceNo}
                     onChange={(e) => setPurchaseForm(prev => ({ ...prev, invoiceNo: e.target.value }))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono focus:outline-none focus:border-indigo-500 text-xs"
                     required
                   />
                 </div>
@@ -812,83 +813,96 @@ export default function PurchaseReport({ token, user }) {
                     type="date"
                     value={purchaseForm.invoiceDate}
                     onChange={(e) => setPurchaseForm(prev => ({ ...prev, invoiceDate: e.target.value }))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500 text-xs"
                     required
                   />
                 </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Payment Status</label>
+                  <select
+                    value={purchaseForm.paymentStatus}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, paymentStatus: e.target.value }))}
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer text-xs"
+                  >
+                    <option value="Paid">Paid</option>
+                    <option value="Partially Paid">Partially Paid</option>
+                    <option value="Unpaid">Unpaid</option>
+                  </select>
+                </div>
               </div>
 
-              {/* Select Existing Part or Custom Entry */}
-              <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 p-3.5 rounded-2xl space-y-3">
+              {/* Row 2: Part Details Section (Compact Desktop Grid) */}
+              <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 p-3.5 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-black uppercase text-indigo-900 dark:text-indigo-300">Part Procurement Details</span>
                   <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Select existing SKU to auto-fill</span>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Existing Part SKU (Optional Auto-fill)</label>
-                  <select
-                    value={purchaseForm.selectedPartId}
-                    onChange={(e) => handleSelectPart(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer text-slate-800 dark:text-slate-200"
-                  >
-                    <option value="">Custom Part / Search Existing Inventory...</option>
-                    {Array.isArray(inventoryList) && inventoryList.map(item => (
-                      <option key={item._id} value={item._id}>
-                        {item.partName} — ({item.partNumber}) | Stock: {item.stockQuantity}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                  <div className="lg:col-span-5">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Existing SKU (Auto-fill)</label>
+                    <select
+                      value={purchaseForm.selectedPartId}
+                      onChange={(e) => handleSelectPart(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer text-slate-800 dark:text-slate-200 text-xs"
+                    >
+                      <option value="">Custom Part / Search Inventory...</option>
+                      {Array.isArray(inventoryList) && inventoryList.map(item => (
+                        <option key={item._id} value={item._id}>
+                          {item.partName} — ({item.partNumber}) | Stock: {item.stockQuantity}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
+                  <div className="lg:col-span-3">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Part Name *</label>
                     <input
                       type="text"
                       placeholder="e.g. Engine Oil 5W30"
                       value={purchaseForm.partName}
                       onChange={(e) => setPurchaseForm(prev => ({ ...prev, partName: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500 text-xs"
                       required
                     />
                   </div>
 
-                  <div>
+                  <div className="lg:col-span-2">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Part Number *</label>
                     <input
                       type="text"
-                      placeholder="e.g. EO-5W30-1L"
+                      placeholder="e.g. EO-5W30"
                       value={purchaseForm.partNumber}
                       onChange={(e) => setPurchaseForm(prev => ({ ...prev, partNumber: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono focus:outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono focus:outline-none focus:border-indigo-500 text-xs"
                       required
                     />
                   </div>
 
-                  <div>
+                  <div className="lg:col-span-2">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">HSN Code</label>
                     <input
                       type="text"
                       placeholder="e.g. 8708"
                       value={purchaseForm.hsnCode}
                       onChange={(e) => setPurchaseForm(prev => ({ ...prev, hsnCode: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono focus:outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono focus:outline-none focus:border-indigo-500 text-xs"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Quantity, Rate & Calculations */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              {/* Row 3: Quantity, Pricing, GST & Location (Responsive 5 Columns on Desktop) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Quantity Purchased *</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Qty Purchased *</label>
                   <input
                     type="number"
                     min="1"
                     value={purchaseForm.qty}
                     onChange={(e) => setPurchaseForm(prev => ({ ...prev, qty: e.target.value }))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono font-bold focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono font-bold focus:outline-none focus:border-indigo-500 text-xs"
                     required
                   />
                 </div>
@@ -902,7 +916,7 @@ export default function PurchaseReport({ token, user }) {
                     placeholder="0.00"
                     value={purchaseForm.purchasePrice}
                     onChange={(e) => setPurchaseForm(prev => ({ ...prev, purchasePrice: e.target.value }))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono font-bold focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono font-bold focus:outline-none focus:border-indigo-500 text-xs"
                     required
                   />
                 </div>
@@ -912,7 +926,7 @@ export default function PurchaseReport({ token, user }) {
                   <select
                     value={purchaseForm.gstPercent}
                     onChange={(e) => setPurchaseForm(prev => ({ ...prev, gstPercent: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer text-xs"
                   >
                     <option value="0">0% (Exempted)</option>
                     <option value="5">5%</option>
@@ -929,72 +943,75 @@ export default function PurchaseReport({ token, user }) {
                     placeholder="e.g. Main Store"
                     value={purchaseForm.warehouse}
                     onChange={(e) => setPurchaseForm(prev => ({ ...prev, warehouse: e.target.value }))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Amount Paid (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder={formTotalAmt ? formTotalAmt.toFixed(2) : "0.00"}
+                    value={purchaseForm.amountPaid}
+                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, amountPaid: e.target.value }))}
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono font-bold focus:outline-none focus:border-indigo-500 text-xs"
                   />
                 </div>
               </div>
 
-              {/* Price calculations preview */}
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-4 font-mono text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Taxable Subtotal</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">₹{formTaxable.toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">GST Amount</span>
-                  <span className="font-bold text-purple-600 dark:text-purple-400">₹{formGstAmt.toFixed(2)} ({formGst}%)</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Total Amount</span>
-                  <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">₹{formTotalAmt.toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Payment Status & Notes */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Payment Status</label>
-                  <select
-                    value={purchaseForm.paymentStatus}
-                    onChange={(e) => setPurchaseForm(prev => ({ ...prev, paymentStatus: e.target.value }))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
-                  >
-                    <option value="Paid">Paid</option>
-                    <option value="Partially Paid">Partially Paid</option>
-                    <option value="Unpaid">Unpaid</option>
-                  </select>
-                </div>
-
-                <div>
+              {/* Row 4: Notes & Live Price Calculations (Side-by-Side Grid) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+                <div className="lg:col-span-6">
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Notes / Remarks (Optional)</label>
                   <input
                     type="text"
                     placeholder="e.g. Batch #4092, Supplier Bill Copy Received"
                     value={purchaseForm.notes}
                     onChange={(e) => setPurchaseForm(prev => ({ ...prev, notes: e.target.value }))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:border-indigo-500 text-xs"
                   />
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end items-center gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowPurchaseModal(false)}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={purchaseSubmitting}
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
-                >
-                  {purchaseSubmitting ? 'Saving Entry...' : 'Save Purchase Entry'}
-                </button>
+                <div className="lg:col-span-6">
+                  <div className="p-2.5 px-4 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 rounded-xl flex items-center justify-between font-mono text-xs">
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase block">Taxable Subtotal</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">₹{formTaxable.toFixed(2)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase block">GST Amount</span>
+                      <span className="font-bold text-purple-600 dark:text-purple-400">₹{formGstAmt.toFixed(2)} ({formGst}%)</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase block">Total Amount</span>
+                      <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">₹{formTotalAmt.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </form>
+
+            {/* Modal Action Footer (Fixed at Bottom) */}
+            <div className="flex-none p-4 px-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex justify-end items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowPurchaseModal(false)}
+                className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="purchase-entry-form"
+                disabled={purchaseSubmitting}
+                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+              >
+                {purchaseSubmitting ? 'Saving Entry...' : 'Save Purchase Entry'}
+              </button>
+            </div>
+
           </div>
         </div>
       )}
