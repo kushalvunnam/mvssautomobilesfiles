@@ -288,13 +288,16 @@ router.get('/purchase-history', auth, async (req, res) => {
     }
 
     res.send({
+      success: true,
+      reports: itemsList,
+      data: itemsList,
+      items: itemsList,
       summary: {
         totalPurchaseAmount: roundToTwo(totalPurchaseAmount),
         totalQuantityPurchased,
         transactionCount: purchases.length,
         itemsCount: itemsList.length
-      },
-      items: itemsList
+      }
     });
   } catch (error) {
     res.status(500).send({ error: 'Failed to generate purchase history report: ' + error.message });

@@ -15,7 +15,7 @@ import {
   Package, 
   Receipt,
   RotateCcw,
-  Download
+  AlertTriangle
 } from 'lucide-react';
 
 export default function PurchaseReport({ token, user }) {
@@ -29,8 +29,9 @@ export default function PurchaseReport({ token, user }) {
 
   // Data states
   const [vendorsList, setVendorsList] = useState([]);
-  const [reportData, setReportData] = useState({ summary: { totalPurchaseAmount: 0, totalQuantityPurchased: 0, transactionCount: 0, itemsCount: 0 }, items: [] });
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   // Sorting state
   const [sortField, setSortField] = useState('purchaseDate');
@@ -48,15 +49,29 @@ export default function PurchaseReport({ token, user }) {
       });
       if (res.ok) {
         const data = await res.json();
-        setVendorsList(data);
+        let list = [];
+        if (Array.isArray(data)) {
+          list = data;
+        } else if (data && Array.isArray(data.reports)) {
+          list = data.reports;
+        } else if (data && Array.isArray(data.data)) {
+          list = data.data;
+        } else if (data && Array.isArray(data.vendors)) {
+          list = data.vendors;
+        }
+        setVendorsList(Array.isArray(list) ? list : []);
+      } else {
+        setVendorsList([]);
       }
     } catch (err) {
       console.error('Failed to fetch vendors:', err);
+      setVendorsList([]);
     }
   };
 
   const fetchPurchaseReport = async () => {
     setLoading(true);
+    setError('');
     try {
       const queryParams = new URLSearchParams();
       if (fromDate) queryParams.append('fromDate', fromDate);
@@ -71,10 +86,28 @@ export default function PurchaseReport({ token, user }) {
 
       if (res.ok) {
         const data = await res.json();
-        setReportData(data);
+        let extracted = [];
+        if (Array.isArray(data)) {
+          extracted = data;
+        } else if (data && Array.isArray(data.reports)) {
+          extracted = data.reports;
+        } else if (data && Array.isArray(data.data)) {
+          extracted = data.data;
+        } else if (data && Array.isArray(data.items)) {
+          extracted = data.items;
+        } else if (data && Array.isArray(data.purchases)) {
+          extracted = data.purchases;
+        }
+        setReports(Array.isArray(extracted) ? extracted : []);
+      } else {
+        const errObj = await res.json().catch(() => ({}));
+        setError(errObj.error || 'Failed to fetch purchase report data.');
+        setReports([]);
       }
     } catch (err) {
       console.error('Failed to fetch purchase report:', err);
+      setError('Failed to connect to server.');
+      setReports([]);
     } finally {
       setLoading(false);
     }
@@ -103,8 +136,10 @@ export default function PurchaseReport({ token, user }) {
     }
   };
 
-  // In-table search & sorting logic
-  const filteredAndSortedItems = (reportData.items || [])
+  // Ensure reports is always an array before filtering/sorting
+  const safeReports = Array.isArray(reports) ? reports : [];
+
+  const filteredAndSortedItems = safeReports
     .filter(item => {
       if (!searchQuery) return true;
       const s = searchQuery.toLowerCase();
@@ -133,6 +168,11 @@ export default function PurchaseReport({ token, user }) {
       return 0;
     });
 
+  // Calculate totals safely
+  const totalPurchaseAmount = safeReports.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+  const totalQuantityPurchased = safeReports.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  const transactionCount = new Set(safeReports.map(item => item.purchaseId || item.purchaseNo || item.invoiceNo || item._id)).size;
+
   // Export handlers
   const handleExportExcel = () => {
     const headers = [
@@ -150,7 +190,7 @@ export default function PurchaseReport({ token, user }) {
     ];
 
     const rows = filteredAndSortedItems.map(item => [
-      `"${new Date(item.purchaseDate).toLocaleDateString('en-IN')}"`,
+      `"${new Date(item.purchaseDate || Date.now()).toLocaleDateString('en-IN')}"`,
       `"${item.invoiceNo || ''}"`,
       `"${(item.vendorName || '').replace(/"/g, '""')}"`,
       `"${(item.partName || '').replace(/"/g, '""')}"`,
@@ -261,7 +301,7 @@ export default function PurchaseReport({ token, user }) {
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 font-bold focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
               <option value="">All Suppliers / Vendors</option>
-              {vendorsList.map(v => (
+              {Array.isArray(vendorsList) && vendorsList.map(v => (
                 <option key={v._id} value={v._id}>{v.name} ({v.vendorCode || 'Vendor'})</option>
               ))}
             </select>
@@ -318,7 +358,7 @@ export default function PurchaseReport({ token, user }) {
           <div>
             <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Total Purchase Amount</span>
             <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
-              ₹{(reportData.summary?.totalPurchaseAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{totalPurchaseAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
         </div>
@@ -331,7 +371,7 @@ export default function PurchaseReport({ token, user }) {
           <div>
             <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Total Quantity Purchased</span>
             <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
-              {(reportData.summary?.totalQuantityPurchased || 0).toLocaleString('en-IN')} <span className="text-xs font-bold text-slate-400">units</span>
+              {totalQuantityPurchased.toLocaleString('en-IN')} <span className="text-xs font-bold text-slate-400">units</span>
             </div>
           </div>
         </div>
@@ -344,7 +384,7 @@ export default function PurchaseReport({ token, user }) {
           <div>
             <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Purchase Transactions</span>
             <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
-              {reportData.summary?.transactionCount || 0} <span className="text-xs font-bold text-slate-400">entries</span>
+              {transactionCount} <span className="text-xs font-bold text-slate-400">entries</span>
             </div>
           </div>
         </div>
@@ -376,7 +416,12 @@ export default function PurchaseReport({ token, user }) {
             <div className="p-12 text-center text-slate-400 text-xs font-semibold">
               Loading purchase history report...
             </div>
-          ) : filteredAndSortedItems.length > 0 ? (
+          ) : error ? (
+            <div className="p-8 text-center text-rose-500 font-semibold text-xs flex items-center justify-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              <span>{error}</span>
+            </div>
+          ) : Array.isArray(filteredAndSortedItems) && filteredAndSortedItems.length > 0 ? (
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-950 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-800">
@@ -465,35 +510,37 @@ export default function PurchaseReport({ token, user }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-700 dark:text-slate-300">
-                {filteredAndSortedItems.map(item => (
-                  <tr key={item._id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/20 transition-colors">
+                {filteredAndSortedItems.map((item, idx) => (
+                  <tr key={item._id || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/20 transition-colors">
                     <td className="p-3.5 font-mono text-[11px]">
-                      {new Date(item.purchaseDate).toLocaleDateString('en-IN')}
+                      {new Date(item.purchaseDate || Date.now()).toLocaleDateString('en-IN')}
                     </td>
                     <td className="p-3.5 font-mono font-bold text-indigo-650 dark:text-indigo-400">
-                      {item.invoiceNo || item.purchaseNo}
+                      {item.invoiceNo || item.purchaseNo || 'N/A'}
                     </td>
                     <td className="p-3.5 font-bold text-slate-800 dark:text-white">
-                      {item.vendorName}
+                      {item.vendorName || '—'}
                     </td>
                     <td className="p-3.5">
-                      <div className="font-bold text-slate-800 dark:text-slate-200">{item.partName}</div>
-                      <div className="text-[10px] text-indigo-500 font-bold uppercase">{item.category}</div>
+                      <div className="font-bold text-slate-800 dark:text-slate-200">{item.partName || '—'}</div>
+                      {item.category && (
+                        <div className="text-[10px] text-indigo-500 font-bold uppercase">{item.category}</div>
+                      )}
                     </td>
                     <td className="p-3.5 font-mono font-bold text-slate-600 dark:text-slate-400">
-                      {item.partNumber}
+                      {item.partNumber || '—'}
                     </td>
                     <td className="p-3.5 text-center font-mono font-bold text-slate-900 dark:text-white">
-                      {item.qty}
+                      {item.qty || 0}
                     </td>
                     <td className="p-3.5 text-right font-mono font-semibold">
-                      ₹{item.purchasePrice.toFixed(2)}
+                      ₹{(Number(item.purchasePrice) || 0).toFixed(2)}
                     </td>
                     <td className="p-3.5 text-right font-mono text-purple-600 dark:text-purple-400 font-semibold">
-                      ₹{item.gstAmount.toFixed(2)} <span className="text-[9px] text-slate-400">({item.gstPercent}%)</span>
+                      ₹{(Number(item.gstAmount) || 0).toFixed(2)} <span className="text-[9px] text-slate-400">({item.gstPercent || 18}%)</span>
                     </td>
                     <td className="p-3.5 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                      ₹{item.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{(Number(item.total) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="p-3.5 font-mono text-[11px] text-slate-500">
                       {item.warehouse || 'Main Store'} {item.locationRack ? `(${item.locationRack})` : ''}
@@ -503,8 +550,8 @@ export default function PurchaseReport({ token, user }) {
               </tbody>
             </table>
           ) : (
-            <div className="p-12 text-center text-slate-400 font-semibold">
-              No purchase records found for the selected date range.
+            <div className="p-12 text-center text-slate-400 font-semibold text-xs">
+              No purchase records found.
             </div>
           )}
         </div>
