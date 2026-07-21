@@ -12,6 +12,9 @@
 - [x] Refactor tracking endpoints to perform direct MongoDB regex queries instead of memory filtering
 - [x] Add MongoDB connection listeners for Connected, Error, and Disconnected logs
 - [x] Rectify model field references (`vehicleNumber`) inside backend notification generators
+- [x] [x] Add Delete button next to Edit button in `frontend/src/pages/Inventory.jsx` <!-- id: 1 -->
+- [x] [x] Add confirmation modal and error/success messaging in `frontend/src/pages/Inventory.jsx` <!-- id: 2 -->
+- [/] [/] Verify backend & frontend deletion behaviour <!-- id: 3 -->
 - [x] Build robust frontend status maps and error warnings for empty JobCard cases
 - [x] Verify live compilation and promote final production to Vercel
 - [x] Resolve frontend API configuration domain mismatch to query Vercel host endpoints relatively

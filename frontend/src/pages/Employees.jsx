@@ -1051,43 +1051,47 @@ export default function Employees({ token, user }) {
                           {!emp.address && !emp.basicDetails && <span>-</span>}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right flex items-center justify-end gap-2.5">
-                        <button
-                          onClick={() => setSelectedProfileEmployee(emp)}
-                          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-emerald-600 transition-colors"
-                          title="View Profile & History"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        {user?.role === 'Admin' && (
-                          <>
-                            <button
-                              onClick={() => handleOpenEdit(emp)}
-                              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
-                              title="Edit Employee"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEmployee(emp._id)}
-                              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-650 transition-colors"
-                              title="Delete Employee"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                        {emp.resumeUrl ? (
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
                           <button
-                            onClick={(e) => handleDownloadResume(e, emp.resumeUrl)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-650 dark:text-indigo-400 rounded-lg hover:underline text-[11px]"
+                            onClick={() => setSelectedProfileEmployee(emp)}
+                            className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-600 dark:bg-blue-955/30 dark:hover:bg-blue-600 text-blue-600 dark:text-blue-400 hover:text-white dark:hover:text-white rounded-lg text-[11px] font-bold transition-all border border-blue-100 dark:border-blue-900/40 shadow-xs shrink-0"
+                            title="View Profile & History"
                           >
-                            <Download className="w-3.5 h-3.5" />
-                            Download Resume
+                            <Eye className="w-3.5 h-3.5" />
+                            View
                           </button>
-                        ) : (
-                          <span className="text-slate-400 italic text-[11px] py-1 px-2">No File</span>
-                        )}
+                          {user?.role === 'Admin' && (
+                            <>
+                              <button
+                                onClick={() => handleOpenEdit(emp)}
+                                className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-600 dark:bg-amber-955/30 dark:hover:bg-amber-600 text-amber-600 dark:text-amber-400 hover:text-white dark:hover:text-white rounded-lg text-[11px] font-bold transition-all border border-amber-100 dark:border-amber-900/40 shadow-xs shrink-0"
+                                title="Edit Employee"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteEmployee(emp._id)}
+                                className="flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-600 dark:bg-rose-955/30 dark:hover:bg-rose-600 text-rose-600 dark:text-rose-400 hover:text-white dark:hover:text-white rounded-lg text-[11px] font-bold transition-all border border-rose-100 dark:border-rose-900/40 shadow-xs shrink-0"
+                                title="Delete Employee"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete
+                              </button>
+                            </>
+                          )}
+                          {emp.resumeUrl ? (
+                            <button
+                              onClick={(e) => handleDownloadResume(e, emp.resumeUrl)}
+                              className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-600 dark:bg-indigo-955/30 dark:hover:bg-indigo-600 text-indigo-600 dark:text-indigo-400 hover:text-white dark:hover:text-white rounded-lg text-[11px] font-bold transition-all border border-indigo-100 dark:border-indigo-900/40 shadow-xs shrink-0"
+                              title="Download Resume"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Resume
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))
