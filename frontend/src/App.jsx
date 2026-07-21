@@ -64,6 +64,7 @@ const tabPermissions = {
   adjustments: ['Admin', 'Spares', 'Accounts'],
   inventoryreports: ['Admin', 'Spares', 'Accounts'],
   purchasereport: ['Admin', 'Spares', 'Accounts'],
+  purchases: ['Admin', 'Spares', 'Accounts'],
   expenses: ['Admin', 'Accounts', 'Service', 'Spares', 'Body Shop'],
   employees: ['Admin', 'Accounts'],
   claims: ['Admin', 'Accounts', 'Service', 'Body Shop'],
@@ -1840,11 +1841,13 @@ function ERPShell({
                 <Route path="/inventory/adjustments" element={<StockAdjustment token={token} user={user} />} />
                 <Route path="/inventory/reports" element={<InventoryReports token={token} user={user} />} />
                 <Route path="/inventory/purchase-report" element={<PurchaseReport token={token} user={user} />} />
+                <Route path="/inventory/purchases" element={<PurchaseReport token={token} user={user} />} />
                 <Route path="/stockstatement" element={<StockStatement token={token} user={user} />} />
                 <Route path="/vendors" element={<Vendors token={token} user={user} />} />
                 <Route path="/adjustments" element={<StockAdjustment token={token} user={user} />} />
                 <Route path="/inventoryreports" element={<InventoryReports token={token} user={user} />} />
                 <Route path="/purchasereport" element={<PurchaseReport token={token} user={user} />} />
+                <Route path="/purchases" element={<PurchaseReport token={token} user={user} />} />
                 <Route path="/inventory/expenses" element={<Expenses token={token} user={user} />} />
                 <Route path="/expenses" element={<Expenses token={token} user={user} />} />
                 <Route path="/employees" element={<Employees token={token} user={user} />} />

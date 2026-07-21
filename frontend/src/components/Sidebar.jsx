@@ -37,7 +37,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
     { id: 'adjustments', name: 'Stock Adjustment', icon: Wrench, roles: ['Admin', 'Spares', 'Accounts'] },
     { id: 'stockstatement', name: 'Stock Statement', icon: FileText, roles: ['Admin', 'Spares', 'Accounts'] },
     { id: 'inventoryreports', name: 'Stock Alerts & Reports', icon: TrendingUp, roles: ['Admin', 'Spares', 'Accounts'] },
-    { id: 'purchasereport', name: 'Purchase Report', icon: ShoppingBag, roles: ['Admin', 'Spares', 'Accounts'] },
+    { id: 'purchases', name: 'Purchases', icon: ShoppingBag, roles: ['Admin', 'Spares', 'Accounts'] },
     { id: 'expenses', name: 'Miscellaneous Expenses', icon: Wallet, roles: ['Admin', 'Accounts', 'Service', 'Spares', 'Body Shop'] },
     { id: 'employees', name: 'Employees', icon: Users, roles: ['Admin', 'Accounts'] },
     { id: 'claims', name: 'Insurance Claims', icon: ShieldCheck, roles: ['Admin', 'Accounts', 'Service', 'Body Shop'] },

@@ -25,8 +25,8 @@ const purchaseItemSchema = new mongoose.Schema({
   },
   sellingPrice: {
     type: Number,
-    required: true,
     min: 0,
+    default: 0,
   },
   mrp: {
     type: Number,
@@ -39,6 +39,17 @@ const purchaseItemSchema = new mongoose.Schema({
   warehouse: {
     type: String,
     default: 'Main Store',
+  },
+  discountPercent: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+  },
+  discountAmount: {
+    type: Number,
+    default: 0,
+    min: 0,
   },
   gstPercent: {
     type: Number,
@@ -87,15 +98,17 @@ const purchaseSchema = new mongoose.Schema({
   },
   items: [purchaseItemSchema],
   totals: {
+    totalQty: { type: Number, required: true, default: 0 },
     subtotal: { type: Number, required: true, default: 0 },
+    totalDiscount: { type: Number, required: true, default: 0 },
     taxableAmount: { type: Number, required: true, default: 0 },
     gstTotal: { type: Number, required: true, default: 0 },
     grandTotal: { type: Number, required: true, default: 0 },
   },
   paymentStatus: {
     type: String,
-    enum: ['Unpaid', 'Partially Paid', 'Paid'],
-    default: 'Unpaid',
+    enum: ['Paid', 'Credit', 'Partially Paid', 'Unpaid'],
+    default: 'Credit',
   },
   amountPaid: {
     type: Number,

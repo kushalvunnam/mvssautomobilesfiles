@@ -25,7 +25,13 @@ router.get('/', auth, async (req, res) => {
     let query = {};
 
     if (vendorId) query.vendorId = vendorId;
-    if (paymentStatus) query.paymentStatus = paymentStatus;
+    if (paymentStatus) {
+      if (paymentStatus === 'Unpaid') {
+        query.paymentStatus = 'Credit';
+      } else {
+        query.paymentStatus = paymentStatus;
+      }
+    }
 
     if (search) {
       query.$or = [
@@ -59,7 +65,9 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
     const purchaseNo = await generatePurchaseNo();
     const roundToTwo = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
-    let subtotal = 0;
+    let totalQtySum = 0;
+    let subtotalSum = 0;
+    let totalDiscountSum = 0;
     let taxableAmountSum = 0;
     let gstTotalSum = 0;
     let grandTotalSum = 0;
@@ -71,22 +79,34 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
       const purchasePrice = Math.max(0, Number(item.purchasePrice) || 0);
       const sellingPrice = Math.max(0, Number(item.sellingPrice) || purchasePrice);
       const mrp = Math.max(0, Number(item.mrp) || sellingPrice);
-      const gstPercent = Number(item.gstPercent) || 18;
+      
+      const grossItemValue = roundToTwo(qty * purchasePrice);
+      
+      let discountPercent = Math.max(0, Math.min(100, Number(item.discountPercent) || 0));
+      let discountAmount = Math.max(0, Number(item.discountAmount) || 0);
 
-      const itemGross = roundToTwo(qty * purchasePrice);
-      const itemTaxable = itemGross;
+      if (item.discountAmount !== undefined && item.discountAmount !== '' && Number(item.discountAmount) > 0) {
+        discountAmount = roundToTwo(Number(item.discountAmount));
+        discountPercent = grossItemValue > 0 ? roundToTwo((discountAmount / grossItemValue) * 100) : 0;
+      } else if (discountPercent > 0) {
+        discountAmount = roundToTwo(grossItemValue * (discountPercent / 100));
+      }
+
+      const itemTaxable = Math.max(0, roundToTwo(grossItemValue - discountAmount));
+      const gstPercent = Number(item.gstPercent) !== undefined ? Number(item.gstPercent) : 18;
       const itemGst = roundToTwo(itemTaxable * (gstPercent / 100));
       const itemTotal = roundToTwo(itemTaxable + itemGst);
 
-      subtotal += itemGross;
+      totalQtySum += qty;
+      subtotalSum += grossItemValue;
+      totalDiscountSum += discountAmount;
       taxableAmountSum += itemTaxable;
       gstTotalSum += itemGst;
       grandTotalSum += itemTotal;
 
       let partId = item.partId;
-
-      // Restock existing part or create new inventory item
       let inventoryItem = null;
+
       if (partId) {
         inventoryItem = await Inventory.findById(partId);
       }
@@ -97,25 +117,26 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
       if (inventoryItem) {
         inventoryItem.stockQuantity += qty;
         inventoryItem.purchasePrice = purchasePrice;
-        inventoryItem.sellingPrice = sellingPrice;
-        inventoryItem.mrp = mrp;
+        if (sellingPrice > 0) inventoryItem.sellingPrice = sellingPrice;
+        if (mrp > 0) inventoryItem.mrp = mrp;
         inventoryItem.vendorId = vendor._id;
         inventoryItem.vendorName = vendor.name;
+        if (gstPercent !== undefined) inventoryItem.gstPercent = gstPercent;
         await inventoryItem.save();
         partId = inventoryItem._id;
       } else {
-        // Create new item
         inventoryItem = new Inventory({
-          partName: item.partName,
+          partName: item.partName || 'Unknown Part',
           partNumber: item.partNumber || `PN-${Date.now()}`,
           hsnCode: item.hsnCode || '8708',
           stockQuantity: qty,
           purchasePrice,
-          sellingPrice,
-          mrp,
+          sellingPrice: sellingPrice || purchasePrice,
+          mrp: mrp || sellingPrice || purchasePrice,
           gstPercent,
           vendorId: vendor._id,
-          vendorName: vendor.name
+          vendorName: vendor.name,
+          warehouse: item.warehouse || 'Main Store'
         });
         await inventoryItem.save();
         partId = inventoryItem._id;
@@ -131,6 +152,8 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
         purchasePrice,
         sellingPrice,
         mrp,
+        discountPercent,
+        discountAmount,
         gstPercent,
         taxableAmount: itemTaxable,
         gstAmount: itemGst,
@@ -139,7 +162,8 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
     }
 
     const paidAmt = Number(amountPaid) || 0;
-    const finalPaymentStatus = paymentStatus || (paidAmt >= grandTotalSum ? 'Paid' : (paidAmt > 0 ? 'Partially Paid' : 'Unpaid'));
+    let rawStatus = paymentStatus || (paidAmt >= grandTotalSum ? 'Paid' : (paidAmt > 0 ? 'Partially Paid' : 'Credit'));
+    if (rawStatus === 'Unpaid') rawStatus = 'Credit';
 
     const purchase = new Purchase({
       purchaseNo,
@@ -150,12 +174,14 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
       invoiceDate: invoiceDate ? new Date(invoiceDate) : new Date(),
       items: processedItems,
       totals: {
-        subtotal: roundToTwo(subtotal),
+        totalQty: totalQtySum,
+        subtotal: roundToTwo(subtotalSum),
+        totalDiscount: roundToTwo(totalDiscountSum),
         taxableAmount: roundToTwo(taxableAmountSum),
         gstTotal: roundToTwo(gstTotalSum),
         grandTotal: roundToTwo(grandTotalSum)
       },
-      paymentStatus: finalPaymentStatus,
+      paymentStatus: rawStatus,
       amountPaid: paidAmt,
       notes: notes || '',
       createdBy: req.user ? req.user.name : 'Staff'
@@ -169,7 +195,7 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
     vendor.outstandingBalance = Math.max(0, roundToTwo(vendor.totalPurchaseValue - vendor.totalPaidAmount));
     await vendor.save();
 
-    await logAction(req.user, 'PURCHASE_CREATE', `Created purchase entry ${purchase.purchaseNo} from Vendor ${vendor.name}`, req);
+    await logAction(req.user, 'PURCHASE_CREATE', `Created purchase entry ${purchase.purchaseNo} with ${processedItems.length} parts from Vendor ${vendor.name}`, req);
     res.status(201).send(purchase);
   } catch (error) {
     res.status(400).send({ error: 'Failed to record purchase entry: ' + error.message });
@@ -179,7 +205,7 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
 // Update Vendor Payment for Purchase Entry
 router.put('/:id/payment', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
   try {
-    const { amountPaid, paymentStatus } = req.body;
+    let { amountPaid, paymentStatus } = req.body;
     const purchase = await Purchase.findById(req.params.id);
     if (!purchase) return res.status(404).send({ error: 'Purchase entry not found.' });
 
@@ -188,8 +214,10 @@ router.put('/:id/payment', auth, restrictTo('Admin', 'Accounts'), async (req, re
     const newPaid = Number(amountPaid) || 0;
     const diff = newPaid - purchase.amountPaid;
 
+    if (paymentStatus === 'Unpaid') paymentStatus = 'Credit';
+
     purchase.amountPaid = newPaid;
-    purchase.paymentStatus = paymentStatus || (newPaid >= purchase.totals.grandTotal ? 'Paid' : (newPaid > 0 ? 'Partially Paid' : 'Unpaid'));
+    purchase.paymentStatus = paymentStatus || (newPaid >= purchase.totals.grandTotal ? 'Paid' : (newPaid > 0 ? 'Partially Paid' : 'Credit'));
     await purchase.save();
 
     if (vendor) {
@@ -198,7 +226,7 @@ router.put('/:id/payment', auth, restrictTo('Admin', 'Accounts'), async (req, re
       await vendor.save();
     }
 
-    await logAction(req.user, 'PURCHASE_PAYMENT_UPDATE', `Updated payment for purchase ${purchase.purchaseNo}`, req);
+    await logAction(req.user, 'PURCHASE_PAYMENT_UPDATE', `Updated payment for purchase entry ${purchase.purchaseNo}: Amount Paid ₹${newPaid}, Status: ${purchase.paymentStatus}`, req);
     res.send(purchase);
   } catch (error) {
     res.status(400).send({ error: 'Failed to update purchase payment: ' + error.message });
