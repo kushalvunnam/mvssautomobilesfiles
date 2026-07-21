@@ -1,84 +1,94 @@
 const { Resend } = require('resend');
 
-const DEFAULT_RESEND_KEY = 're_UxozLy9n_HLzJH9YaDWyEZcLWLxsY4KeE';
-
 /**
  * Sends an email notification using Resend API
  * @param {Object} options
  * @param {string|string[]} options.to - Recipient email address(es)
  * @param {string} options.subject - Email subject
  * @param {string} options.html - Email HTML content
- * @param {string} [options.from] - Custom sender address (default: MVSS Automobiles <accounts@auto4m.in>)
+ * @param {string} [options.from] - Custom sender address
  * @returns {Promise<{ success: boolean, data?: any, error?: any }>}
  */
 async function sendEmail({ to, subject, html, from }) {
-  const apiKey = process.env.RESEND_API_KEY || DEFAULT_RESEND_KEY;
+  const apiKey = process.env.RESEND_API_KEY;
 
-  console.log('[EMAIL SERVICE] Attempting email send...');
-  console.log(`[EMAIL SERVICE] Using RESEND_API_KEY: ${apiKey.slice(0, 10)}...`);
+  console.log('[EMAIL SERVICE] Dispatching email via Resend SDK...');
+  console.log(`[EMAIL SERVICE] RESEND_API_KEY present: ${Boolean(apiKey)}`);
+
+  if (!apiKey) {
+    const errorMsg = 'RESEND_API_KEY environment variable is not defined in backend runtime environment.';
+    console.error(`[EMAIL SERVICE ERROR] ${errorMsg}`);
+    return { 
+      success: false, 
+      error: { statusCode: 400, name: 'missing_api_key', message: errorMsg } 
+    };
+  }
 
   const resend = new Resend(apiKey);
 
-  // Preferred sender email requested by client: accounts@auto4m.in
-  const senderAddress = from || process.env.RESEND_FROM_EMAIL || 'MVSS Automobiles <accounts@auto4m.in>';
+  // Sender email: Use RESEND_FROM_EMAIL or default to verified onboarding@resend.dev
+  const senderAddress = from || process.env.RESEND_FROM_EMAIL || 'MVSS Automobiles <onboarding@resend.dev>';
   
-  // Format recipient list
-  const recipientList = Array.isArray(to) ? to.filter(Boolean) : [to].filter(Boolean);
-  
-  if (recipientList.length === 0) {
-    const errorMsg = 'No valid recipient email address provided.';
-    console.error(`[EMAIL SERVICE ERROR] ${errorMsg}`);
-    return { success: false, error: errorMsg };
-  }
+  // Recipient email: Always accounts@auto4m.in
+  const recipient = 'accounts@auto4m.in';
 
   try {
     console.log(`[EMAIL SERVICE] Sending email...`);
     console.log(`[EMAIL SERVICE] From: ${senderAddress}`);
-    console.log(`[EMAIL SERVICE] To: ${recipientList.join(', ')}`);
+    console.log(`[EMAIL SERVICE] To: ${recipient}`);
     console.log(`[EMAIL SERVICE] Subject: "${subject}"`);
 
-    let response = await resend.emails.send({
+    const response = await resend.emails.send({
       from: senderAddress,
-      to: recipientList,
+      to: recipient,
       subject,
       html
     });
 
-    console.log('[EMAIL SERVICE] Resend API response:', JSON.stringify(response, null, 2));
+    console.log('[EMAIL SERVICE] Full Resend API Response:', JSON.stringify(response, null, 2));
 
     if (response.error) {
-      console.error('[EMAIL SERVICE ERROR] Resend API returned an error:', response.error);
+      console.error('[EMAIL SERVICE ERROR] Resend API Error Details:', {
+        id: response.data ? response.data.id : null,
+        statusCode: response.error.statusCode || response.error.status || 400,
+        name: response.error.name,
+        message: response.error.message,
+        suppressionReason: response.error.message
+      });
 
-      // If domain verification fails for auto4m.in, automatically fallback to onboarding@resend.dev
+      // If custom domain fails, try with onboarding@resend.dev
       const errMsg = (response.error.message || '').toLowerCase();
-      const errName = (response.error.name || '').toLowerCase();
-
-      if ((errMsg.includes('domain') || errMsg.includes('not verified') || errName.includes('validation')) && !senderAddress.includes('onboarding@resend.dev')) {
-        console.warn('[EMAIL SERVICE WARN] Domain auto4m.in unverified in Resend dashboard. Retrying email with verified sender MVSS Automobiles <onboarding@resend.dev>...');
+      if ((errMsg.includes('domain') || errMsg.includes('not verified') || errMsg.includes('validation')) && !senderAddress.includes('onboarding@resend.dev')) {
+        console.warn('[EMAIL SERVICE WARN] Retrying with verified sender MVSS Automobiles <onboarding@resend.dev>...');
         
         const fallbackResponse = await resend.emails.send({
           from: 'MVSS Automobiles <onboarding@resend.dev>',
-          to: recipientList,
+          to: recipient,
           subject,
           html
         });
         
-        console.log('[EMAIL SERVICE FALLBACK] Resend API fallback response:', JSON.stringify(fallbackResponse, null, 2));
+        console.log('[EMAIL SERVICE FALLBACK] Full Resend API Response:', JSON.stringify(fallbackResponse, null, 2));
         
         if (!fallbackResponse.error) {
-          console.log('[EMAIL SERVICE SUCCESS] Fallback email sent successfully. ID:', fallbackResponse.data ? fallbackResponse.data.id : 'N/A');
-          return { success: true, data: fallbackResponse.data, usedFallback: true };
+          console.log('[EMAIL SERVICE SUCCESS] Email sent successfully via fallback sender. Email ID:', fallbackResponse.data ? fallbackResponse.data.id : 'N/A');
+          return { success: true, data: fallbackResponse.data };
+        } else {
+          return { success: false, error: fallbackResponse.error };
         }
       }
 
       return { success: false, error: response.error };
     }
 
-    console.log('[EMAIL SERVICE SUCCESS] Email sent successfully. ID:', response.data ? response.data.id : 'N/A');
+    console.log('[EMAIL SERVICE SUCCESS] Email sent successfully. Email ID:', response.data ? response.data.id : 'N/A');
     return { success: true, data: response.data };
   } catch (err) {
     console.error('[EMAIL SERVICE EXCEPTION] Full error message if sending fails:', err);
-    return { success: false, error: err.message || err };
+    return { 
+      success: false, 
+      error: { statusCode: 500, name: 'exception', message: err.message || String(err) } 
+    };
   }
 }
 

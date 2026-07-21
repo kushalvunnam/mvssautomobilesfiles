@@ -253,7 +253,7 @@ router.post('/', async (req, res) => {
 
 
     // ==========================================
-    // 7. SEND EMAIL NOTIFICATION
+    // 7. SEND ADMIN EMAIL NOTIFICATION
     // ==========================================
 
     let emailSent = false;
@@ -261,32 +261,35 @@ router.post('/', async (req, res) => {
     let emailLogs = [];
 
     try {
+      const adminEmail = 'accounts@auto4m.in';
+
       const htmlBodyAdmin = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
           <h2 style="color: #4f46e5; margin-top: 0;">New Service Booking Received</h2>
           <p>A new service appointment has been booked via the MVSS Automobiles portal.</p>
-          <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Customer Name:</td><td>${customerName}</td></tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Phone Number:</td><td>${mobile}</td></tr>
-            ${customerEmail ? `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Customer Email:</td><td>${customerEmail}</td></tr>` : ''}
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Vehicle Number:</td><td>${vehicleNumber}</td></tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Vehicle Model:</td><td>${vehicleModel || 'N/A'}</td></tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Service Type:</td><td>${serviceType}</td></tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Preferred Date:</td><td>${preferredDate || 'Not provided'}</td></tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Remarks:</td><td>${remarks || 'None'}</td></tr>
+          <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold; width: 40%;">Customer Name:</td><td style="padding: 8px 0;">${customerName}</td></tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Phone Number:</td><td style="padding: 8px 0;">${mobile}</td></tr>
+            ${customerEmail ? `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Customer Email:</td><td style="padding: 8px 0;">${customerEmail}</td></tr>` : ''}
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Vehicle Number:</td><td style="padding: 8px 0;">${vehicleNumber}</td></tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Vehicle Model:</td><td style="padding: 8px 0;">${vehicleModel || 'N/A'}</td></tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Service Type:</td><td style="padding: 8px 0;">${serviceType}</td></tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Preferred Date:</td><td style="padding: 8px 0;">${preferredDate || 'Not provided'}</td></tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Remarks:</td><td style="padding: 8px 0;">${remarks || 'None'}</td></tr>
           </table>
-          <p style="font-size: 11px; color: #94a3b8;">Submitted on ${bDate} at ${bTime}</p>
+          <p style="font-size: 11px; color: #94a3b8; margin-bottom: 0;">Submitted on ${bDate} at ${bTime}</p>
         </div>
       `;
 
-      // 1. Send Admin / Workshop Notification Email to verified address accounts@auto4m.in
+      // Dispatch admin email notification to verified accounts@auto4m.in
       console.log(`[BOOKING ROUTE] Sending email to ${adminEmail}...`);
       const adminResult = await sendEmail({
         to: adminEmail,
-        from: 'MVSS Automobiles <accounts@auto4m.in>',
-        subject: `New Service Booking: ${customerName} (${vehicleNumber})`,
+        subject: `New Service Booking Notification - MVSS Automobiles`,
         html: htmlBodyAdmin,
       });
+
+      console.log('[BOOKING ROUTE] Resend API response:', JSON.stringify(adminResult, null, 2));
 
       if (adminResult.success) {
         emailSent = true;
@@ -296,42 +299,6 @@ router.post('/', async (req, res) => {
         emailError = adminResult.error;
         console.error('[BOOKING ROUTE] Full error message if sending fails:', adminResult.error);
         emailLogs.push(`Admin email failed: ${typeof adminResult.error === 'object' ? JSON.stringify(adminResult.error) : adminResult.error}`);
-      }
-
-      // 2. Send Customer Confirmation Email (if customer provided an email address)
-      if (customerEmail && customerEmail.includes('@')) {
-        const htmlBodyCustomer = `
-          <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px;">
-            <h2 style="color: #4f46e5; margin-top: 0;">Service Booking Confirmation - MVSS Automobiles</h2>
-            <p>Dear <strong>${customerName}</strong>,</p>
-            <p>Thank you for booking your vehicle service with <strong>MVSS Automobiles</strong>! We have received your booking request.</p>
-            <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0;">
-              <p style="margin: 5px 0;"><strong>Vehicle Number:</strong> ${vehicleNumber}</p>
-              <p style="margin: 5px 0;"><strong>Service Type:</strong> ${serviceType}</p>
-              <p style="margin: 5px 0;"><strong>Preferred Date:</strong> ${preferredDate || 'As scheduled'}</p>
-            </div>
-            <p>Our service advisor will contact you at <strong>${mobile}</strong> shortly to confirm your appointment details.</p>
-            <br>
-            <p style="margin-bottom: 0;">Warm regards,<br><strong>MVSS Automobiles Team</strong></p>
-          </div>
-        `;
-
-        console.log(`[BOOKING ROUTE] Sending email to customer ${customerEmail}...`);
-        const custResult = await sendEmail({
-          to: customerEmail,
-          from: 'MVSS Automobiles <accounts@auto4m.in>',
-          subject: 'Service Booking Confirmation - MVSS Automobiles',
-          html: htmlBodyCustomer,
-        });
-
-        if (custResult.success) {
-          emailSent = true;
-          console.log(`[BOOKING ROUTE] Email sent successfully to ${customerEmail}`);
-          emailLogs.push(`Customer email sent successfully to ${customerEmail}`);
-        } else {
-          console.error('[BOOKING ROUTE] Full error message if sending fails:', custResult.error);
-          emailLogs.push(`Customer email failed: ${typeof custResult.error === 'object' ? JSON.stringify(custResult.error) : custResult.error}`);
-        }
       }
     } catch (emailErr) {
       emailError = emailErr.message || emailErr;
