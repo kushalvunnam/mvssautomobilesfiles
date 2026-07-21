@@ -249,28 +249,84 @@ router.post('/', async (req, res) => {
     // ==========================================
 
     let emailSent = false;
+    let emailError = null;
+    let emailLogs = [];
 
     try {
-      const htmlBody = `
-        <h3>New Service Booking Received</h3>
-        <p><strong>Customer Name:</strong> ${customerName}</p>
-        <p><strong>Phone Number:</strong> ${mobile}</p>
-        <p><strong>Vehicle Number:</strong> ${vehicleNumber}</p>
-        <p><strong>Service Category:</strong> ${serviceType}</p>
-        <p><strong>Preferred Service Date:</strong> ${
-          preferredDate || 'Not provided'
-        }</p>
-        <p><strong>Remarks:</strong> ${remarks || 'None'}</p>
-        <p><small>Submitted on ${bDate} at ${bTime}</small></p>
+      const adminEmail = process.env.ADMIN_EMAIL || process.env.WORKSHOP_EMAIL || 'accounts@auto4m.in';
+      const customerEmail = req.body.email ? String(req.body.email).trim() : null;
+
+      const htmlBodyAdmin = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+          <h2 style="color: #4f46e5; margin-top: 0;">New Service Booking Received</h2>
+          <p>A new service appointment has been booked via the MVSS Automobiles portal.</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Customer Name:</td><td>${customerName}</td></tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Phone Number:</td><td>${mobile}</td></tr>
+            ${customerEmail ? `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Customer Email:</td><td>${customerEmail}</td></tr>` : ''}
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Vehicle Number:</td><td>${vehicleNumber}</td></tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Vehicle Model:</td><td>${vehicleModel || 'N/A'}</td></tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Service Type:</td><td>${serviceType}</td></tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Preferred Date:</td><td>${preferredDate || 'Not provided'}</td></tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px 0; font-weight: bold;">Remarks:</td><td>${remarks || 'None'}</td></tr>
+          </table>
+          <p style="font-size: 11px; color: #94a3b8;">Submitted on ${bDate} at ${bTime}</p>
+        </div>
       `;
 
-      emailSent = await sendEmail({
-        to: 'accounts@auto4m.in',
-        subject: 'New Service Booking - MVSS Automobiles',
-        html: htmlBody,
+      // 1. Send Admin / Workshop Notification Email
+      console.log(`[BOOKING ROUTE] Dispatching admin notification email to ${adminEmail}...`);
+      const adminResult = await sendEmail({
+        to: adminEmail,
+        subject: `New Service Booking: ${customerName} (${vehicleNumber})`,
+        html: htmlBodyAdmin,
       });
+
+      if (adminResult.success) {
+        emailSent = true;
+        emailLogs.push(`Admin email sent successfully to ${adminEmail}`);
+      } else {
+        emailError = adminResult.error;
+        emailLogs.push(`Admin email failed: ${typeof adminResult.error === 'object' ? JSON.stringify(adminResult.error) : adminResult.error}`);
+        console.error('[BOOKING ROUTE] Admin notification email failed:', adminResult.error);
+      }
+
+      // 2. Send Customer Confirmation Email (if customer provided an email address)
+      if (customerEmail && customerEmail.includes('@')) {
+        const htmlBodyCustomer = `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <h2 style="color: #4f46e5; margin-top: 0;">Service Booking Confirmation - MVSS Automobiles</h2>
+            <p>Dear <strong>${customerName}</strong>,</p>
+            <p>Thank you for booking your vehicle service with <strong>MVSS Automobiles</strong>! We have received your booking request.</p>
+            <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <p style="margin: 5px 0;"><strong>Vehicle Number:</strong> ${vehicleNumber}</p>
+              <p style="margin: 5px 0;"><strong>Service Type:</strong> ${serviceType}</p>
+              <p style="margin: 5px 0;"><strong>Preferred Date:</strong> ${preferredDate || 'As scheduled'}</p>
+            </div>
+            <p>Our service advisor will contact you at <strong>${mobile}</strong> shortly to confirm your appointment details.</p>
+            <br>
+            <p style="margin-bottom: 0;">Warm regards,<br><strong>MVSS Automobiles Team</strong></p>
+          </div>
+        `;
+
+        console.log(`[BOOKING ROUTE] Dispatching customer confirmation email to ${customerEmail}...`);
+        const custResult = await sendEmail({
+          to: customerEmail,
+          subject: 'Service Booking Confirmation - MVSS Automobiles',
+          html: htmlBodyCustomer,
+        });
+
+        if (custResult.success) {
+          emailSent = true;
+          emailLogs.push(`Customer email sent successfully to ${customerEmail}`);
+        } else {
+          emailLogs.push(`Customer email failed: ${typeof custResult.error === 'object' ? JSON.stringify(custResult.error) : custResult.error}`);
+          console.error('[BOOKING ROUTE] Customer confirmation email failed:', custResult.error);
+        }
+      }
     } catch (emailErr) {
-      console.warn('Email notification failed:', emailErr.message);
+      emailError = emailErr.message || emailErr;
+      console.error('[BOOKING ROUTE] Exception in email notification dispatch:', emailErr);
     }
 
 
@@ -286,6 +342,8 @@ router.post('/', async (req, res) => {
       webhookError,
       webhookUrl: BOOKING_WEBHOOK_URL,
       emailSent,
+      emailError: emailError ? (typeof emailError === 'object' ? JSON.stringify(emailError) : emailError) : null,
+      emailLogs,
       booking,
     });
 
