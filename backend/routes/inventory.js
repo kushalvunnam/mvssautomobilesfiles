@@ -1,5 +1,10 @@
 const express = require('express');
 const Inventory = require('../models/Inventory');
+const Estimate = require('../models/Estimate');
+const Invoice = require('../models/Invoice');
+const StockAdjustment = require('../models/StockAdjustment');
+const Purchase = require('../models/Purchase');
+const Notification = require('../models/Notification');
 const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
@@ -139,14 +144,61 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, 
 });
 
 // Delete part / master entry
-router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
+router.delete('/:id', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
   try {
     const item = await Inventory.findById(req.params.id);
     if (!item) return res.status(404).send({ error: 'Part not found.' });
 
+    // Check if referenced in Job Cards / Estimates
+    const usedInEstimate = await Estimate.findOne({
+      $or: [
+        { 'parts.partId': item._id },
+        { 'parts.partNo': item.partNumber }
+      ]
+    });
+
+    // Check if referenced in Invoices
+    const usedInInvoice = await Invoice.findOne({
+      $or: [
+        { 'parts.partId': item._id },
+        { 'parts.partNo': item.partNumber }
+      ]
+    });
+
+    // Check if referenced in Stock Adjustments
+    const usedInAdjustment = await StockAdjustment.findOne({
+      $or: [
+        { partId: item._id },
+        { partNumber: item.partNumber }
+      ]
+    });
+
+    // Check if referenced in Purchase History
+    const usedInPurchase = await Purchase.findOne({
+      $or: [
+        { 'items.partId': item._id },
+        { 'items.partNumber': item.partNumber }
+      ]
+    });
+
+    if (usedInEstimate || usedInInvoice || usedInAdjustment || usedInPurchase) {
+      return res.status(400).send({
+        error: 'This part cannot be deleted because it is already used in transactions. Consider setting its status to Inactive instead.'
+      });
+    }
+
+    // Safely remove associated low stock alert notifications
+    await Notification.deleteMany({
+      $or: [
+        { vehicleNumber: item.partNumber },
+        { customerName: item.partName }
+      ],
+      type: 'low_stock'
+    });
+
     await Inventory.findByIdAndDelete(req.params.id);
     await logAction(req.user, 'INVENTORY_DELETE', `Deleted master entry ${item.partName} (${item.partNumber})`, req);
-    res.send({ message: 'Item deleted successfully.' });
+    res.send({ message: 'Part deleted successfully.' });
   } catch (error) {
     res.status(500).send({ error: 'Failed to delete part: ' + error.message });
   }
