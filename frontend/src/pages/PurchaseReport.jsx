@@ -704,7 +704,7 @@ export default function PurchaseReport({ token, user }) {
                   onChange={(e) => setPurchaseHeader({ ...purchaseHeader, paymentStatus: e.target.value })}
                   className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="Credit">Credit (Unpaid Outstanding)</option>
+                  <option value="Credit">Credit</option>
                   <option value="Paid">Paid</option>
                   <option value="Partially Paid">Partially Paid</option>
                 </select>
@@ -1611,7 +1611,7 @@ export default function PurchaseReport({ token, user }) {
                   onChange={(e) => setPaymentModalStatus(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold text-slate-800 dark:text-white"
                 >
-                  <option value="Credit">Credit (Unpaid)</option>
+                  <option value="Credit">Credit</option>
                   <option value="Paid">Paid</option>
                   <option value="Partially Paid">Partially Paid</option>
                 </select>
