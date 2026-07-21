@@ -323,10 +323,10 @@ export default function PurchaseReport({ token, user }) {
       return 0;
     });
 
-  // Calculate totals safely
-  const totalPurchaseAmount = safeReports.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-  const totalQuantityPurchased = safeReports.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
-  const transactionCount = new Set(safeReports.map(item => item.purchaseId || item.purchaseNo || item.invoiceNo || item._id)).size;
+  // Calculate totals safely based on filtered items
+  const totalPurchaseAmount = filteredAndSortedItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+  const totalQuantityPurchased = filteredAndSortedItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  const transactionCount = new Set(filteredAndSortedItems.map(item => item.purchaseId || item.purchaseNo || item.invoiceNo || item._id)).size;
 
   // Calculated form preview values
   const formQty = Number(purchaseForm.qty) || 0;

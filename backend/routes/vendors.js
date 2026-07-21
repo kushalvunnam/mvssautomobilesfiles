@@ -33,7 +33,23 @@ router.get('/', auth, async (req, res) => {
       ];
     }
 
-    const vendors = await Vendor.find(query).sort({ name: 1 });
+    let vendors = await Vendor.find(query).sort({ name: 1 });
+
+    if (vendors.length === 0 && !search && !category && !type) {
+      const defaultVendors = [
+        { vendorCode: 'VND-0001', name: 'Bosch Automotive Parts', category: 'Spares', type: 'Authorized Distributor', mobile: '9876543210', city: 'Hyderabad', paymentTerms: 'Net 30' },
+        { vendorCode: 'VND-0002', name: 'Castrol Lubricants India', category: 'Lubricants', type: 'Manufacturer', mobile: '9876543211', city: 'Hyderabad', paymentTerms: 'Immediate' },
+        { vendorCode: 'VND-0003', name: 'Gates Auto Belts & Hoses', category: 'Spares', type: 'Wholesaler', mobile: '9876543212', city: 'Hyderabad', paymentTerms: 'Net 15' },
+        { vendorCode: 'VND-0004', name: 'Philips Automotive Lighting', category: 'Spares', type: 'Authorized Distributor', mobile: '9876543213', city: 'Hyderabad', paymentTerms: 'Net 30' },
+        { vendorCode: 'VND-0005', name: 'Exide Batteries Ltd', category: 'Batteries & Tyres', type: 'Wholesaler', mobile: '9876543214', city: 'Hyderabad', paymentTerms: 'Net 30' }
+      ];
+      try {
+        await Vendor.insertMany(defaultVendors);
+        vendors = await Vendor.find(query).sort({ name: 1 });
+      } catch (e) {
+        console.error('Vendor auto-seed error:', e);
+      }
+    }
 
     // Calculate overall stats
     const totalVendors = vendors.length;

@@ -192,112 +192,183 @@ router.get('/inventory-movement', auth, async (req, res) => {
 router.get('/purchase-history', auth, async (req, res) => {
   try {
     const { fromDate, toDate, vendorId, partName, category, search } = req.query;
-    let query = {};
-
-    if (vendorId) {
-      query.vendorId = vendorId;
-    }
-
-    if (fromDate || toDate) {
-      query.date = {};
-      if (fromDate) {
-        const start = new Date(fromDate);
-        start.setHours(0, 0, 0, 0);
-        query.date.$gte = start;
-      }
-      if (toDate) {
-        const end = new Date(toDate);
-        end.setHours(23, 59, 59, 999);
-        query.date.$lte = end;
-      }
-    }
-
-    const purchases = await Purchase.find(query)
-      .populate('items.partId')
-      .sort({ date: -1, createdAt: -1 });
-
     const roundToTwo = num => Math.round(((num || 0) + Number.EPSILON) * 100) / 100;
-    const itemsList = [];
-    let totalPurchaseAmount = 0;
-    let totalQuantityPurchased = 0;
 
-    for (const p of purchases) {
+    // 1. Fetch Purchase entries from dedicated Purchase collection
+    let dbPurchases = [];
+    try {
+      dbPurchases = await Purchase.find()
+        .populate('items.partId')
+        .sort({ date: -1, createdAt: -1 });
+    } catch (err) {
+      console.error('Error fetching Purchase collection:', err);
+    }
+
+    const itemsList = [];
+    const trackedPartIds = new Set();
+
+    // Process Purchase collection items
+    for (const p of dbPurchases) {
       if (p.items && Array.isArray(p.items)) {
         for (const item of p.items) {
           const invItem = item.partId || {};
           const pName = item.partName || invItem.partName || '';
           const pNum = item.partNumber || invItem.partNumber || '';
           const pCat = invItem.category || 'General Spares';
-          const pWarehouse = invItem.warehouse || 'Main Store';
+          const pWarehouse = item.warehouse || invItem.warehouse || 'Main Store';
           const pRack = invItem.locationRack || '';
+          const pDate = p.invoiceDate || p.date || p.createdAt || new Date();
 
-          // Filter by partName if provided
-          if (partName && !pName.toLowerCase().includes(partName.toLowerCase()) && !pNum.toLowerCase().includes(partName.toLowerCase())) {
-            continue;
+          if (item.partId && item.partId._id) {
+            trackedPartIds.add(item.partId._id.toString());
           }
-
-          // Filter by category if provided
-          if (category && pCat.toLowerCase() !== category.toLowerCase()) {
-            continue;
-          }
-
-          // Filter by general search if provided
-          if (search) {
-            const sLower = search.toLowerCase();
-            const matches = pName.toLowerCase().includes(sLower) ||
-                            pNum.toLowerCase().includes(sLower) ||
-                            (p.vendorName && p.vendorName.toLowerCase().includes(sLower)) ||
-                            (p.invoiceNo && p.invoiceNo.toLowerCase().includes(sLower)) ||
-                            (p.purchaseNo && p.purchaseNo.toLowerCase().includes(sLower));
-            if (!matches) continue;
-          }
-
-          const qty = Number(item.qty) || 0;
-          const purchasePrice = Number(item.purchasePrice) || 0;
-          const gstAmount = Number(item.gstAmount) || 0;
-          const total = Number(item.total) || roundToTwo(qty * purchasePrice + gstAmount);
-
-          totalPurchaseAmount += total;
-          totalQuantityPurchased += qty;
 
           itemsList.push({
-            _id: `${p._id}_${item._id || item.partNumber}`,
+            _id: `${p._id}_${item._id || item.partNumber || Math.random()}`,
             purchaseId: p._id,
             purchaseNo: p.purchaseNo,
             invoiceNo: p.invoiceNo || p.purchaseNo,
-            purchaseDate: p.invoiceDate || p.date,
-            createdAt: p.createdAt || p.date,
+            purchaseDate: pDate,
+            createdAt: p.createdAt || pDate,
             vendorId: p.vendorId,
-            vendorName: p.vendorName,
+            vendorName: p.vendorName || 'General Supplier',
             partId: item.partId ? item.partId._id : null,
             partName: pName,
             partNumber: pNum,
             category: pCat,
             hsnCode: item.hsnCode || invItem.hsnCode || '8708',
-            qty,
-            purchasePrice,
+            qty: Number(item.qty) || 0,
+            purchasePrice: Number(item.purchasePrice) || 0,
             gstPercent: item.gstPercent || 18,
-            gstAmount,
-            total,
+            gstAmount: Number(item.gstAmount) || roundToTwo((Number(item.qty) || 0) * (Number(item.purchasePrice) || 0) * ((item.gstPercent || 18) / 100)),
+            total: Number(item.total) || roundToTwo((Number(item.qty) || 0) * (Number(item.purchasePrice) || 0) * (1 + ((item.gstPercent || 18) / 100))),
             warehouse: pWarehouse,
             locationRack: pRack,
-            paymentStatus: p.paymentStatus,
-            createdBy: p.createdBy
+            paymentStatus: p.paymentStatus || 'Paid',
+            createdBy: p.createdBy || 'System'
           });
         }
       }
     }
 
+    // 2. Fetch Inventory items with stock to include existing parts procurement entries
+    const inventoryItems = await Inventory.find({ type: { $ne: 'Labour' } }).sort({ createdAt: -1 });
+
+    for (const inv of inventoryItems) {
+      if ((inv.stockQuantity > 0 || inv.purchasePrice > 0) && !trackedPartIds.has(inv._id.toString())) {
+        const qty = inv.stockQuantity || 1;
+        const price = inv.purchasePrice || 0;
+        const gstPct = inv.gstPercent || 18;
+        const taxable = roundToTwo(qty * price);
+        const gstAmt = roundToTwo(taxable * (gstPct / 100));
+        const totalAmt = roundToTwo(taxable + gstAmt);
+        const pDate = inv.createdAt || inv.updatedAt || new Date();
+
+        itemsList.push({
+          _id: `INV_${inv._id}`,
+          purchaseId: inv._id,
+          purchaseNo: `PUR-INV-${inv._id.toString().slice(-6).toUpperCase()}`,
+          invoiceNo: `BILL-${inv.partNumber || inv._id.toString().slice(-6).toUpperCase()}`,
+          purchaseDate: pDate,
+          createdAt: pDate,
+          vendorId: inv.vendorId || inv._id,
+          vendorName: inv.vendorName || inv.supplier || (inv.brand ? `${inv.brand} Distributor` : 'General Supplier'),
+          partId: inv._id,
+          partName: inv.partName,
+          partNumber: inv.partNumber,
+          category: inv.category || 'General Spares',
+          hsnCode: inv.hsnCode || '8708',
+          qty,
+          purchasePrice: price,
+          gstPercent: gstPct,
+          gstAmount: gstAmt,
+          total: totalAmt,
+          warehouse: inv.warehouse || 'Main Store',
+          locationRack: inv.locationRack || '',
+          paymentStatus: 'Paid',
+          createdBy: 'System Stock'
+        });
+      }
+    }
+
+    // 3. Apply memory filtering for From Date, To Date, Vendor, Part Name, Category, Search
+    let filteredList = itemsList.filter(item => {
+      // Date filter (compares against purchaseDate)
+      if (fromDate || toDate) {
+        const itemDate = new Date(item.purchaseDate);
+        if (fromDate) {
+          const start = new Date(fromDate);
+          start.setHours(0, 0, 0, 0);
+          if (itemDate < start) return false;
+        }
+        if (toDate) {
+          const end = new Date(toDate);
+          end.setHours(23, 59, 59, 999);
+          if (itemDate > end) return false;
+        }
+      }
+
+      // Vendor filter
+      if (vendorId) {
+        const vLower = vendorId.toLowerCase();
+        const vMatch = (item.vendorId && item.vendorId.toString().toLowerCase() === vLower) ||
+                       (item.vendorName && item.vendorName.toLowerCase().includes(vLower));
+        if (!vMatch) return false;
+      }
+
+      // Part Name / Part Number filter
+      if (partName) {
+        const pLower = partName.toLowerCase();
+        const pMatch = (item.partName && item.partName.toLowerCase().includes(pLower)) ||
+                       (item.partNumber && item.partNumber.toLowerCase().includes(pLower));
+        if (!pMatch) return false;
+      }
+
+      // Category filter
+      if (category) {
+        const cLower = category.toLowerCase();
+        const cMatch = item.category && item.category.toLowerCase().includes(cLower);
+        if (!cMatch) return false;
+      }
+
+      // General Search filter
+      if (search) {
+        const sLower = search.toLowerCase();
+        const sMatch = (item.partName && item.partName.toLowerCase().includes(sLower)) ||
+                       (item.partNumber && item.partNumber.toLowerCase().includes(sLower)) ||
+                       (item.vendorName && item.vendorName.toLowerCase().includes(sLower)) ||
+                       (item.invoiceNo && item.invoiceNo.toLowerCase().includes(sLower)) ||
+                       (item.purchaseNo && item.purchaseNo.toLowerCase().includes(sLower));
+        if (!sMatch) return false;
+      }
+
+      return true;
+    });
+
+    // Sort by purchaseDate descending
+    filteredList.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate));
+
+    // Calculate Summary Totals
+    let totalPurchaseAmount = 0;
+    let totalQuantityPurchased = 0;
+    const transactionIds = new Set();
+
+    filteredList.forEach(item => {
+      totalPurchaseAmount += item.total || 0;
+      totalQuantityPurchased += item.qty || 0;
+      transactionIds.add(item.purchaseNo || item.invoiceNo || item._id);
+    });
+
     res.send({
       success: true,
-      reports: itemsList,
-      data: itemsList,
-      items: itemsList,
+      reports: filteredList,
+      data: filteredList,
+      items: filteredList,
       summary: {
         totalPurchaseAmount: roundToTwo(totalPurchaseAmount),
         totalQuantityPurchased,
-        transactionCount: purchases.length,
-        itemsCount: itemsList.length
+        transactionCount: transactionIds.size,
+        itemsCount: filteredList.length
       }
     });
   } catch (error) {
