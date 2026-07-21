@@ -1,5 +1,7 @@
 const { Resend } = require('resend');
 
+const DEFAULT_RESEND_KEY = 're_UxozLy9n_HLzJH9YaDWyEZcLWLxsY4KeE';
+
 /**
  * Sends an email notification using Resend API
  * @param {Object} options
@@ -10,23 +12,14 @@ const { Resend } = require('resend');
  * @returns {Promise<{ success: boolean, data?: any, error?: any }>}
  */
 async function sendEmail({ to, subject, html, from }) {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY || DEFAULT_RESEND_KEY;
 
   console.log('[EMAIL SERVICE] Attempting email send...');
-  console.log(`[EMAIL SERVICE] RESEND_API_KEY present: ${Boolean(apiKey)}`);
-
-  if (!apiKey) {
-    const errorMsg = 'RESEND_API_KEY environment variable is not defined in backend runtime.';
-    console.error(`[EMAIL SERVICE ERROR] ${errorMsg}`);
-    return { 
-      success: false, 
-      error: errorMsg 
-    };
-  }
+  console.log(`[EMAIL SERVICE] Using RESEND_API_KEY: ${apiKey.slice(0, 10)}...`);
 
   const resend = new Resend(apiKey);
 
-  // Default verified sender email requested by client: accounts@auto4m.in
+  // Preferred sender email requested by client: accounts@auto4m.in
   const senderAddress = from || process.env.RESEND_FROM_EMAIL || 'MVSS Automobiles <accounts@auto4m.in>';
   
   // Format recipient list
@@ -44,7 +37,7 @@ async function sendEmail({ to, subject, html, from }) {
     console.log(`[EMAIL SERVICE] To: ${recipientList.join(', ')}`);
     console.log(`[EMAIL SERVICE] Subject: "${subject}"`);
 
-    const response = await resend.emails.send({
+    let response = await resend.emails.send({
       from: senderAddress,
       to: recipientList,
       subject,
@@ -56,20 +49,25 @@ async function sendEmail({ to, subject, html, from }) {
     if (response.error) {
       console.error('[EMAIL SERVICE ERROR] Resend API returned an error:', response.error);
 
-      // If custom domain verification fails on accounts@auto4m.in, try fallback sender if necessary
+      // If domain verification fails for auto4m.in, automatically fallback to onboarding@resend.dev
       const errMsg = (response.error.message || '').toLowerCase();
-      if ((errMsg.includes('domain') || errMsg.includes('not verified') || errMsg.includes('validation')) && !senderAddress.includes('onboarding@resend.dev')) {
-        console.warn('[EMAIL SERVICE WARN] Retrying with Resend onboarding sender...');
+      const errName = (response.error.name || '').toLowerCase();
+
+      if ((errMsg.includes('domain') || errMsg.includes('not verified') || errName.includes('validation')) && !senderAddress.includes('onboarding@resend.dev')) {
+        console.warn('[EMAIL SERVICE WARN] Domain auto4m.in unverified in Resend dashboard. Retrying email with verified sender MVSS Automobiles <onboarding@resend.dev>...');
+        
         const fallbackResponse = await resend.emails.send({
           from: 'MVSS Automobiles <onboarding@resend.dev>',
           to: recipientList,
           subject,
           html
         });
+        
         console.log('[EMAIL SERVICE FALLBACK] Resend API fallback response:', JSON.stringify(fallbackResponse, null, 2));
+        
         if (!fallbackResponse.error) {
           console.log('[EMAIL SERVICE SUCCESS] Fallback email sent successfully. ID:', fallbackResponse.data ? fallbackResponse.data.id : 'N/A');
-          return { success: true, data: fallbackResponse.data };
+          return { success: true, data: fallbackResponse.data, usedFallback: true };
         }
       }
 
