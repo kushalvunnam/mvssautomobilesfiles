@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import StatsCard from '../components/StatsCard';
 import { API_BASE_URL } from '../config';
 import { 
   Plus, 
@@ -485,7 +486,7 @@ export default function Backlogs({ token, user }) {
   };
 
   return (
-    <div className="space-y-6 p-1 w-full max-w-full animate-fade-in print:p-0">
+    <div className="space-y-6 animate-fade-in p-1">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
@@ -525,75 +526,44 @@ export default function Backlogs({ token, user }) {
 
       {/* Summary KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 print:hidden">
-        {/* Total Backlog Parts */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4.5 rounded-2xl shadow-2xs relative overflow-hidden flex flex-col justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Backlog Parts</span>
-            <span className="text-xl font-black text-slate-800 dark:text-white">{totalBacklogParts}</span>
-          </div>
-          <div className="absolute right-3.5 top-3.5 bg-indigo-50 dark:bg-indigo-950/30 p-1.5 rounded-lg text-indigo-500">
-            <Package className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Pending Orders */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4.5 rounded-2xl shadow-2xs relative overflow-hidden flex flex-col justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending Orders</span>
-            <span className="text-xl font-black text-slate-800 dark:text-white">{pendingCount}</span>
-          </div>
-          <div className="absolute right-3.5 top-3.5 bg-blue-50 dark:bg-blue-950/30 p-1.5 rounded-lg text-blue-500">
-            <Clock className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Ordered */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4.5 rounded-2xl shadow-2xs relative overflow-hidden flex flex-col justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Ordered</span>
-            <span className="text-xl font-black text-slate-800 dark:text-white">{orderedCount}</span>
-          </div>
-          <div className="absolute right-3.5 top-3.5 bg-purple-50 dark:bg-purple-950/30 p-1.5 rounded-lg text-purple-500">
-            <ArrowRightLeft className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Partially Received */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4.5 rounded-2xl shadow-2xs relative overflow-hidden flex flex-col justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Partially Rcvd</span>
-            <span className="text-xl font-black text-slate-800 dark:text-white">{partiallyReceivedCount}</span>
-          </div>
-          <div className="absolute right-3.5 top-3.5 bg-amber-50 dark:bg-amber-950/30 p-1.5 rounded-lg text-amber-500">
-            <AlertTriangle className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Received Today */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4.5 rounded-2xl shadow-2xs relative overflow-hidden flex flex-col justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Received Today</span>
-            <span className="text-xl font-black text-slate-800 dark:text-white">{receivedTodayCount}</span>
-          </div>
-          <div className="absolute right-3.5 top-3.5 bg-emerald-50 dark:bg-emerald-950/30 p-1.5 rounded-lg text-emerald-500">
-            <CheckCircle2 className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Overdue Deliveries */}
-        <div className={`border p-4.5 rounded-2xl shadow-2xs relative overflow-hidden flex flex-col justify-between ${
-          overdueCount > 0 
-            ? 'bg-rose-50/40 border-rose-200 dark:bg-rose-950/10 dark:border-rose-900/30' 
-            : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800'
-        }`}>
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Overdue Deliveries</span>
-            <span className={`text-xl font-black ${overdueCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'}`}>{overdueCount}</span>
-          </div>
-          <div className={`absolute right-3.5 top-3.5 p-1.5 rounded-lg ${overdueCount > 0 ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600'}`}>
-            <AlertCircle className="w-4 h-4" />
-          </div>
-        </div>
+        <StatsCard 
+          title="Total Backlog Parts" 
+          value={totalBacklogParts || 0} 
+          icon={Package} 
+          description="Procurement backlog" 
+        />
+        <StatsCard 
+          title="Pending Orders" 
+          value={pendingCount || 0} 
+          icon={Clock} 
+          description="Awaiting dispatch" 
+        />
+        <StatsCard 
+          title="Ordered" 
+          value={orderedCount || 0} 
+          icon={ArrowRightLeft} 
+          description="Shipped / In-transit" 
+        />
+        <StatsCard 
+          title="Partially Rcvd" 
+          value={partiallyReceivedCount || 0} 
+          icon={AlertTriangle} 
+          description="Incomplete deliveries" 
+        />
+        <StatsCard 
+          title="Received Today" 
+          value={receivedTodayCount || 0} 
+          icon={CheckCircle2} 
+          description="Restocked today" 
+        />
+        <StatsCard 
+          title="Overdue Deliveries" 
+          value={overdueCount || 0} 
+          icon={AlertCircle} 
+          description="Past expected date"
+          trend={overdueCount > 0 ? "Alert" : null}
+          trendType={overdueCount > 0 ? "down" : "up"}
+        />
       </div>
 
       {/* Filter and Search Panel */}
