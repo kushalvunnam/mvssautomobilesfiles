@@ -485,7 +485,7 @@ export default function Backlogs({ token, user }) {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in p-1 print:p-0">
+    <div className="space-y-6 p-1 w-full max-w-full animate-fade-in print:p-0">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
@@ -524,7 +524,7 @@ export default function Backlogs({ token, user }) {
       )}
 
       {/* Summary KPI Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 print:hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 print:hidden">
         {/* Total Backlog Parts */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4.5 rounded-2xl shadow-2xs relative overflow-hidden flex flex-col justify-between">
           <div className="space-y-1">
