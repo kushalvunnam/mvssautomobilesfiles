@@ -7,6 +7,7 @@ import { getCachedData, setCachedData } from '../utils/apiCache';
 export default function Vehicles({ token, user }) {
   const [vehicles, setVehicles] = useState(() => getCachedData(`${API_BASE_URL}/vehicles?search=`) || []);
   const [customers, setCustomers] = useState([]);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   
   const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -162,6 +163,28 @@ export default function Vehicles({ token, user }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Client-side validations
+    if (!formData.vehicleNumber || !formData.vehicleNumber.trim()) {
+      alert('Vehicle Registration Number is required.');
+      return;
+    }
+    if (!formData.customerId) {
+      alert('Owner / Customer must be selected.');
+      return;
+    }
+    if (!formData.make || !formData.make.trim()) {
+      alert('Vehicle Make is required.');
+      return;
+    }
+    if (!formData.model || !formData.model.trim()) {
+      alert('Vehicle Model is required.');
+      return;
+    }
+
+    if (saving) return;
+    setSaving(true);
+
     const payload = {
       ...formData,
       odometerReading: Number(formData.odometerReading) || 0
@@ -183,18 +206,43 @@ export default function Vehicles({ token, user }) {
       });
 
       if (res.ok) {
+        alert(modalMode === 'add' ? 'Vehicle added successfully.' : 'Vehicle details updated successfully.');
         setShowModal(false);
-        fetchVehicles();
-        if (modalMode === 'edit') {
+        
+        // Reset form data on successful add
+        if (modalMode === 'add') {
+          setFormData({
+            vehicleNumber: '',
+            chassisNumber: '',
+            engineNumber: '',
+            make: '',
+            model: '',
+            variant: '',
+            fuelType: 'Petrol',
+            transmission: 'Manual',
+            color: '',
+            insuranceCompany: '',
+            insurancePolicyNumber: '',
+            insuranceExpiryDate: '',
+            odometerReading: '',
+            customerId: customers[0]?._id || ''
+          });
+        } else {
           const updated = await res.json();
           setSelectedVehicle(updated);
         }
+        
+        // Refresh list
+        fetchVehicles();
       } else {
         const err = await res.json();
         alert(err.error || 'Operation failed');
       }
     } catch (err) {
       console.error(err);
+      alert('An error occurred while saving the vehicle.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -570,9 +618,10 @@ export default function Vehicles({ token, user }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all"
+                  disabled={saving}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:cursor-not-allowed"
                 >
-                  {modalMode === 'add' ? 'Save Vehicle' : 'Save Changes'}
+                  {saving ? 'Saving...' : (modalMode === 'add' ? 'Save Vehicle' : 'Save Changes')}
                 </button>
               </div>
             </form>
