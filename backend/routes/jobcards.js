@@ -101,7 +101,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Create digital job card
-router.post('/', auth, restrictTo('Admin', 'Service'), async (req, res) => {
+router.post('/', auth, restrictTo('Admin', 'Service', 'Accounts', 'Body Shop', 'Reception'), async (req, res) => {
   try {
     const jobCardNo = await generateJobCardNo();
     const today = new Date();

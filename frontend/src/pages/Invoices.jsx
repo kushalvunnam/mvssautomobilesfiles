@@ -1007,14 +1007,16 @@ export default function Invoices({ token, user, setActiveTab }) {
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); handleDeleteInvoice(inv._id, e); }}
-                                title="Delete Invoice"
-                                className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50 rounded-lg transition-colors border border-red-200/50 dark:border-red-800/50 flex items-center justify-center"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {user?.role === 'Admin' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteInvoice(inv._id, e); }}
+                                  title="Delete Invoice"
+                                  className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50 rounded-lg transition-colors border border-red-200/50 dark:border-red-800/50 flex items-center justify-center"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

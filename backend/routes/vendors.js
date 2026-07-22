@@ -86,7 +86,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Create Vendor
-router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
+router.post('/', auth, restrictTo('Admin', 'Spares'), async (req, res) => {
   try {
     const { name, mobile, vendorCode } = req.body;
     if (!name || !mobile) {
@@ -115,7 +115,7 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
 });
 
 // Update Vendor
-router.put('/:id', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
+router.put('/:id', auth, restrictTo('Admin', 'Spares'), async (req, res) => {
   try {
     const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!vendor) return res.status(404).json({ success: false, error: 'Vendor not found.', message: 'Vendor not found.' });

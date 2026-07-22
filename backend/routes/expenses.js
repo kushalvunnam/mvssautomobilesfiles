@@ -16,7 +16,7 @@ const generateExpenseId = async () => {
   return `EXP-${dateStr}-${sequence}`;
 };
 
-router.use(auth, restrictTo('Admin', 'Spares', 'Accounts'));
+router.use(auth, restrictTo('Admin', 'Accounts', 'Service', 'Spares', 'Body Shop'));
 
 // GET /api/expenses - List expenses with filters and summary statistics
 router.get('/', async (req, res) => {

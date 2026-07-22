@@ -190,7 +190,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Create estimate
-router.post('/', auth, restrictTo('Admin', 'Service', 'Spares'), async (req, res) => {
+router.post('/', auth, restrictTo('Admin', 'Service', 'Accounts', 'Body Shop'), async (req, res) => {
   try {
     const { jobCardId, parts, labour } = req.body;
     
@@ -238,7 +238,7 @@ router.post('/', auth, restrictTo('Admin', 'Service', 'Spares'), async (req, res
 });
 
 // Update estimate
-router.put('/:id', auth, restrictTo('Admin', 'Service', 'Spares'), async (req, res) => {
+router.put('/:id', auth, restrictTo('Admin', 'Service', 'Accounts', 'Body Shop'), async (req, res) => {
   try {
     const { parts, labour, status } = req.body;
     const estimate = await Estimate.findById(req.params.id);
@@ -319,7 +319,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
 });
 
 // Issue parts to Job Card (Reduce inventory quantity automatically)
-router.post('/:id/parts/issue', auth, restrictTo('Admin', 'Spares', 'Service'), async (req, res) => {
+router.post('/:id/parts/issue', auth, restrictTo('Admin', 'Spares', 'Service', 'Accounts', 'Body Shop'), async (req, res) => {
   try {
     const { partId, qtyToIssue } = req.body;
     const estimate = await Estimate.findById(req.params.id);
