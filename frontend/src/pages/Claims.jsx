@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import { Search, ShieldAlert, FileText, Upload, Calendar, CheckCircle2, User, Car, X } from 'lucide-react';
 
@@ -73,6 +74,17 @@ export default function Claims({ token, user }) {
       console.error(err);
     }
   };
+
+  // Close modal on Esc keypress
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowAddModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     fetchClaims();
@@ -528,10 +540,13 @@ export default function Claims({ token, user }) {
       </div>
 
       {/* Add Claim modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 overflow-y-auto max-h-[90vh] animate-fade-in text-xs font-semibold">
-            <div className="flex justify-between items-center mb-6">
+      {showAddModal && createPortal(
+        <div 
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex justify-center items-center p-3 sm:p-6 z-[99999] select-none overflow-hidden animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-[90vw] max-w-[800px] h-[80vh] max-h-[80vh] shadow-2xl flex flex-col relative overflow-hidden my-auto animate-scale-in">
+            <div className="px-6 py-4.5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/40 shrink-0 mb-0">
               <h3 className="text-lg font-black text-slate-850 dark:text-white uppercase tracking-wider">
                 File New Claim Entry
               </h3>
@@ -544,7 +559,8 @@ export default function Claims({ token, user }) {
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} className="space-y-4">
+            <form onSubmit={handleAddSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wide">Claim Number</label>
@@ -795,17 +811,20 @@ export default function Claims({ token, user }) {
                 />
               </div>
 
-              <div className="flex gap-3 justify-end pt-4 border-t border-slate-105/50">
+                            </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex justify-end gap-3 shrink-0 rounded-b-3xl">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-350 rounded-xl font-bold"
+                  className="px-4 py-2 bg-slate-150 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-750 dark:text-slate-350 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all"
                 >
                   Save Claim Entry
                 </button>

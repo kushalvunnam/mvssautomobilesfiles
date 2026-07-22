@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import { Search, Plus, Edit2, Calendar, FileText, ClipboardList, Trash2, X } from 'lucide-react';
 
@@ -64,6 +65,17 @@ export default function Vehicles({ token, user }) {
       console.error(err);
     }
   };
+
+  // Close modal on Esc keypress
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     fetchVehicles();
@@ -415,10 +427,13 @@ export default function Vehicles({ token, user }) {
       </div>
 
       {/* Add / Edit modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 overflow-y-auto max-h-[90vh] animate-fade-in">
-            <div className="flex justify-between items-center mb-6">
+      {showModal && createPortal(
+        <div 
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex justify-center items-center p-3 sm:p-6 z-[99999] select-none overflow-hidden animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-[90vw] max-w-[850px] h-[80vh] max-h-[80vh] shadow-2xl flex flex-col relative overflow-hidden my-auto animate-scale-in">
+            <div className="px-6 py-4.5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/40 shrink-0 mb-0">
               <h3 className="text-lg font-black text-slate-850 dark:text-white uppercase tracking-wider">
                 {modalMode === 'add' ? 'New Vehicle Record' : 'Edit Vehicle Details'}
               </h3>
@@ -431,7 +446,8 @@ export default function Vehicles({ token, user }) {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wide">Vehicle Reg Number</label>
@@ -617,7 +633,10 @@ export default function Vehicles({ token, user }) {
                 </div>
               </div>
 
-              <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex justify-end gap-3 shrink-0 rounded-b-3xl">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
@@ -635,7 +654,8 @@ export default function Vehicles({ token, user }) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

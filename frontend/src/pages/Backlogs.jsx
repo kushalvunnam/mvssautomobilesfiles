@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import { 
   Plus, 
@@ -83,6 +84,19 @@ export default function Backlogs({ token, user }) {
     fetchJobCards();
     fetchInventoryList();
   }, [token, statusFilter, priorityFilter, orderedFromDate, orderedToDate, expectedFromDate, expectedToDate]);
+
+  // Close modals on Esc keypress
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowAddModal(false);
+        setShowEditModal(false);
+        setShowViewModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const parseJsonResponse = async (res) => {
     try {
@@ -930,9 +944,12 @@ export default function Backlogs({ token, user }) {
       {/* ========================================================== */}
       {/* MODAL 1: ADD BACKLOG REQUEST                                */}
       {/* ========================================================== */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl border border-slate-200 dark:border-slate-800 shadow-2xl relative animate-scale-in max-h-[90vh] flex flex-col">
+      {showAddModal && createPortal(
+        <div 
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex justify-center items-center p-3 sm:p-6 z-[99999] select-none overflow-hidden animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-[90vw] max-w-[1200px] h-[85vh] max-h-[85vh] shadow-2xl flex flex-col relative overflow-hidden my-auto animate-scale-in">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
@@ -1186,15 +1203,19 @@ export default function Backlogs({ token, user }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================== */}
       {/* MODAL 2: EDIT BACKLOG REQUEST                               */}
       {/* ========================================================== */}
-      {showEditModal && selectedBacklog && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl border border-slate-200 dark:border-slate-800 shadow-2xl relative animate-scale-in max-h-[90vh] flex flex-col">
+      {showEditModal && selectedBacklog && createPortal(
+        <div 
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex justify-center items-center p-3 sm:p-6 z-[99999] select-none overflow-hidden animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false); }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-[90vw] max-w-[1200px] h-[85vh] max-h-[85vh] shadow-2xl flex flex-col relative overflow-hidden my-auto animate-scale-in">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
@@ -1442,15 +1463,19 @@ export default function Backlogs({ token, user }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================== */}
       {/* MODAL 3: VIEW BACKLOG REQUEST DETAILS                      */}
       {/* ========================================================== */}
-      {showViewModal && selectedBacklog && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg border border-slate-200 dark:border-slate-800 shadow-2xl relative animate-scale-in max-h-[90vh] flex flex-col">
+      {showViewModal && selectedBacklog && createPortal(
+        <div 
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex justify-center items-center p-3 sm:p-6 z-[99999] select-none overflow-hidden animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowViewModal(false); }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-[90vw] max-w-[1000px] h-[85vh] max-h-[85vh] shadow-2xl flex flex-col relative overflow-hidden my-auto animate-scale-in">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
@@ -1598,7 +1623,8 @@ export default function Backlogs({ token, user }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

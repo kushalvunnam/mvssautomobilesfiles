@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import { 
   Wallet, 
@@ -102,6 +103,19 @@ export default function Expenses({ token, user }) {
   });
 
   // Load initial dataset on mount
+  // Close modals on Esc keypress
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowAddModal(false);
+        setViewingExpense(null);
+        setDeletingExpense(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   useEffect(() => {
     fetchExpenses();
   }, [token]);
@@ -761,9 +775,12 @@ export default function Expenses({ token, user }) {
       </div>
 
       {/* Add / Edit Expense Desktop-Optimized Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex justify-center items-center z-50 p-3 sm:p-6 overflow-hidden">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[92vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+      {showAddModal && createPortal(
+        <div 
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex justify-center items-center p-3 sm:p-6 z-[99999] select-none overflow-hidden animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-[90vw] max-w-[1100px] h-[85vh] max-h-[85vh] shadow-2xl flex flex-col relative overflow-hidden my-auto animate-scale-in">
             
             {/* Header (Fixed) */}
             <div className="flex-none p-4 px-6 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
@@ -925,11 +942,11 @@ export default function Expenses({ token, user }) {
             </form>
 
             {/* Action Footer (Fixed) */}
-            <div className="flex-none p-4 px-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex justify-end items-center gap-3">
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex justify-end gap-3 shrink-0 rounded-b-3xl">
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                className="px-4 py-2 bg-slate-150 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-750 dark:text-slate-350 transition-colors"
               >
                 Cancel
               </button>
@@ -943,14 +960,18 @@ export default function Expenses({ token, user }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* View Expense Detail Modal */}
-      {viewingExpense && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex justify-center items-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
+      {viewingExpense && createPortal(
+        <div 
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex justify-center items-center p-3 sm:p-6 z-[99999] select-none overflow-hidden animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setViewingExpense(null); }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-[90vw] max-w-[800px] h-[75vh] max-h-[75vh] shadow-2xl flex flex-col relative overflow-hidden my-auto animate-scale-in">
+            <div className="p-5 bg-slate-900 text-white flex justify-between items-center shrink-0">
               <div className="flex items-center gap-2.5">
                 <Wallet className="w-5 h-5 text-indigo-400" />
                 <h3 className="font-black text-sm uppercase tracking-wider">Expense Details ({viewingExpense.expenseId})</h3>
@@ -963,7 +984,7 @@ export default function Expenses({ token, user }) {
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase block">Expense ID</span>
@@ -1016,7 +1037,7 @@ export default function Expenses({ token, user }) {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex justify-end gap-3 shrink-0 rounded-b-3xl">
               <button
                 onClick={() => setViewingExpense(null)}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
@@ -1025,7 +1046,8 @@ export default function Expenses({ token, user }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirmation Modal */}
