@@ -5,6 +5,8 @@ const Notification = require('../models/Notification');
 const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 
+router.use(auth, restrictTo('Admin', 'Service'));
+
 // Generate unique sequential gate pass number (e.g. GP-260702-001)
 const generateGatePassNo = async () => {
   const today = new Date();

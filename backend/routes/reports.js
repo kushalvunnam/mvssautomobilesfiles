@@ -4,8 +4,10 @@ const Vendor = require('../models/Vendor');
 const Purchase = require('../models/Purchase');
 const StockAdjustment = require('../models/StockAdjustment');
 const Invoice = require('../models/Invoice');
-const { auth } = require('../middleware/auth');
+const { auth, restrictTo } = require('../middleware/auth');
 const router = express.Router();
+
+router.use(auth, restrictTo('Admin', 'Service', 'Spares'));
 
 // 1. Stock Valuation & Statement Report
 router.get('/stock-statement', auth, async (req, res) => {
