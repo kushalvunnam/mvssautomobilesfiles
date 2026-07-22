@@ -17,8 +17,10 @@ const generateAdjustmentNo = async () => {
   return `ADJ-${dateStr}-${sequence}`;
 };
 
+router.use(auth, restrictTo('Admin', 'Spares'));
+
 // List stock adjustments with search & type filter
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { search, type, status } = req.query;
     let query = {};
@@ -47,7 +49,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Create Stock Adjustment (Automatically updates inventory stock if status is Approved)
-router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { partId, type, qty, reason, comments, reference } = req.body;
     if (!partId || !type || !qty || !reason) {
@@ -109,7 +111,7 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
 });
 
 // Approve Pending Adjustment (Admin Only)
-router.put('/:id/approve', auth, restrictTo('Admin'), async (req, res) => {
+router.put('/:id/approve', restrictTo('Admin'), async (req, res) => {
   try {
     const adjustment = await StockAdjustment.findById(req.params.id);
     if (!adjustment) return res.status(404).send({ error: 'Adjustment not found.' });

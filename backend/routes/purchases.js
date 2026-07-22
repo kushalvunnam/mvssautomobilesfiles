@@ -17,9 +17,10 @@ const generatePurchaseNo = async () => {
   const sequence = String(count + 1).padStart(4, '0');
   return `PUR-${dateStr}-${sequence}`;
 };
+router.use(auth, restrictTo('Admin', 'Spares'));
 
 // List all purchases with search & vendor filter
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { search, vendorId, paymentStatus } = req.query;
     let query = {};
@@ -52,7 +53,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Create Purchase Entry (Restocks Inventory & Updates Vendor Balances)
-router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { vendorId, invoiceNo, invoiceDate, items, paymentStatus, amountPaid, notes } = req.body;
     if (!vendorId || !items || !Array.isArray(items) || items.length === 0) {
@@ -203,7 +204,7 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Spares'), async (req, re
 });
 
 // Update Vendor Payment for Purchase Entry
-router.put('/:id/payment', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
+router.put('/:id/payment', async (req, res) => {
   try {
     let { amountPaid, paymentStatus } = req.body;
     const purchase = await Purchase.findById(req.params.id);

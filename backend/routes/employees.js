@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Admin restriction applies to all endpoints here
-router.use(auth, restrictTo('Admin', 'Accounts'));
+router.use(auth, restrictTo('Admin'));
 
 // 1. Get all employees (with self-healing unique employeeId backfill)
 router.get('/', async (req, res) => {

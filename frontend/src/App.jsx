@@ -52,26 +52,26 @@ import {
 import * as mockData from './utils/mockData';
 
 const tabPermissions = {
-  dashboard: ['Admin', 'Accounts'],
-  customers: ['Admin', 'Service', 'Accounts', 'Body Shop'],
-  vehicles: ['Admin', 'Service', 'Accounts', 'Body Shop'],
-  jobcards: ['Admin', 'Service', 'Spares', 'Body Shop'],
-  estimates: ['Admin', 'Service', 'Spares'],
-  invoices: ['Admin', 'Accounts'],
-  inventory: ['Admin', 'Spares', 'Accounts'],
-  stockstatement: ['Admin', 'Spares', 'Accounts'],
-  vendors: ['Admin', 'Spares', 'Accounts'],
-  adjustments: ['Admin', 'Spares', 'Accounts'],
-  inventoryreports: ['Admin', 'Spares', 'Accounts'],
-  purchasereport: ['Admin', 'Spares', 'Accounts'],
-  purchases: ['Admin', 'Spares', 'Accounts'],
-  expenses: ['Admin', 'Accounts', 'Service', 'Spares', 'Body Shop'],
-  employees: ['Admin', 'Accounts'],
-  claims: ['Admin', 'Accounts', 'Service', 'Body Shop'],
-  reports: ['Admin', 'Accounts', 'Service', 'Spares'],
-  auditlogs: ['Admin'],
+  dashboard: ['Admin', 'Service', 'Reception'],
   bodyshop: ['Admin', 'Body Shop'],
-  gatepass: ['Admin']
+  customers: ['Admin', 'Accounts', 'Service', 'Body Shop', 'Reception'],
+  vehicles: ['Admin', 'Accounts', 'Service', 'Body Shop', 'Reception'],
+  jobcards: ['Admin', 'Accounts', 'Service', 'Body Shop', 'Reception'],
+  estimates: ['Admin', 'Accounts', 'Service', 'Body Shop'],
+  invoices: ['Admin', 'Accounts'],
+  inventory: ['Admin', 'Spares'],
+  vendors: ['Admin', 'Spares'],
+  adjustments: ['Admin', 'Spares'],
+  stockstatement: ['Admin', 'Spares'],
+  inventoryreports: ['Admin', 'Spares'],
+  purchases: ['Admin', 'Spares'],
+  purchasereport: ['Admin', 'Spares'],
+  expenses: ['Admin', 'Spares', 'Accounts'],
+  employees: ['Admin'],
+  claims: ['Admin', 'Service'],
+  reports: ['Admin', 'Service'],
+  auditlogs: ['Admin'],
+  gatepass: ['Admin', 'Service']
 };
 
 export default function App() {
@@ -1636,11 +1636,10 @@ function ProtectedRoute({ children, token, user }) {
 }
 
 function getRedirectPath(role) {
-  if (role === 'Service') return '/job-cards';
   if (role === 'Spares') return '/inventory';
-  if (role === 'Accounts') return '/invoices';
+  if (role === 'Accounts') return '/customers';
   if (role === 'Body Shop') return '/body-shop';
-  return '/dashboard'; // Default to dashboard for Admin
+  return '/dashboard'; // Default to dashboard for Admin, Service, Reception
 }
 
 function LoginWrapper({ token, user, onLoginSuccess }) {
@@ -1700,7 +1699,12 @@ function ERPShell({
     else if (path === '/job-cards') setActiveTab('jobcards');
     else if (path === '/estimates') setActiveTab('estimates');
     else if (path === '/invoices') setActiveTab('invoices');
-    else if (path === '/purchasereport' || path === '/inventory/purchase-report') setActiveTab('purchasereport');
+    else if (path === '/inventory') setActiveTab('inventory');
+    else if (path === '/stockstatement' || path === '/inventory/statement') setActiveTab('stockstatement');
+    else if (path === '/vendors' || path === '/inventory/vendors') setActiveTab('vendors');
+    else if (path === '/adjustments' || path === '/inventory/adjustments') setActiveTab('adjustments');
+    else if (path === '/inventoryreports' || path === '/inventory/reports') setActiveTab('inventoryreports');
+    else if (path === '/purchasereport' || path === '/inventory/purchase-report' || path === '/purchases' || path === '/inventory/purchases') setActiveTab('purchases');
     else if (path === '/expenses' || path === '/inventory/expenses') setActiveTab('expenses');
     else if (path === '/employees') setActiveTab('employees');
     else if (path === '/claims') setActiveTab('claims');
@@ -1713,19 +1717,21 @@ function ERPShell({
   const hasAccess = tabPermissions[activeTab]?.includes(userRole) ?? true;
 
   const navigationItems = [
-    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Accounts'] },
+    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Service', 'Reception'] },
     { id: 'bodyshop', name: 'Body Shop', icon: Wrench, roles: ['Admin', 'Body Shop'] },
-    { id: 'customers', name: 'Customers', icon: Users, roles: ['Admin', 'Service', 'Accounts', 'Body Shop'] },
-    { id: 'vehicles', name: 'Vehicles', icon: Car, roles: ['Admin', 'Service', 'Accounts', 'Body Shop'] },
-    { id: 'jobcards', name: 'Job Cards', icon: FileText, roles: ['Admin', 'Service', 'Spares', 'Body Shop'] },
-    { id: 'estimates', name: 'Estimates', icon: FileCheck, roles: ['Admin', 'Service', 'Spares'] },
+    { id: 'customers', name: 'Customers', icon: Users, roles: ['Admin', 'Accounts', 'Service', 'Body Shop', 'Reception'] },
+    { id: 'vehicles', name: 'Vehicles', icon: Car, roles: ['Admin', 'Accounts', 'Service', 'Body Shop', 'Reception'] },
+    { id: 'jobcards', name: 'Job Cards', icon: FileText, roles: ['Admin', 'Accounts', 'Service', 'Body Shop', 'Reception'] },
+    { id: 'estimates', name: 'Estimates', icon: FileCheck, roles: ['Admin', 'Accounts', 'Service', 'Body Shop'] },
     { id: 'invoices', name: 'Invoices', icon: Receipt, roles: ['Admin', 'Accounts'] },
     { id: 'inventory', name: 'Inventory', icon: Package, roles: ['Admin', 'Spares'] },
-    { id: 'employees', name: 'Employees', icon: Users, roles: ['Admin', 'Accounts'] },
-    { id: 'claims', name: 'Claims', icon: ShieldCheck, roles: ['Admin', 'Accounts', 'Service', 'Body Shop'] },
-    { id: 'reports', name: 'Reports', icon: TrendingUp, roles: ['Admin', 'Accounts', 'Service', 'Spares'] },
+    { id: 'purchases', name: 'Purchases', icon: ShoppingBag, roles: ['Admin', 'Spares'] },
+    { id: 'expenses', name: 'Expenses', icon: Wallet, roles: ['Admin', 'Spares', 'Accounts'] },
+    { id: 'employees', name: 'Employees', icon: Users, roles: ['Admin'] },
+    { id: 'claims', name: 'Claims', icon: ShieldCheck, roles: ['Admin', 'Service'] },
+    { id: 'reports', name: 'Reports', icon: TrendingUp, roles: ['Admin', 'Service'] },
     { id: 'auditlogs', name: 'Audit Logs', icon: History, roles: ['Admin'] },
-    { id: 'gatepass', name: 'Gate Pass', icon: FileText, roles: ['Admin'] },
+    { id: 'gatepass', name: 'Gate Pass', icon: Key, roles: ['Admin', 'Service'] }
   ];
 
   const filteredNavItems = navigationItems.filter(item => item.roles.includes(userRole));
@@ -1812,8 +1818,17 @@ function ERPShell({
                   </div>
                 </div>
 
+                <div className="pt-2">
+                  <button
+                    onClick={() => navigate(getRedirectPath(userRole))}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/10"
+                  >
+                    Return to Allowed Workspace
+                  </button>
+                </div>
+
                 <p className="text-[10px] font-semibold text-slate-500">
-                  Please sign out and sign in using an authorized profile to launch this workspace console.
+                  Please sign out or return to an authorized console.
                 </p>
               </div>
             </div>

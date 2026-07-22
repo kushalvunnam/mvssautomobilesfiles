@@ -16,8 +16,10 @@ const generateExpenseId = async () => {
   return `EXP-${dateStr}-${sequence}`;
 };
 
+router.use(auth, restrictTo('Admin', 'Spares', 'Accounts'));
+
 // GET /api/expenses - List expenses with filters and summary statistics
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { fromDate, toDate, expenseType, paymentMode, status, search } = req.query;
     let query = {};
@@ -132,7 +134,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // GET /api/expenses/:id - Single expense details
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const expense = await Expense.findById(req.params.id);
     if (!expense) {
@@ -145,7 +147,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // POST /api/expenses - Create new expense record
-router.post('/', auth, restrictTo('Admin', 'Accounts', 'Service', 'Spares', 'Body Shop'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { date, expenseType, description, amount, paymentMode, paidTo, referenceNo, remarks, status } = req.body;
 
@@ -192,7 +194,7 @@ router.post('/', auth, restrictTo('Admin', 'Accounts', 'Service', 'Spares', 'Bod
 });
 
 // PUT /api/expenses/:id - Update expense record
-router.put('/:id', auth, restrictTo('Admin', 'Accounts', 'Service', 'Spares', 'Body Shop'), async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { amount, expenseType, description, paymentMode, date } = req.body;
 
@@ -236,7 +238,7 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts', 'Service', 'Spares', 'B
 });
 
 // DELETE /api/expenses/:id - Delete expense record
-router.delete('/:id', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
+router.delete('/:id', restrictTo('Admin', 'Accounts'), async (req, res) => {
   try {
     const expense = await Expense.findById(req.params.id);
     if (!expense) {

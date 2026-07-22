@@ -229,7 +229,8 @@ async function seedDatabase() {
       { name: 'Accounts Executive', email: 'accounts@mvssautomobiles.com', password: 'accounts_mvss@2026', role: 'Accounts' },
       { name: 'Service Advisor', email: 'service@mvssautomobiles.com', password: 'service_mvss@2026', role: 'Service' },
       { name: 'Store Manager', email: 'store@mvssautomobiles.com', password: 'store_mvss@2026', role: 'Spares' },
-      { name: 'Body Shop Manager', email: 'bodyshop@mvssautomobiles.com', password: 'bodyshop_mvss@2026', role: 'Body Shop' }
+      { name: 'Body Shop Manager', email: 'bodyshop@mvssautomobiles.com', password: 'bodyshop_mvss@2026', role: 'Body Shop' },
+      { name: 'Front Desk Receptionist', email: 'reception@mvssautomobiles.com', password: 'reception_mvss@2026', role: 'Reception' }
     ];
     for (const u of defaultUsers) {
       const existing = await User.findOne({ email: u.email });
