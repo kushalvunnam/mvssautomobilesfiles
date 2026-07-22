@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
 // Create Purchase Entry (Restocks Inventory & Updates Vendor Balances)
 router.post('/', async (req, res) => {
   try {
-    const { vendorId, invoiceNo, invoiceDate, items, paymentStatus, amountPaid, notes } = req.body;
+    const { vendorId, invoiceNo, invoiceDate, items, paymentStatus, amountPaid, notes, updatePurchasePrice = true, updateMRP = true } = req.body;
     if (!vendorId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).send({ error: 'Vendor ID and at least one purchase item are required.' });
     }
@@ -76,6 +76,10 @@ router.post('/', async (req, res) => {
     const processedItems = [];
 
     for (const item of items) {
+      if (item.mrp !== undefined && Number(item.mrp) < 0) {
+        return res.status(400).send({ error: `MRP cannot be negative for part ${item.partName || ''}.` });
+      }
+
       const qty = Math.max(1, Number(item.qty) || 1);
       const purchasePrice = Math.max(0, Number(item.purchasePrice) || 0);
       const sellingPrice = Math.max(0, Number(item.sellingPrice) || purchasePrice);
@@ -117,9 +121,13 @@ router.post('/', async (req, res) => {
 
       if (inventoryItem) {
         inventoryItem.stockQuantity += qty;
-        inventoryItem.purchasePrice = purchasePrice;
+        if (updatePurchasePrice) {
+          inventoryItem.purchasePrice = purchasePrice;
+        }
         if (sellingPrice > 0) inventoryItem.sellingPrice = sellingPrice;
-        if (mrp > 0) inventoryItem.mrp = mrp;
+        if (updateMRP && mrp > 0 && inventoryItem.mrp !== mrp) {
+          inventoryItem.mrp = mrp;
+        }
         inventoryItem.vendorId = vendor._id;
         inventoryItem.vendorName = vendor.name;
         if (gstPercent !== undefined) inventoryItem.gstPercent = gstPercent;

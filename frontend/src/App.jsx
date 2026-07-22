@@ -24,6 +24,7 @@ import StockAdjustment from './pages/StockAdjustment';
 import StockStatement from './pages/StockStatement';
 import InventoryReports from './pages/InventoryReports';
 import PurchaseReport from './pages/PurchaseReport';
+import Backlogs from './pages/Backlogs';
 import Expenses from './pages/Expenses';
 
 const PageSkeletonLoader = () => (
@@ -69,6 +70,7 @@ const tabPermissions = {
   inventoryreports: ['Admin', 'Spares'],
   purchases: ['Admin', 'Spares'],
   purchasereport: ['Admin', 'Spares'],
+  backlogs: ['Admin', 'Accounts', 'Service', 'Body Shop', 'Spares'],
   expenses: ['Admin', 'Accounts', 'Service', 'Spares', 'Body Shop'],
   employees: ['Admin'],
   claims: ['Admin', 'Service'],
@@ -197,6 +199,7 @@ export default function App() {
         sessionStorage.setItem('mock_invoices', JSON.stringify(mockData.initialInvoices));
         sessionStorage.setItem('mock_claims', JSON.stringify(mockData.initialClaims));
         sessionStorage.setItem('mock_gatepasses', JSON.stringify([]));
+        sessionStorage.setItem('mock_backlogs', JSON.stringify([]));
         localStorage.setItem('mock_auditlogs', JSON.stringify(mockData.initialAuditLogs));
         sessionStorage.setItem('mock_employees', JSON.stringify([
           {
@@ -956,6 +959,200 @@ export default function App() {
           }
         }
 
+        if (urlStr.includes('/api/backlogs')) {
+          const db = JSON.parse(sessionStorage.getItem('mock_backlogs') || '[]');
+          
+          if (method === 'GET') {
+            const cleanUrl = urlStr.includes('?') ? urlStr.split('?')[0] : urlStr;
+            if (cleanUrl.match(/\/backlogs\/[a-zA-Z0-9_-]+$/)) {
+              const id = cleanUrl.split('/').pop();
+              return responseJson(db.find(item => item._id === id) || db[0]);
+            }
+            
+            let filteredDb = [...db];
+            if (user?.role === 'Service') {
+              filteredDb = filteredDb.filter(b => b.serviceAdvisorId === user?.id || b.createdBy === user?.name);
+            }
+            
+            const searchMatch = urlStr.match(/[?&]search=([^&]*)/);
+            if (searchMatch) {
+              const term = decodeURIComponent(searchMatch[1]).toLowerCase();
+              if (term) {
+                filteredDb = filteredDb.filter(b => 
+                  (b.vehicleNo && b.vehicleNo.toLowerCase().includes(term)) ||
+                  (b.jobCardNo && b.jobCardNo.toLowerCase().includes(term)) ||
+                  (b.partNumber && b.partNumber.toLowerCase().includes(term)) ||
+                  (b.partName && b.partName.toLowerCase().includes(term)) ||
+                  (b.vendorName && b.vendorName.toLowerCase().includes(term)) ||
+                  (b.customerName && b.customerName.toLowerCase().includes(term))
+                );
+              }
+            }
+            
+            return responseJson(filteredDb);
+          }
+          
+          if (method === 'POST') {
+            const prefix = `BL-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-`;
+            const count = db.filter(b => b.backlogId?.startsWith(prefix)).length;
+            const sequence = String(count + 1).padStart(4, '0');
+            const backlogId = `${prefix}${sequence}`;
+            
+            const newItem = {
+              _id: 'bl_' + Date.now(),
+              backlogId,
+              status: 'Pending Order',
+              createdBy: user?.name || 'Staff Member',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              ...body
+            };
+            
+            db.unshift(newItem);
+            sessionStorage.setItem('mock_backlogs', JSON.stringify(db));
+            
+            const mockAudit = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+            mockAudit.unshift({
+              _id: 'mock_log_' + Date.now(),
+              timestamp: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              userId: user?.id || 'demo_user',
+              userName: user?.name || 'Guest/System',
+              role: user?.role || 'Guest',
+              userRole: user?.role || 'Guest',
+              module: 'Backlog',
+              action: 'BACKLOG_CREATE',
+              details: `Created backlog request ${newItem.backlogId} for Part ${newItem.partName}`,
+              ipAddress: '127.0.0.1'
+            });
+            localStorage.setItem('mock_auditlogs', JSON.stringify(mockAudit));
+            window.dispatchEvent(new Event('storage'));
+            
+            return responseJson(newItem, 201);
+          }
+          
+          if (method === 'PUT') {
+            const cleanUrl = urlStr.includes('?') ? urlStr.split('?')[0] : urlStr;
+            const id = cleanUrl.split('/').pop();
+            
+            if (urlStr.includes('/receive')) {
+              const backlogIdFromUrl = cleanUrl.split('/receive')[0].split('/').pop();
+              const idx = db.findIndex(b => b._id === backlogIdFromUrl);
+              if (idx !== -1) {
+                db[idx].status = 'Received';
+                db[idx].receivedDate = new Date().toISOString();
+                db[idx].lastUpdatedBy = user?.name || 'Staff';
+                
+                const invDb = JSON.parse(sessionStorage.getItem('mock_inventory') || '[]');
+                const pIdx = invDb.findIndex(p => p.partNumber === db[idx].partNumber);
+                if (pIdx !== -1) {
+                  invDb[pIdx].stockQuantity = (invDb[pIdx].stockQuantity || 0) + Number(db[idx].qty);
+                } else {
+                  invDb.push({
+                    _id: 'inv_' + Date.now(),
+                    partName: db[idx].partName,
+                    partNumber: db[idx].partNumber,
+                    hsnCode: '8708',
+                    stockQuantity: Number(db[idx].qty),
+                    purchasePrice: 0,
+                    sellingPrice: 0,
+                    gstPercent: 18,
+                    brand: db[idx].brand || '',
+                    warehouse: 'Main Store'
+                  });
+                }
+                sessionStorage.setItem('mock_inventory', JSON.stringify(invDb));
+                
+                const purchasesDb = JSON.parse(sessionStorage.getItem('mock_purchases') || '[]');
+                const mockPurNo = `PUR-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${purchasesDb.length + 1}`;
+                purchasesDb.unshift({
+                  _id: 'pur_' + Date.now(),
+                  purchaseNo: mockPurNo,
+                  vendorName: db[idx].vendorName,
+                  date: new Date().toISOString(),
+                  invoiceNo: db[idx].poNumber || `RCV-${db[idx].backlogId}`,
+                  invoiceDate: new Date().toISOString(),
+                  items: [{
+                    partNumber: db[idx].partNumber,
+                    partName: db[idx].partName,
+                    qty: db[idx].qty,
+                    purchasePrice: 0,
+                    sellingPrice: 0,
+                    gstPercent: 18,
+                    total: 0
+                  }],
+                  totals: {
+                    totalQty: db[idx].qty,
+                    grandTotal: 0
+                  },
+                  paymentStatus: 'Paid',
+                  amountPaid: 0,
+                  notes: db[idx].remarks || `Received from Backlog ${db[idx].backlogId}`,
+                  createdBy: user?.name || 'Staff'
+                });
+                sessionStorage.setItem('mock_purchases', JSON.stringify(purchasesDb));
+                
+                sessionStorage.setItem('mock_backlogs', JSON.stringify(db));
+                
+                const mockAudit = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+                mockAudit.unshift({
+                  _id: 'mock_log_' + Date.now(),
+                  timestamp: new Date().toISOString(),
+                  createdAt: new Date().toISOString(),
+                  userId: user?.id || 'demo_user',
+                  userName: user?.name || 'Guest/System',
+                  role: user?.role || 'Guest',
+                  userRole: user?.role || 'Guest',
+                  module: 'Backlog',
+                  action: 'BACKLOG_RECEIVE',
+                  details: `Received backlog parts for request ${db[idx].backlogId}. Restocked ${db[idx].qty} units of ${db[idx].partName}`,
+                  ipAddress: '127.0.0.1'
+                });
+                localStorage.setItem('mock_auditlogs', JSON.stringify(mockAudit));
+                window.dispatchEvent(new Event('storage'));
+                
+                return responseJson(db[idx]);
+              }
+              return responseJson({ error: 'Backlog not found' }, 404);
+            }
+            
+            const idx = db.findIndex(b => b._id === id);
+            if (idx !== -1) {
+              db[idx] = { ...db[idx], ...body, lastUpdatedBy: user?.name || 'Staff' };
+              sessionStorage.setItem('mock_backlogs', JSON.stringify(db));
+              return responseJson(db[idx]);
+            }
+            return responseJson({ error: 'Backlog not found' }, 404);
+          }
+          
+          if (method === 'DELETE') {
+            const id = urlStr.split('/').pop();
+            const backlog = db.find(b => b._id === id);
+            const filtered = db.filter(b => b._id !== id);
+            sessionStorage.setItem('mock_backlogs', JSON.stringify(filtered));
+            
+            if (backlog) {
+              const mockAudit = JSON.parse(localStorage.getItem('mock_auditlogs') || '[]');
+              mockAudit.unshift({
+                _id: 'mock_log_' + Date.now(),
+                timestamp: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                userId: user?.id || 'demo_user',
+                userName: user?.name || 'Guest/System',
+                role: user?.role || 'Guest',
+                userRole: user?.role || 'Guest',
+                module: 'Backlog',
+                action: 'BACKLOG_DELETE',
+                details: `Deleted backlog entry ${backlog.backlogId}`,
+                ipAddress: '127.0.0.1'
+              });
+              localStorage.setItem('mock_auditlogs', JSON.stringify(mockAudit));
+              window.dispatchEvent(new Event('storage'));
+            }
+            return responseJson({ message: 'Backlog entry deleted.' });
+          }
+        }
+
         if (urlStr.includes('/api/inventory')) {
           const db = JSON.parse(sessionStorage.getItem('mock_inventory') || '[]');
           
@@ -1708,6 +1905,7 @@ function ERPShell({
     else if (path === '/adjustments' || path === '/inventory/adjustments') setActiveTab('adjustments');
     else if (path === '/inventoryreports' || path === '/inventory/reports') setActiveTab('inventoryreports');
     else if (path === '/purchasereport' || path === '/inventory/purchase-report' || path === '/purchases' || path === '/inventory/purchases') setActiveTab('purchases');
+    else if (path === '/backlogs' || path === '/inventory/backlogs') setActiveTab('backlogs');
     else if (path === '/expenses' || path === '/inventory/expenses') setActiveTab('expenses');
     else if (path === '/employees') setActiveTab('employees');
     else if (path === '/claims') setActiveTab('claims');
@@ -1866,6 +2064,8 @@ function ERPShell({
                 <Route path="/inventoryreports" element={<InventoryReports token={token} user={user} />} />
                 <Route path="/purchasereport" element={<PurchaseReport token={token} user={user} />} />
                 <Route path="/purchases" element={<PurchaseReport token={token} user={user} />} />
+                <Route path="/inventory/backlogs" element={<Backlogs token={token} user={user} />} />
+                <Route path="/backlogs" element={<Backlogs token={token} user={user} />} />
                 <Route path="/inventory/expenses" element={<Expenses token={token} user={user} />} />
                 <Route path="/expenses" element={<Expenses token={token} user={user} />} />
                 <Route path="/employees" element={<Employees token={token} user={user} />} />

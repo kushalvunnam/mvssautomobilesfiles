@@ -16,7 +16,8 @@ import {
   History,
   Key,
   ShoppingBag,
-  Wallet
+  Wallet,
+  Clock
 } from 'lucide-react';
 
 export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isOpen, setIsOpen, isCollapsed }) {
@@ -37,6 +38,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, isO
     { id: 'stockstatement', name: 'Stock Statement', icon: FileText, roles: ['Admin', 'Spares'] },
     { id: 'inventoryreports', name: 'Stock Alerts & Reports', icon: TrendingUp, roles: ['Admin', 'Spares'] },
     { id: 'purchases', name: 'Purchases', icon: ShoppingBag, roles: ['Admin', 'Spares'] },
+    { id: 'backlogs', name: 'Backlog Tracking', icon: Clock, roles: ['Admin', 'Accounts', 'Service', 'Body Shop', 'Spares'] },
     { id: 'expenses', name: 'Miscellaneous Expenses', icon: Wallet, roles: ['Admin', 'Accounts', 'Service', 'Spares', 'Body Shop'] },
     { id: 'employees', name: 'Employees', icon: Users, roles: ['Admin'] },
     { id: 'claims', name: 'Insurance Claims', icon: ShieldCheck, roles: ['Admin', 'Service'] },

@@ -15,22 +15,25 @@ async function sendEmail({ to, subject, html, from }) {
   const recipientEmail = 'accounts@auto4m.in';
   const senderEmail = from || process.env.RESEND_FROM_EMAIL || 'MVSS Automobiles <onboarding@resend.dev>';
 
-  console.log('[EMAIL SERVICE] Calling Resend...');
-  console.log(`[EMAIL SERVICE] Recipient email: ${recipientEmail}`);
-  console.log(`[EMAIL SERVICE] Sender email: ${senderEmail}`);
+  console.log('[EMAIL SERVICE] Preparing email dispatch...');
+  console.log(`[EMAIL SERVICE] Recipient: ${recipientEmail}`);
+  console.log(`[EMAIL SERVICE] Sender: ${senderEmail}`);
 
   if (!apiKey) {
     const errorMsg = 'RESEND_API_KEY environment variable is not defined in backend runtime environment.';
-    console.error(`[EMAIL SERVICE ERROR] Error message if sending fails: ${errorMsg}`);
+    console.error(`[EMAIL SERVICE ERROR] RESEND_API_KEY Loaded: NO. Error details: ${errorMsg}`);
     return { 
       success: false, 
       error: { statusCode: 400, name: 'missing_api_key', message: errorMsg } 
     };
   }
 
+  console.log(`[EMAIL SERVICE] RESEND_API_KEY Loaded: YES. Using API Key: ${apiKey.slice(0, 5)}xxxxxxxxx`);
+
   try {
     const resend = new Resend(apiKey);
 
+    console.log('[EMAIL SERVICE] Calling Resend emails.send API...');
     let response = await resend.emails.send({
       from: senderEmail,
       to: recipientEmail,
@@ -41,7 +44,7 @@ async function sendEmail({ to, subject, html, from }) {
     console.log('[EMAIL SERVICE] Full Resend response:', JSON.stringify(response, null, 2));
 
     if (response.error) {
-      console.error('[EMAIL SERVICE ERROR] Error message if sending fails:', response.error);
+      console.error('[EMAIL SERVICE ERROR] Email dispatch failed. Error details:', response.error);
 
       // Fallback if custom sender domain fails (unverified, validation, rate limits, etc.)
       if (!senderEmail.includes('onboarding@resend.dev')) {
@@ -62,11 +65,11 @@ async function sendEmail({ to, subject, html, from }) {
       console.log(`[EMAIL SERVICE SUCCESS] Email ID: ${response.data.id}`);
       return { success: true, data: response.data, emailId: response.data.id };
     } else {
-      console.error('[EMAIL SERVICE ERROR] Error message if sending fails:', response.error);
+      console.error('[EMAIL SERVICE ERROR] Final dispatch attempt failed. Resend Error:', response.error);
       return { success: false, error: response.error };
     }
   } catch (err) {
-    console.error('[EMAIL SERVICE EXCEPTION] Error message if sending fails:', err);
+    console.error('[EMAIL SERVICE EXCEPTION] Exception during dispatch:', err);
     return { 
       success: false, 
       error: { statusCode: 500, name: 'exception', message: err.message || String(err) } 

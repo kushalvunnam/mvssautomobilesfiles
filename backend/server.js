@@ -121,6 +121,7 @@ app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/vendors', require('./routes/vendors'));
 app.use('/api/adjustments', require('./routes/adjustments'));
 app.use('/api/purchases', require('./routes/purchases'));
+app.use('/api/backlogs', require('./routes/backlogs'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/claims', require('./routes/claims'));
 app.use('/api/dashboard', require('./routes/dashboard'));

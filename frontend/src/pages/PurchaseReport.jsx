@@ -91,7 +91,9 @@ export default function PurchaseReport({ token, user }) {
     invoiceDate: new Date().toISOString().slice(0, 10),
     paymentStatus: 'Credit', // Options: Paid, Credit, Partially Paid
     amountPaid: '',
-    notes: ''
+    notes: '',
+    updatePurchasePrice: true,
+    updateMRP: true
   });
 
   const [purchaseItems, setPurchaseItems] = useState([createEmptyRow()]);
@@ -337,6 +339,20 @@ export default function PurchaseReport({ token, user }) {
         setPurchaseFormError(`Row #${i + 1}: Quantity must be at least 1.`);
         return;
       }
+      if (item.mrp === undefined || item.mrp === '' || Number(item.mrp) < 0) {
+        setPurchaseFormError(`Row #${i + 1}: MRP must be 0 or greater.`);
+        return;
+      }
+    }
+
+    const rateExceedsMrpItems = purchaseItems.filter(item => Number(item.purchasePrice) > Number(item.mrp));
+    if (rateExceedsMrpItems.length > 0) {
+      const confirmSave = window.confirm(
+        `Warning: Purchase Rate exceeds MRP for the following items:\n` +
+        rateExceedsMrpItems.map(item => `- ${item.partName} (Purchase Rate: ₹${item.purchasePrice}, MRP: ₹${item.mrp})`).join('\n') +
+        `\n\nDo you want to proceed and save this purchase entry?`
+      );
+      if (!confirmSave) return;
     }
 
     const grandTotal = summaryTotals.grandTotal;
@@ -355,7 +371,7 @@ export default function PurchaseReport({ token, user }) {
         qty: Number(row.qty) || 1,
         purchasePrice: Number(row.purchasePrice) || 0,
         sellingPrice: Number(row.sellingPrice) || Number(row.purchasePrice) || 0,
-        mrp: Number(row.mrp) || Number(row.sellingPrice) || Number(row.purchasePrice) || 0,
+        mrp: Number(row.mrp) || 0,
         discountPercent: Number(row.discountPercent) || 0,
         discountAmount: Number(row.discountAmount) || 0,
         gstPercent: Number(row.gstPercent) !== undefined ? Number(row.gstPercent) : 18,
@@ -373,7 +389,9 @@ export default function PurchaseReport({ token, user }) {
       paymentStatus: finalStatus,
       amountPaid: finalStatus === 'Paid' ? grandTotal : amountPaidNum,
       notes: purchaseHeader.notes,
-      items: payloadItems
+      items: payloadItems,
+      updatePurchasePrice: purchaseHeader.updatePurchasePrice,
+      updateMRP: purchaseHeader.updateMRP
     };
 
     setPurchaseSubmitting(true);
@@ -398,7 +416,9 @@ export default function PurchaseReport({ token, user }) {
             invoiceDate: new Date().toISOString().slice(0, 10),
             paymentStatus: 'Credit',
             amountPaid: '',
-            notes: ''
+            notes: '',
+            updatePurchasePrice: true,
+            updateMRP: true
           });
           setPurchaseItems([createEmptyRow()]);
           fetchPurchases();
@@ -525,6 +545,7 @@ export default function PurchaseReport({ token, user }) {
       'HSN Code',
       'Qty Purchased',
       'Purchase Price (INR)',
+      'MRP (INR)',
       'Discount (INR)',
       'GST Amount (INR)',
       'Total Amount (INR)',
@@ -541,6 +562,7 @@ export default function PurchaseReport({ token, user }) {
       `"${item.hsnCode || '8708'}"`,
       item.qty || 0,
       (item.purchasePrice || 0).toFixed(2),
+      (item.mrp || 0).toFixed(2),
       (item.discountAmount || 0).toFixed(2),
       (item.gstAmount || 0).toFixed(2),
       (item.total || 0).toFixed(2),
@@ -622,6 +644,34 @@ export default function PurchaseReport({ token, user }) {
       {/* ========================================================================= */}
       {activeTab === 'entry' && (
         <form onSubmit={handlePurchaseSubmit} className="space-y-6">
+          {/* Live Auto Calculation Header Banner */}
+          <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 shadow-lg shrink-0 print:hidden grid grid-cols-2 md:grid-cols-6 gap-4 text-center md:text-left animate-fade-in">
+            <div className="border-b md:border-b-0 md:border-r border-slate-800 pb-3 md:pb-0 pr-2">
+              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block">Total Cost Price</span>
+              <span className="text-sm font-black font-mono text-slate-200">₹{summaryTotals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="border-b md:border-b-0 md:border-r border-slate-800 pb-3 md:pb-0 pr-2">
+              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block">Total Quantity</span>
+              <span className="text-sm font-black font-mono text-blue-400">{summaryTotals.totalQty} Pcs</span>
+            </div>
+            <div className="border-b md:border-b-0 md:border-r border-slate-800 pb-3 md:pb-0 pr-2">
+              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block">Total Discount</span>
+              <span className="text-sm font-black font-mono text-amber-400">₹{summaryTotals.totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="border-b md:border-b-0 md:border-r border-slate-800 pb-3 md:pb-0 pr-2">
+              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block">Total Purchase Value</span>
+              <span className="text-sm font-black font-mono text-indigo-300 font-bold">₹{summaryTotals.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="border-b md:border-b-0 md:border-r border-slate-800 pb-3 md:pb-0 pr-2">
+              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block">GST Amount</span>
+              <span className="text-sm font-black font-mono text-purple-400">₹{summaryTotals.gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div>
+              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block">Grand Total</span>
+              <span className="text-base font-black font-mono text-emerald-300">₹{summaryTotals.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+
           {/* Header Card */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -739,6 +789,30 @@ export default function PurchaseReport({ token, user }) {
                 />
               </div>
             </div>
+
+            <div className="flex flex-wrap items-center gap-6 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Inventory Master Updates:
+              </span>
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-350 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={purchaseHeader.updatePurchasePrice}
+                  onChange={(e) => setPurchaseHeader({ ...purchaseHeader, updatePurchasePrice: e.target.checked })}
+                  className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                />
+                Update Purchase Rate (Cost) in Parts Master
+              </label>
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-350 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={purchaseHeader.updateMRP}
+                  onChange={(e) => setPurchaseHeader({ ...purchaseHeader, updateMRP: e.target.checked })}
+                  className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                />
+                Update MRP in Parts Master
+              </label>
+            </div>
           </div>
 
           {/* Multiple Line Items Table Card */}
@@ -776,12 +850,14 @@ export default function PurchaseReport({ token, user }) {
                     <th className="py-2.5 px-3 w-24">HSN</th>
                     <th className="py-2.5 px-3 w-20">Qty *</th>
                     <th className="py-2.5 px-3 w-28">Rate (₹) *</th>
+                    <th className="py-2.5 px-3 w-28">MRP (₹) *</th>
                     <th className="py-2.5 px-3 w-24">Disc %</th>
                     <th className="py-2.5 px-3 w-28">Disc Amt (₹)</th>
                     <th className="py-2.5 px-3 w-20">GST %</th>
                     <th className="py-2.5 px-3 w-28">Taxable (₹)</th>
                     <th className="py-2.5 px-3 w-28">GST (₹)</th>
                     <th className="py-2.5 px-3 w-32">Total (₹)</th>
+                    <th className="py-2.5 px-3 w-36">Warehouse</th>
                     <th className="py-2.5 px-3 w-12 text-center">Action</th>
                   </tr>
                 </thead>
@@ -873,6 +949,20 @@ export default function PurchaseReport({ token, user }) {
                           />
                         </td>
 
+                        {/* MRP (GST Inclusive) */}
+                        <td className="py-2.5 px-3">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            value={row.mrp}
+                            onChange={(e) => handleRowChange(row.id, 'mrp', e.target.value)}
+                            required
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-bold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </td>
+
                         {/* Discount % */}
                         <td className="py-2.5 px-3">
                           <input
@@ -927,7 +1017,26 @@ export default function PurchaseReport({ token, user }) {
 
                         {/* Total Amount (Calculated) */}
                         <td className="py-2.5 px-3 font-black text-indigo-600 dark:text-indigo-400">
-                          ₹{rowCalc.total.toFixed(2)}
+                          <div>₹{rowCalc.total.toFixed(2)}</div>
+                          {row.qty > 1 && (
+                            <div className="text-[9px] text-slate-400 font-semibold mt-0.5" title="Net Cost Per Unit (Final Amount / Quantity)">
+                              Net: ₹{(rowCalc.total / row.qty).toFixed(2)}/u
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Warehouse Location */}
+                        <td className="py-2.5 px-3">
+                          <select
+                            value={row.warehouse || 'Main Store'}
+                            onChange={(e) => handleRowChange(row.id, 'warehouse', e.target.value)}
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="Main Store">Main Store</option>
+                            <option value="Spares Warehouse">Spares Warehouse</option>
+                            <option value="Body Shop Store">Body Shop Store</option>
+                            <option value="Accessories Store">Accessories Store</option>
+                          </select>
                         </td>
 
                         {/* Remove Row Button */}
@@ -963,15 +1072,20 @@ export default function PurchaseReport({ token, user }) {
 
           {/* Live Purchase Summary Footer Card */}
           <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-6 text-left w-full md:w-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-6 text-left w-full md:w-auto">
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Parts Count</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Parts</span>
                 <span className="text-base font-black text-white">{purchaseItems.length} Parts</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Qty</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Quantity</span>
                 <span className="text-base font-black text-white">{summaryTotals.totalQty} Pcs</span>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Purchase Value</span>
+                <span className="text-base font-black text-slate-200">₹{summaryTotals.subtotal.toFixed(2)}</span>
               </div>
 
               <div>
@@ -980,13 +1094,13 @@ export default function PurchaseReport({ token, user }) {
               </div>
 
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Taxable</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Taxable Amount</span>
                 <span className="text-base font-black text-slate-200">₹{summaryTotals.taxableAmount.toFixed(2)}</span>
               </div>
 
               <div>
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total GST</span>
-                <span className="text-base font-black text-indigo-300">₹{summaryTotals.gstTotal.toFixed(2)}</span>
+                <span className="text-base font-black text-indigo-300 font-semibold">₹{summaryTotals.gstTotal.toFixed(2)}</span>
               </div>
             </div>
 
@@ -1176,6 +1290,7 @@ export default function PurchaseReport({ token, user }) {
                                         <th className="py-2 px-3">HSN</th>
                                         <th className="py-2 px-3">Qty</th>
                                         <th className="py-2 px-3">Rate</th>
+                                        <th className="py-2 px-3">MRP</th>
                                         <th className="py-2 px-3">Discount</th>
                                         <th className="py-2 px-3">Taxable</th>
                                         <th className="py-2 px-3">GST %</th>
@@ -1191,6 +1306,7 @@ export default function PurchaseReport({ token, user }) {
                                           <td className="py-2 px-3 text-slate-600 dark:text-slate-300">{item.hsnCode || '8708'}</td>
                                           <td className="py-2 px-3 font-bold">{item.qty}</td>
                                           <td className="py-2 px-3">₹{(item.purchasePrice || 0).toFixed(2)}</td>
+                                          <td className="py-2 px-3">₹{(item.mrp || 0).toFixed(2)}</td>
                                           <td className="py-2 px-3 text-emerald-600">₹{(item.discountAmount || 0).toFixed(2)}</td>
                                           <td className="py-2 px-3">₹{(item.taxableAmount || 0).toFixed(2)}</td>
                                           <td className="py-2 px-3">{item.gstPercent || 18}%</td>
@@ -1520,6 +1636,7 @@ export default function PurchaseReport({ token, user }) {
                     <th className="p-2 border-b">Part #</th>
                     <th className="p-2 border-b">Qty</th>
                     <th className="p-2 border-b">Rate</th>
+                    <th className="p-2 border-b">MRP</th>
                     <th className="p-2 border-b">Disc</th>
                     <th className="p-2 border-b">Taxable</th>
                     <th className="p-2 border-b">GST %</th>
@@ -1533,6 +1650,7 @@ export default function PurchaseReport({ token, user }) {
                       <td className="p-2 font-mono text-slate-500">{item.partNumber}</td>
                       <td className="p-2 font-bold">{item.qty}</td>
                       <td className="p-2">₹{(item.purchasePrice || 0).toFixed(2)}</td>
+                      <td className="p-2">₹{(item.mrp || 0).toFixed(2)}</td>
                       <td className="p-2 text-emerald-600">₹{(item.discountAmount || 0).toFixed(2)}</td>
                       <td className="p-2">₹{(item.taxableAmount || 0).toFixed(2)}</td>
                       <td className="p-2">{item.gstPercent || 18}%</td>
