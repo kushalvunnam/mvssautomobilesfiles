@@ -134,44 +134,34 @@ app.use('/api/expenses', require('./routes/expenses'));
 
 // Resend Email Diagnostic Endpoint
 app.get('/api/test-email', async (req, res) => {
-  const { Resend } = require('resend');
+  const { sendEmail } = require('./services/emailService');
   const recipient = req.query.to || 'accounts@auto4m.in';
-  const resendKey = req.query.resend_key || process.env.RESEND_API_KEY;
 
-  console.log(`[EMAIL TEST] Sending test email via Resend SDK to ${recipient}`);
-
-  if (!resendKey) {
-    return res.status(400).send({
-      status: 'error',
-      message: 'RESEND_API_KEY environment variable is not defined and no resend_key parameter was provided.'
-    });
-  }
+  console.log(`[EMAIL TEST] Sending test email via sendEmail helper to ${recipient}`);
 
   try {
-    const resend = new Resend(resendKey);
-    const result = await resend.emails.send({
-      from: 'MVSS Automobiles <bookings@mvssautomobiles.com>',
+    const result = await sendEmail({
       to: recipient,
       subject: 'Test Email - MVSS Automobiles Resend Diagnostic',
       html: '<h3>Test Email</h3><p>This is a test email sent from the MVSS Automobiles Resend SDK Diagnostic Suite.</p>'
     });
 
-    if (result.error) {
-      console.error('[EMAIL TEST] Resend SDK Error:', result.error);
+    if (!result.success) {
+      console.error('[EMAIL TEST] sendEmail Helper Error:', result.error);
       return res.status(500).send({
         status: 'error',
-        message: result.error.message,
+        message: result.error?.message || 'Failed to send email',
         error: result.error
       });
     }
 
-    console.log('[EMAIL TEST] Resend SDK Email sent successfully. Result:', result.data);
+    console.log('[EMAIL TEST] Email sent successfully via sendEmail helper. Result:', result.data);
     res.send({
       status: 'success',
       data: result.data
     });
   } catch (err) {
-    console.error('[EMAIL TEST] Resend SDK Exception:', err);
+    console.error('[EMAIL TEST] sendEmail Exception:', err);
     res.status(500).send({
       status: 'error',
       message: err.message,

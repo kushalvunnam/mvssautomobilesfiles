@@ -43,10 +43,9 @@ async function sendEmail({ to, subject, html, from }) {
     if (response.error) {
       console.error('[EMAIL SERVICE ERROR] Error message if sending fails:', response.error);
 
-      // Fallback if custom sender domain is unverified
-      const errMsg = (response.error.message || '').toLowerCase();
-      if ((errMsg.includes('domain') || errMsg.includes('not verified') || errMsg.includes('validation')) && !senderEmail.includes('onboarding@resend.dev')) {
-        console.warn('[EMAIL SERVICE WARN] Custom sender domain unverified. Retrying with onboarding@resend.dev...');
+      // Fallback if custom sender domain fails (unverified, validation, rate limits, etc.)
+      if (!senderEmail.includes('onboarding@resend.dev')) {
+        console.warn('[EMAIL SERVICE WARN] Primary sender failed. Retrying unconditionally with onboarding@resend.dev...');
         
         response = await resend.emails.send({
           from: 'MVSS Automobiles <onboarding@resend.dev>',
