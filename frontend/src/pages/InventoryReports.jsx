@@ -9,7 +9,7 @@ import {
   FileSpreadsheet, 
   Printer, 
   Search,
-  DollarSign,
+  IndianRupee,
   ShoppingBag
 } from 'lucide-react';
 import PurchaseReport from './PurchaseReport';

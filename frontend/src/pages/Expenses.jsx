@@ -8,7 +8,7 @@ import {
   FileSpreadsheet, 
   Printer, 
   ArrowUpDown, 
-  DollarSign, 
+  IndianRupee, 
   Clock, 
   TrendingUp, 
   CreditCard, 
@@ -471,7 +471,7 @@ export default function Expenses({ token, user }) {
         {/* Total Expenses */}
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl border border-emerald-500/20 shrink-0">
-            <DollarSign className="w-5 h-5" />
+            <IndianRupee className="w-5 h-5" />
           </div>
           <div>
             <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider block">Total Expenses</span>

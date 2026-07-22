@@ -11,7 +11,7 @@ import {
   Printer, 
   FileText, 
   ArrowUpDown, 
-  DollarSign, 
+  IndianRupee, 
   Package, 
   Receipt,
   RotateCcw,
@@ -1454,7 +1454,7 @@ export default function PurchaseReport({ token, user }) {
                 <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">₹{reportTotalAmount.toFixed(2)}</span>
               </div>
               <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 rounded-xl">
-                <DollarSign className="w-6 h-6" />
+                <IndianRupee className="w-6 h-6" />
               </div>
             </div>
 

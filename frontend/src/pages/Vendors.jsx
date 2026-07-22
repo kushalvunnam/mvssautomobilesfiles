@@ -11,7 +11,7 @@ import {
   Mail, 
   MapPin, 
   FileSpreadsheet, 
-  DollarSign, 
+  IndianRupee, 
   Clock, 
   Edit3, 
   Trash2, 
@@ -298,7 +298,7 @@ export default function Vendors({ token, user }) {
 
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-lg">
-            <DollarSign className="w-6 h-6" />
+            <IndianRupee className="w-6 h-6" />
           </div>
           <div>
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Purchases</span>

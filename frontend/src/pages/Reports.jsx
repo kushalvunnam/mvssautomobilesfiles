@@ -12,7 +12,7 @@ import {
   Filter, 
   RefreshCw,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   FileCheck,
   Percent,
   Package,
@@ -1018,14 +1018,14 @@ export default function Reports({ token, user }) {
         {activeGroup === 'financial' && (
           <>
             {[
-              { id: 'revenue', name: 'Revenue Report', icon: DollarSign },
+              { id: 'revenue', name: 'Revenue Report', icon: IndianRupee },
               { id: 'payment_collection', name: 'Payment Collection', icon: FileCheck },
               { id: 'pending_payment', name: 'Pending Payments', icon: Clock },
               { id: 'invoice_report', name: 'Invoices Report', icon: FileText },
               { id: 'gst_report', name: 'GST Report', icon: Percent },
               { id: 'tax_collection', name: 'Tax Collection', icon: TrendingUp }
             ].map(report => {
-              const Icon = report.icon || DollarSign;
+              const Icon = report.icon || IndianRupee;
               const isSelected = selectedReport === report.id;
               return (
                 <button
@@ -1054,7 +1054,7 @@ export default function Reports({ token, user }) {
               { id: 'stock_report', name: 'Stock Report', icon: Package },
               { id: 'low_stock', name: 'Low Stock Report', icon: AlertTriangle },
               { id: 'parts_usage', name: 'Parts Usage Report', icon: ClipboardList },
-              { id: 'inventory_value', name: 'Inventory Value Report', icon: DollarSign }
+              { id: 'inventory_value', name: 'Inventory Value Report', icon: IndianRupee }
             ].map(report => {
               const Icon = report.icon || Package;
               const isSelected = selectedReport === report.id;
@@ -1083,7 +1083,7 @@ export default function Reports({ token, user }) {
           <>
             {[
               { id: 'attendance', name: 'Attendance Report', icon: Users },
-              { id: 'salary_report', name: 'Salary Report', icon: DollarSign },
+              { id: 'salary_report', name: 'Salary Report', icon: IndianRupee },
               { id: 'technician_performance', name: 'Technician Performance', icon: Wrench },
               { id: 'bodyshop_performance', name: 'Body Shop Performance', icon: ClipboardList }
             ].map(report => {

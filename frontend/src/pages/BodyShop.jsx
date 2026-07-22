@@ -18,7 +18,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Calendar,
-  DollarSign
+  IndianRupee
 } from 'lucide-react';
 
 export default function BodyShop({ token, user, onNavigateToJobCard }) {

@@ -9,7 +9,7 @@ import {
   Download, 
   Building2, 
   Package, 
-  DollarSign, 
+  IndianRupee, 
   AlertTriangle,
   Layers,
   MapPin
@@ -174,7 +174,7 @@ export default function StockStatement({ token, user }) {
 
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-lg">
-            <DollarSign className="w-6 h-6" />
+            <IndianRupee className="w-6 h-6" />
           </div>
           <div>
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Purchase Valuation</span>
@@ -186,7 +186,7 @@ export default function StockStatement({ token, user }) {
 
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-lg">
-            <DollarSign className="w-6 h-6" />
+            <IndianRupee className="w-6 h-6" />
           </div>
           <div>
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Selling Valuation</span>

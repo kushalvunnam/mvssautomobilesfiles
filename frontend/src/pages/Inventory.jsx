@@ -10,7 +10,7 @@ import {
   X, 
   Package, 
   Wrench, 
-  DollarSign, 
+  IndianRupee, 
   Building2, 
   Layers, 
   Tag, 
@@ -1376,7 +1376,7 @@ function PartsMasterBillingModal({
           {/* Section 2: Pricing & Tax */}
           <div className="bg-slate-50/70 dark:bg-slate-950/40 p-4.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-200/60 dark:border-slate-800 pb-2.5">
-              <DollarSign className="w-4 h-4 text-emerald-500" />
+              <IndianRupee className="w-4 h-4 text-emerald-500" />
               <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
                 2. Pricing, Margin & Tax Calculation
               </h4>
