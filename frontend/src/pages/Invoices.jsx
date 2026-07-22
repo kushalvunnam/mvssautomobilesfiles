@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL, OWNER_SUPPORT_NUMBER } from '../config';
-import { Search, Plus, Receipt, Download, Share2, Mail, CheckCircle2, Printer, Edit2, Eye, Trash2, Copy, Link, ChevronDown, MessageSquare } from 'lucide-react';
+import { Search, Plus, Receipt, Download, Share2, Mail, CheckCircle2, Printer, Edit2, Eye, Trash2, Copy, Link, ChevronDown, MessageSquare, X } from 'lucide-react';
 import InvoiceForm from './InvoiceForm';
 
 import { getCachedData, setCachedData } from '../utils/apiCache';
@@ -1197,9 +1197,18 @@ export default function Invoices({ token, user, setActiveTab }) {
               </div>
             ) : (
               <div className="space-y-4">
-                <h3 className="text-sm font-black text-slate-850 dark:text-white uppercase tracking-wider">
-                  {shareModal.type === 'whatsapp' ? 'Share Invoice on WhatsApp' : 'Dispatch Email Invoice'}
-                </h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-black text-slate-850 dark:text-white uppercase tracking-wider">
+                    {shareModal.type === 'whatsapp' ? 'Share Invoice on WhatsApp' : 'Dispatch Email Invoice'}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShareModal({ show: false, type: 'whatsapp', invoice: null })}
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
                 
                 {shareModal.type === 'whatsapp' ? (
                   <div>

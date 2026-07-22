@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Search, ShieldAlert, FileText, Upload, Calendar, CheckCircle2, User, Car } from 'lucide-react';
+import { Search, ShieldAlert, FileText, Upload, Calendar, CheckCircle2, User, Car, X } from 'lucide-react';
 
 export default function Claims({ token, user }) {
   const [claims, setClaims] = useState([]);
@@ -531,9 +531,18 @@ export default function Claims({ token, user }) {
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 overflow-y-auto max-h-[90vh] animate-fade-in text-xs font-semibold">
-            <h3 className="text-lg font-black text-slate-850 dark:text-white uppercase tracking-wider mb-6">
-              File New Claim Entry
-            </h3>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-black text-slate-850 dark:text-white uppercase tracking-wider">
+                File New Claim Entry
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <form onSubmit={handleAddSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">

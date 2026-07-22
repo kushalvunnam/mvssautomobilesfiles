@@ -635,9 +635,18 @@ export default function Inventory({ token, user }) {
       {showRestockModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm shadow-2xl p-6 overflow-y-auto max-h-[90vh] animate-fade-in text-xs font-semibold">
-            <h3 className="text-sm font-black text-slate-850 dark:text-white uppercase tracking-wider mb-6">
-              Restock Spare Part
-            </h3>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-sm font-black text-slate-850 dark:text-white uppercase tracking-wider">
+                Restock Spare Part
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowRestockModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <form onSubmit={handleRestockSubmit} className="space-y-4">
               <div>
@@ -744,9 +753,18 @@ export default function Inventory({ token, user }) {
       {showReduceModal && (
         <div className="fixed inset-0 bg-slate-955/60 backdrop-blur-xs flex justify-center items-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm shadow-2xl p-6 overflow-y-auto max-h-[90vh] animate-fade-in text-xs font-semibold">
-            <h3 className="text-sm font-black text-slate-850 dark:text-white uppercase tracking-wider mb-6">
-              Reduce Spare Part Stock
-            </h3>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-sm font-black text-slate-850 dark:text-white uppercase tracking-wider">
+                Reduce Spare Part Stock
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowReduceModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <form onSubmit={handleReduceSubmit} className="space-y-4">
               <div>
@@ -814,9 +832,9 @@ export default function Inventory({ token, user }) {
               </h3>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-650 dark:text-slate-350 rounded-xl font-bold"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                Close
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -854,16 +872,25 @@ export default function Inventory({ token, user }) {
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-slate-955/60 backdrop-blur-xs flex justify-center items-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm shadow-2xl p-6 overflow-y-auto max-h-[90vh] animate-fade-in text-xs font-semibold">
-            <div className="flex items-center gap-3 mb-4 text-red-600 dark:text-red-400">
-              <div className="p-2.5 bg-red-100 dark:bg-red-950/40 rounded-2xl">
-                <AlertTriangle className="w-6 h-6" />
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+                <div className="p-2.5 bg-red-100 dark:bg-red-950/40 rounded-2xl">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-850 dark:text-white uppercase tracking-wider">
+                    Delete Spare Part
+                  </h3>
+                  <p className="text-[11px] font-mono text-slate-400">{deleteTarget.partNumber}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-black text-slate-850 dark:text-white uppercase tracking-wider">
-                  Delete Spare Part
-                </h3>
-                <p className="text-[11px] font-mono text-slate-400">{deleteTarget.partNumber}</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="p-3 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl mb-4 space-y-1">
