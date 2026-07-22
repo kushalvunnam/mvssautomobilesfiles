@@ -46,7 +46,10 @@ import {
   History,
   MoreHorizontal,
   Wrench,
-  TrendingUp
+  TrendingUp,
+  ShoppingBag,
+  Wallet,
+  Key
 } from 'lucide-react';
 
 import * as mockData from './utils/mockData';
