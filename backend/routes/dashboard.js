@@ -10,6 +10,11 @@ const GatePass = require('../models/GatePass');
 const { auth, restrictTo } = require('../middleware/auth');
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log(`[DASHBOARD] Route request received: ${req.method} ${req.baseUrl}${req.path}`);
+  next();
+});
+
 const { checkLowStockAlerts } = require('../utils/alerts');
 
 // Get dashboard KPIs
@@ -506,6 +511,246 @@ router.get('/search', auth, async (req, res) => {
     res.send(results);
   } catch (error) {
     res.status(500).send({ error: 'Global search failed: ' + error.message });
+  }
+});
+
+// Get dashboard summary with filters and comparisons
+router.get('/summary', auth, async (req, res) => {
+  try {
+    const { filter, startDate, endDate } = req.query;
+
+    let start, end;
+    const now = new Date();
+
+    if (filter === 'Today') {
+      start = new Date();
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setHours(23, 59, 59, 999);
+    } else if (filter === 'Yesterday') {
+      start = new Date();
+      start.setDate(start.getDate() - 1);
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setDate(end.getDate() - 1);
+      end.setHours(23, 59, 59, 999);
+    } else if (filter === 'This Week') {
+      start = new Date();
+      const day = start.getDay();
+      const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+      start.setDate(diff);
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setHours(23, 59, 59, 999);
+    } else if (filter === 'This Month') {
+      start = new Date();
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setHours(23, 59, 59, 999);
+    } else if (filter === 'Custom' && startDate && endDate) {
+      start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      // Default to This Month
+      start = new Date();
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setHours(23, 59, 59, 999);
+    }
+
+    const JobCard = require('../models/JobCard');
+    const Expense = require('../models/Expense');
+
+    const getDashboardSummaryData = async (s, e) => {
+      const closedCards = await JobCard.find({
+        status: { $in: ['Delivered', 'Closed'] },
+        updatedAt: { $gte: s, $lte: e }
+      });
+
+      let closedJobCardsCount = closedCards.length;
+      let salePartsValue = 0;
+      let purchasePartsValue = 0;
+      let labourRevenue = 0;
+      let grossProfit = 0;
+      let gstCollected = 0;
+      let discounts = 0;
+      let totalBilling = 0;
+
+      closedCards.forEach(jc => {
+        const summary = jc.billingSummary || {};
+        salePartsValue += Number(summary.partsSaleAmount) || 0;
+        purchasePartsValue += Number(summary.partsPurchaseAmount) || 0;
+        labourRevenue += Number(summary.labourAmount) || 0;
+        grossProfit += Number(summary.grossProfit) || 0;
+        gstCollected += Number(summary.totalGST) || 0;
+        discounts += Number(summary.totalDiscount) || 0;
+        totalBilling += Number(summary.grandTotal) || 0;
+      });
+
+      const expenses = await Expense.find({
+        date: { $gte: s, $lte: e }
+      });
+      const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+      const netProfit = grossProfit - totalExpenses;
+
+      return {
+        closedJobCardsCount,
+        salePartsValue: Math.round(salePartsValue * 100) / 100,
+        purchasePartsValue: Math.round(purchasePartsValue * 100) / 100,
+        labourRevenue: Math.round(labourRevenue * 100) / 100,
+        grossProfit: Math.round(grossProfit * 100) / 100,
+        netProfit: Math.round(netProfit * 100) / 100,
+        gstCollected: Math.round(gstCollected * 100) / 100,
+        discounts: Math.round(discounts * 100) / 100,
+        totalBilling: Math.round(totalBilling * 100) / 100,
+        totalExpenses: Math.round(totalExpenses * 100) / 100
+      };
+    };
+
+    // Filtered Period Stats
+    const periodStats = await getDashboardSummaryData(start, end);
+
+    // Today's Stats
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    const todayStats = await getDashboardSummaryData(todayStart, todayEnd);
+
+    // Monthly Stats
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthEnd = new Date();
+    monthEnd.setHours(23, 59, 59, 999);
+    const monthlyStats = await getDashboardSummaryData(monthStart, monthEnd);
+
+    res.json({
+      success: true,
+      filter,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      periodStats,
+      todayStats,
+      monthlyStats
+    });
+  } catch (error) {
+    console.error('[DASHBOARD] Summary stats fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard summary: ' + error.message });
+  }
+});
+
+// Get dashboard reports grouping data
+router.get('/reports', auth, async (req, res) => {
+  try {
+    const { type } = req.query; // 'daily', 'weekly', 'monthly', 'yearly'
+    if (!type) {
+      return res.status(400).json({ error: 'Report type query param is required.' });
+    }
+
+    const JobCard = require('../models/JobCard');
+    const Expense = require('../models/Expense');
+
+    const closedCards = await JobCard.find({
+      status: { $in: ['Delivered', 'Closed'] }
+    });
+
+    const expenses = await Expense.find({});
+
+    const groups = {};
+
+    closedCards.forEach(jc => {
+      const summary = jc.billingSummary || {};
+      const date = new Date(jc.updatedAt);
+      
+      let key;
+      if (type === 'daily') {
+        key = date.toISOString().substring(0, 10);
+      } else if (type === 'weekly') {
+        const oneJan = new Date(date.getFullYear(), 0, 1);
+        const numberOfDays = Math.floor((date - oneJan) / (24 * 60 * 60 * 1000));
+        const week = Math.ceil(( date.getDay() + 1 + numberOfDays) / 7);
+        key = `${date.getFullYear()}-W${week}`;
+      } else if (type === 'monthly') {
+        key = date.toISOString().substring(0, 7);
+      } else {
+        key = `${date.getFullYear()}`;
+      }
+
+      if (!groups[key]) {
+        groups[key] = {
+          periodLabel: key,
+          closedJobCardsCount: 0,
+          salePartsValue: 0,
+          purchasePartsValue: 0,
+          labourRevenue: 0,
+          grossProfit: 0,
+          netProfit: 0,
+          totalBilling: 0,
+          totalExpenses: 0
+        };
+      }
+
+      groups[key].closedJobCardsCount += 1;
+      groups[key].salePartsValue += Number(summary.partsSaleAmount) || 0;
+      groups[key].purchasePartsValue += Number(summary.partsPurchaseAmount) || 0;
+      groups[key].labourRevenue += Number(summary.labourAmount) || 0;
+      groups[key].grossProfit += Number(summary.grossProfit) || 0;
+      groups[key].totalBilling += Number(summary.grandTotal) || 0;
+    });
+
+    expenses.forEach(exp => {
+      const date = new Date(exp.date);
+      let key;
+      if (type === 'daily') {
+        key = date.toISOString().substring(0, 10);
+      } else if (type === 'weekly') {
+        const oneJan = new Date(date.getFullYear(), 0, 1);
+        const numberOfDays = Math.floor((date - oneJan) / (24 * 60 * 60 * 1000));
+        const week = Math.ceil(( date.getDay() + 1 + numberOfDays) / 7);
+        key = `${date.getFullYear()}-W${week}`;
+      } else if (type === 'monthly') {
+        key = date.toISOString().substring(0, 7);
+      } else {
+        key = `${date.getFullYear()}`;
+      }
+
+      if (!groups[key]) {
+        groups[key] = {
+          periodLabel: key,
+          closedJobCardsCount: 0,
+          salePartsValue: 0,
+          purchasePartsValue: 0,
+          labourRevenue: 0,
+          grossProfit: 0,
+          netProfit: 0,
+          totalBilling: 0,
+          totalExpenses: 0
+        };
+      }
+      groups[key].totalExpenses += exp.amount || 0;
+    });
+
+    Object.keys(groups).forEach(key => {
+      groups[key].netProfit = groups[key].grossProfit - groups[key].totalExpenses;
+      groups[key].salePartsValue = Math.round(groups[key].salePartsValue * 100) / 100;
+      groups[key].purchasePartsValue = Math.round(groups[key].purchasePartsValue * 100) / 100;
+      groups[key].labourRevenue = Math.round(groups[key].labourRevenue * 100) / 100;
+      groups[key].grossProfit = Math.round(groups[key].grossProfit * 100) / 100;
+      groups[key].netProfit = Math.round(groups[key].netProfit * 100) / 100;
+      groups[key].totalBilling = Math.round(groups[key].totalBilling * 100) / 100;
+      groups[key].totalExpenses = Math.round(groups[key].totalExpenses * 100) / 100;
+    });
+
+    const reportData = Object.values(groups).sort((a, b) => b.periodLabel.localeCompare(a.periodLabel));
+    res.json({ success: true, type, reports: reportData });
+  } catch (error) {
+    console.error('[DASHBOARD] Reports fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch reports summary: ' + error.message });
   }
 });
 

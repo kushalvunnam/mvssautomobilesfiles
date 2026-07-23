@@ -175,6 +175,11 @@ router.put('/:id', auth, async (req, res) => {
     const jobCard = await JobCard.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!jobCard) return res.status(404).send({ error: 'Job Card not found.' });
 
+    if (req.body.status) {
+      const { calculateBillingSummary } = require('../utils/billing');
+      await calculateBillingSummary(jobCard._id);
+    }
+
     if (req.body.odometerReading) {
       await Vehicle.findByIdAndUpdate(jobCard.vehicleId, { odometerReading: req.body.odometerReading });
     }

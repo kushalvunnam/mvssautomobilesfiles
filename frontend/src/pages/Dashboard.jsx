@@ -51,6 +51,82 @@ export default function Dashboard({ token, user, setActiveTab }) {
     return !getCachedData(`${API_BASE_URL}/dashboard/stats`);
   });
 
+  const [summaryFilter, setSummaryFilter] = useState('This Month');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+
+  const [summaryData, setSummaryData] = useState({
+    periodStats: {
+      closedJobCardsCount: 0,
+      salePartsValue: 0,
+      purchasePartsValue: 0,
+      labourRevenue: 0,
+      grossProfit: 0,
+      netProfit: 0,
+      gstCollected: 0,
+      discounts: 0,
+      totalBilling: 0,
+      totalExpenses: 0
+    },
+    todayStats: {
+      closedJobCardsCount: 0,
+      salePartsValue: 0,
+      purchasePartsValue: 0,
+      labourRevenue: 0,
+      grossProfit: 0,
+      netProfit: 0,
+      gstCollected: 0,
+      discounts: 0,
+      totalBilling: 0,
+      totalExpenses: 0
+    },
+    monthlyStats: {
+      closedJobCardsCount: 0,
+      salePartsValue: 0,
+      purchasePartsValue: 0,
+      labourRevenue: 0,
+      grossProfit: 0,
+      netProfit: 0,
+      gstCollected: 0,
+      discounts: 0,
+      totalBilling: 0,
+      totalExpenses: 0
+    }
+  });
+
+  const [reportType, setReportType] = useState('monthly');
+  const [reportsData, setReportsData] = useState([]);
+
+  const fetchSummaryData = async () => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      let url = `${API_BASE_URL}/dashboard/summary?filter=${summaryFilter}`;
+      if (summaryFilter === 'Custom' && customStartDate && customEndDate) {
+        url += `&startDate=${customStartDate}&endDate=${customEndDate}`;
+      }
+      const res = await fetch(url, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setSummaryData(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch dashboard summary:', err);
+    }
+  };
+
+  const fetchReportsData = async () => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await fetch(`${API_BASE_URL}/dashboard/reports?type=${reportType}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setReportsData(data.reports || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch reports summary:', err);
+    }
+  };
+
   // 3. Restore the original Promise.all backend data fetch logic with SWR caching
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -72,6 +148,8 @@ export default function Dashboard({ token, user, setActiveTab }) {
           setStats(statsData);
           setCharts(chartsData);
         }
+        await fetchSummaryData();
+        await fetchReportsData();
       } catch (err) {
         console.error('Failed to fetch dashboard metrics:', err);
       } finally {
@@ -82,7 +160,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, 10000);
     return () => clearInterval(interval);
-  }, [token]);
+  }, [token, summaryFilter, customStartDate, customEndDate, reportType]);
 
   if (loading) {
     return (
@@ -229,6 +307,282 @@ export default function Dashboard({ token, user, setActiveTab }) {
   return (
     <div className="space-y-6 p-1 select-none w-full animate-fade-in">
       
+      {/* Workshop ERP Billing & Profit Summary Panel */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs p-6 space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h2 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-wider">Workshop ERP Billing & Profit Summary</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold mt-1">Real-time financial analytics, margins, and automatically updated summaries</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {['Today', 'Yesterday', 'This Week', 'This Month', 'Custom'].map(f => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setSummaryFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  summaryFilter === f
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom date range picker */}
+        {summaryFilter === 'Custom' && (
+          <div className="flex flex-wrap items-center gap-4 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200/60 dark:border-slate-800/80 animate-fade-in">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Start Date:</span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">End Date:</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold focus:outline-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Billing & Profit KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Card 1: Revenue & Billing */}
+          <div className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 p-5 rounded-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-slate-400 dark:text-slate-550 uppercase tracking-wide">Revenue & Billing</span>
+              <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">{summaryFilter}</span>
+            </div>
+            <div className="space-y-1">
+              <span className="text-2xl font-black text-slate-800 dark:text-white block">₹{(summaryData.periodStats?.totalBilling || 0).toLocaleString('en-IN')}</span>
+              <span className="text-[10px] text-slate-450 font-semibold block">Total Grand Billing Amount</span>
+            </div>
+            <div className="pt-2 border-t border-slate-200/50 dark:border-slate-850 grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-500">
+              <div>
+                <span className="block text-slate-400">GST Collected</span>
+                <span className="text-slate-700 dark:text-slate-300">₹{(summaryData.periodStats?.gstCollected || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div>
+                <span className="block text-slate-400">Discounts Allowed</span>
+                <span className="text-slate-700 dark:text-slate-300">₹{(summaryData.periodStats?.discounts || 0).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Spare Parts Performance */}
+          <div className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 p-5 rounded-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-slate-400 dark:text-slate-550 uppercase tracking-wide">Parts Performance</span>
+              <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">{summaryFilter}</span>
+            </div>
+            <div className="space-y-1">
+              <span className="text-2xl font-black text-slate-800 dark:text-white block">₹{(summaryData.periodStats?.salePartsValue || 0).toLocaleString('en-IN')}</span>
+              <span className="text-[10px] text-slate-450 font-semibold block">Parts Selling Value</span>
+            </div>
+            <div className="pt-2 border-t border-slate-200/50 dark:border-slate-850 grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-500">
+              <div>
+                <span className="block text-slate-400">Parts Purchase Value</span>
+                <span className="text-slate-700 dark:text-slate-300">₹{(summaryData.periodStats?.purchasePartsValue || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div>
+                <span className="block text-slate-400">Net Parts Revenue</span>
+                <span className="text-slate-750 dark:text-slate-200">₹{Math.max(0, (summaryData.periodStats?.salePartsValue || 0) - (summaryData.periodStats?.discounts || 0)).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Labour & Workload */}
+          <div className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 p-5 rounded-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-slate-400 dark:text-slate-550 uppercase tracking-wide">Labour & Output</span>
+              <span className="text-[10px] bg-amber-50 dark:bg-amber-955/30 text-amber-655 dark:text-amber-450 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">{summaryFilter}</span>
+            </div>
+            <div className="space-y-1">
+              <span className="text-2xl font-black text-slate-800 dark:text-white block">₹{(summaryData.periodStats?.labourRevenue || 0).toLocaleString('en-IN')}</span>
+              <span className="text-[10px] text-slate-440 font-semibold block">Total Labour Charges</span>
+            </div>
+            <div className="pt-2 border-t border-slate-200/50 dark:border-slate-850 grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-500">
+              <div>
+                <span className="block text-slate-400">Closed Job Cards</span>
+                <span className="text-slate-700 dark:text-slate-300 font-extrabold text-xs">{summaryData.periodStats?.closedJobCardsCount || 0} Cards</span>
+              </div>
+              <div>
+                <span className="block text-slate-400">Workforce Revenue</span>
+                <span className="text-slate-750 dark:text-slate-200">₹{(summaryData.periodStats?.labourRevenue || 0).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: ERP Profitability Card */}
+          <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-5 rounded-2xl shadow-md space-y-4 relative overflow-hidden">
+            <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 w-32 h-32 bg-white/5 rounded-full pointer-events-none" />
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wide text-emerald-100">Workshop Net Margin</span>
+              <span className="text-[9px] bg-white/20 text-white font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">{summaryFilter}</span>
+            </div>
+            <div className="space-y-1">
+              <span className="text-3xl font-black block">₹{(summaryData.periodStats?.netProfit || 0).toLocaleString('en-IN')}</span>
+              <span className="text-[10px] text-emerald-100 font-semibold block">Net Profit (Gross Profit - Expenses)</span>
+            </div>
+            <div className="pt-2 border-t border-white/25 grid grid-cols-2 gap-2 text-[10px] font-bold text-emerald-100">
+              <div>
+                <span className="block text-emerald-200">Gross Profit</span>
+                <span className="text-white text-xs font-black">₹{(summaryData.periodStats?.grossProfit || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div>
+                <span className="block text-emerald-200">Profit Margin %</span>
+                <span className="text-white text-xs font-black">
+                  {summaryData.periodStats?.salePartsValue + summaryData.periodStats?.labourRevenue > 0
+                    ? `${Math.round((summaryData.periodStats?.grossProfit / (summaryData.periodStats?.salePartsValue + summaryData.periodStats?.labourRevenue)) * 100)}%`
+                    : '0%'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Comparisons for Today & This Month */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-slate-100 dark:border-slate-850">
+          {/* Today Overview */}
+          <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-900/60">
+            <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wide mb-3 flex items-center justify-between">
+              <span>Today's Closed Summary</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            </h4>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-lg">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block">Closed Cards</span>
+                <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-0.5 block">{summaryData.todayStats?.closedJobCardsCount || 0}</span>
+              </div>
+              <div className="p-2 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-lg">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block">Today's Billing</span>
+                <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-0.5 block">₹{Math.round(summaryData.todayStats?.totalBilling || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div className="p-2 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-lg">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block">Today's Profit</span>
+                <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-450 mt-0.5 block">₹{Math.round(summaryData.todayStats?.netProfit || 0).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-3 text-[10px] font-bold text-slate-500 px-1">
+              <div>
+                <span className="text-slate-400 block">Today's Parts Sale:</span>
+                <span className="text-slate-800 dark:text-slate-200">₹{(summaryData.todayStats?.salePartsValue || 0).toLocaleString('en-IN')} (Purchase: ₹{(summaryData.todayStats?.purchasePartsValue || 0).toLocaleString('en-IN')})</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Today's Labour Revenue:</span>
+                <span className="text-slate-800 dark:text-slate-200">₹{(summaryData.todayStats?.labourRevenue || 0).toLocaleString('en-IN')} (GST: ₹{(summaryData.todayStats?.gstCollected || 0).toLocaleString('en-IN')})</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Month Overview */}
+          <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-900/60">
+            <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wide mb-3">Monthly Summary Overview</h4>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-lg">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block">Monthly Cards</span>
+                <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-0.5 block">{summaryData.monthlyStats?.closedJobCardsCount || 0}</span>
+              </div>
+              <div className="p-2 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-lg">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block">Monthly Billing</span>
+                <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-0.5 block">₹{Math.round(summaryData.monthlyStats?.totalBilling || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div className="p-2 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-lg">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide block">Monthly Profit</span>
+                <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 block">₹{Math.round(summaryData.monthlyStats?.netProfit || 0).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-3 text-[10px] font-bold text-slate-500 px-1">
+              <div>
+                <span className="text-slate-400 block">Monthly Parts Sale:</span>
+                <span className="text-slate-800 dark:text-slate-200">₹{(summaryData.monthlyStats?.salePartsValue || 0).toLocaleString('en-IN')} (Purchase: ₹{(summaryData.monthlyStats?.purchasePartsValue || 0).toLocaleString('en-IN')})</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Monthly Labour Revenue:</span>
+                <span className="text-slate-800 dark:text-slate-200">₹{(summaryData.monthlyStats?.labourRevenue || 0).toLocaleString('en-IN')} (GST: ₹{(summaryData.monthlyStats?.gstCollected || 0).toLocaleString('en-IN')})</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Automatic Grouped Summary Reports Section */}
+        <div className="pt-6 border-t border-slate-100 dark:border-slate-855 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Automatic Financial Period Reports</h3>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Aggregated summaries grouped by daily, weekly, monthly, and yearly bounds</p>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
+              {['daily', 'weekly', 'monthly', 'yearly'].map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setReportType(t)}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                    reportType === t
+                      ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200/60 dark:border-slate-800/80">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-left text-[11px] font-bold">
+              <thead className="bg-slate-50 dark:bg-slate-955 text-slate-450 uppercase tracking-wider text-[9px] font-extrabold border-b border-slate-200/60 dark:border-slate-800/80">
+                <tr>
+                  <th className="px-4 py-3">Period Label</th>
+                  <th className="px-4 py-3">Closed Job Cards</th>
+                  <th className="px-4 py-3">Parts Sale Value</th>
+                  <th className="px-4 py-3">Parts Purchase Cost</th>
+                  <th className="px-4 py-3">Labour Revenue</th>
+                  <th className="px-4 py-3 text-emerald-600 dark:text-emerald-450">Gross Profit</th>
+                  <th className="px-4 py-3 text-rose-600 dark:text-rose-450">Expenses</th>
+                  <th className="px-4 py-3 text-indigo-600 dark:text-indigo-450">Net Profit</th>
+                  <th className="px-4 py-3">Total Billing (Grand Total)</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                {reportsData.length > 0 ? (
+                  reportsData.map(rep => (
+                    <tr key={rep.periodLabel} className="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-all font-mono">
+                      <td className="px-4 py-3.5 font-bold font-sans text-slate-900 dark:text-white">{rep.periodLabel}</td>
+                      <td className="px-4 py-3.5 font-sans">{rep.closedJobCardsCount} Cards</td>
+                      <td className="px-4 py-3.5">₹{(rep.salePartsValue || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3.5">₹{(rep.purchasePartsValue || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3.5">₹{(rep.labourRevenue || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3.5 text-emerald-600 dark:text-emerald-400 font-bold">₹{(rep.grossProfit || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3.5 text-rose-500 font-bold">₹{(rep.totalExpenses || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3.5 text-indigo-600 dark:text-indigo-450 font-extrabold">₹{(rep.netProfit || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3.5 font-sans font-extrabold text-slate-855 dark:text-slate-200">₹{(rep.totalBilling || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="9" className="text-center py-6 text-slate-400 italic">No period reports found. Generate invoices and close job cards first.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       {/* 12 Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatsCard 

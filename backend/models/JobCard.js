@@ -217,8 +217,32 @@ const JobCardSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ['Created', 'Inspect Stage', 'Estimation', 'Customer Approval', 'Work In Progress', 'Body Shop', 'Surveyor Approval', 'Repair', 'Quality Check', 'Ready for Delivery', 'Delivered'],
+    enum: ['Created', 'Inspect Stage', 'Estimation', 'Customer Approval', 'Work In Progress', 'Body Shop', 'Surveyor Approval', 'Repair', 'Quality Check', 'Ready for Delivery', 'Delivered', 'Closed'],
     default: 'Created',
+  },
+
+  billingSummary: {
+    totalPartsUsed: { type: Number, default: 0 },
+    totalPartsSellingValue: { type: Number, default: 0 },
+    totalPartsDiscount: { type: Number, default: 0 },
+    partsGST: { type: Number, default: 0 },
+    netPartsAmount: { type: Number, default: 0 },
+    totalPurchaseCostOfPartsUsed: { type: Number, default: 0 },
+    totalPurchaseGST: { type: Number, default: 0 },
+    totalPurchaseAmount: { type: Number, default: 0 },
+    totalLabourHours: { type: Number, default: 0 },
+    totalLabourCharges: { type: Number, default: 0 },
+    labourDiscount: { type: Number, default: 0 },
+    labourGST: { type: Number, default: 0 },
+    netLabourAmount: { type: Number, default: 0 },
+    partsSaleAmount: { type: Number, default: 0 },
+    partsPurchaseAmount: { type: Number, default: 0 },
+    labourAmount: { type: Number, default: 0 },
+    totalDiscount: { type: Number, default: 0 },
+    totalGST: { type: Number, default: 0 },
+    grandTotal: { type: Number, default: 0 },
+    grossProfit: { type: Number, default: 0 },
+    profitPercentage: { type: Number, default: 0 }
   },
 
   // Signatures

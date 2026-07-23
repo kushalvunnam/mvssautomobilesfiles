@@ -431,8 +431,12 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
 
       // Mark Job Card as Delivered/Closed
       await JobCard.findByIdAndUpdate(invoice.jobCardId, { status: 'Delivered' });
+      const { calculateBillingSummary } = require('../utils/billing');
+      await calculateBillingSummary(invoice.jobCardId);
       await logAction(req.user, 'INVOICE_FINALIZE', `Finalized Invoice ${invoice.invoiceNo} & deducted inventory items`, req);
     } else {
+      const { calculateBillingSummary } = require('../utils/billing');
+      await calculateBillingSummary(invoice.jobCardId);
       await logAction(req.user, 'INVOICE_EDIT', `Updated Invoice ${invoice.invoiceNo}`, req);
     }
 
