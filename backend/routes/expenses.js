@@ -4,6 +4,11 @@ const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log(`[EXPENSES] Route request received: ${req.method} ${req.baseUrl}${req.path}`);
+  next();
+});
+
 // Auto-generate Expense ID: EXP-YYYYMM-0001
 const generateExpenseId = async () => {
   const today = new Date();
@@ -20,6 +25,7 @@ router.use(auth, restrictTo('Admin', 'Accounts', 'Service', 'Spares', 'Body Shop
 
 // GET /api/expenses - List expenses with filters and summary statistics
 router.get('/', async (req, res) => {
+  console.log('[EXPENSES] GET request received');
   try {
     const { fromDate, toDate, expenseType, paymentMode, status, search } = req.query;
     let query = {};
@@ -110,6 +116,7 @@ router.get('/', async (req, res) => {
       }
     });
 
+    console.log('[EXPENSES] Expenses returned');
     res.json({
       success: true,
       expenses,
@@ -129,6 +136,7 @@ router.get('/', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('[EXPENSES] Database error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch expenses: ' + error.message });
   }
 });
@@ -142,6 +150,7 @@ router.get('/:id', async (req, res) => {
     }
     res.json({ success: true, expense });
   } catch (error) {
+    console.error('[EXPENSES] Database error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch expense: ' + error.message });
   }
 });
@@ -189,6 +198,7 @@ router.post('/', async (req, res) => {
     await logAction(req.user, 'EXPENSE_CREATE', `Added expense ${expense.expenseId} (${expense.expenseType} - ₹${expense.amount})`, req);
     res.status(201).json({ success: true, expense });
   } catch (error) {
+    console.error('[EXPENSES] Database error:', error);
     res.status(400).json({ success: false, error: 'Failed to record expense: ' + error.message });
   }
 });
@@ -233,6 +243,7 @@ router.put('/:id', async (req, res) => {
     await logAction(req.user, 'EXPENSE_UPDATE', `Updated expense ${expense.expenseId}`, req);
     res.json({ success: true, expense });
   } catch (error) {
+    console.error('[EXPENSES] Database error:', error);
     res.status(400).json({ success: false, error: 'Failed to update expense: ' + error.message });
   }
 });
@@ -249,6 +260,7 @@ router.delete('/:id', restrictTo('Admin', 'Accounts'), async (req, res) => {
     await logAction(req.user, 'EXPENSE_DELETE', `Deleted expense ${expense.expenseId} (${expense.description})`, req);
     res.json({ success: true, message: 'Expense deleted successfully.' });
   } catch (error) {
+    console.error('[EXPENSES] Database error:', error);
     res.status(500).json({ success: false, error: 'Failed to delete expense: ' + error.message });
   }
 });

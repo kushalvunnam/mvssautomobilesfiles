@@ -6,6 +6,11 @@ const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log(`[PURCHASES] Route request received: ${req.method} ${req.baseUrl}${req.path}`);
+  next();
+});
+
 // Auto-generate Purchase Entry Number
 const generatePurchaseNo = async () => {
   const today = new Date();

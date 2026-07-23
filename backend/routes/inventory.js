@@ -9,6 +9,11 @@ const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log(`[INVENTORY] Route request received: ${req.method} ${req.baseUrl}${req.path}`);
+  next();
+});
+
 const { checkLowStockAlerts } = require('../utils/alerts');
 
 // Barcode Lookup Route

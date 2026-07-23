@@ -15,28 +15,28 @@ const auth = async (req, res, next) => {
     }
 
     if (!token) {
-      return res.status(401).send({ error: 'Please authenticate.' });
+      return res.status(401).json({ error: 'Please authenticate.' });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findOne({ _id: decoded._id, active: true }).select('-password').lean();
 
     if (!user) {
-      return res.status(401).send({ error: 'User not found or inactive.' });
+      return res.status(401).json({ error: 'User not found or inactive.' });
     }
 
     req.token = token;
     req.user = user;
     next();
   } catch (e) {
-    res.status(401).send({ error: 'Please authenticate.' });
+    res.status(401).json({ error: 'Please authenticate.' });
   }
 };
 
 const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).send({ error: 'Access denied: Insufficient permissions.' });
+      return res.status(403).json({ error: 'Access denied: Insufficient permissions.' });
     }
     next();
   };

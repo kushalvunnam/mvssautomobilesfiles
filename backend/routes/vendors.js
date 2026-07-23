@@ -5,6 +5,11 @@ const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log(`[VENDORS] Route request received: ${req.method} ${req.baseUrl}${req.path}`);
+  next();
+});
+
 // Helper to auto-generate Vendor Code
 const generateVendorCode = async () => {
   const count = await Vendor.countDocuments();
@@ -87,10 +92,45 @@ router.get('/:id', auth, async (req, res) => {
 
 // Create Vendor
 router.post('/', auth, restrictTo('Admin', 'Spares'), async (req, res) => {
+  console.log('[VENDORS] POST request received');
   try {
-    const { name, mobile, vendorCode } = req.body;
-    if (!name || !mobile) {
-      return res.status(400).json({ success: false, error: 'Vendor Name and Mobile Number are required.', message: 'Vendor Name and Mobile Number are required.' });
+    const { name, mobile, vendorCode, email, gstNumber } = req.body;
+    
+    // Validation
+    const trimmedName = name ? name.trim() : '';
+    const trimmedMobile = mobile ? mobile.trim() : '';
+    
+    if (!trimmedName || !trimmedMobile) {
+      console.warn('[VENDORS] Validation failed: Name or mobile is empty');
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Vendor Name and Mobile Number are required.', 
+        message: 'Vendor Name and Mobile Number are required.' 
+      });
+    }
+
+    if (email && email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        console.warn('[VENDORS] Validation failed: Invalid email format');
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Invalid email format.', 
+          message: 'Invalid email format.' 
+        });
+      }
+    }
+
+    if (gstNumber && gstNumber.trim()) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(gstNumber.trim().toUpperCase())) {
+        console.warn('[VENDORS] Validation failed: Invalid GSTIN format');
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Invalid GSTIN format.', 
+          message: 'Invalid GSTIN format.' 
+        });
+      }
     }
 
     const code = vendorCode ? vendorCode.trim() : await generateVendorCode();
@@ -98,7 +138,12 @@ router.post('/', auth, restrictTo('Admin', 'Spares'), async (req, res) => {
     // Unique check
     const existingCode = await Vendor.findOne({ vendorCode: code });
     if (existingCode) {
-      return res.status(400).json({ success: false, error: `Vendor code "${code}" already exists.`, message: `Vendor code "${code}" already exists.` });
+      console.warn(`[VENDORS] Validation failed: Vendor code "${code}" already exists`);
+      return res.status(400).json({ 
+        success: false, 
+        error: `Vendor code "${code}" already exists.`, 
+        message: `Vendor code "${code}" already exists.` 
+      });
     }
 
     const vendor = new Vendor({
@@ -107,16 +152,70 @@ router.post('/', auth, restrictTo('Admin', 'Spares'), async (req, res) => {
     });
 
     await vendor.save();
+    console.log('[VENDORS] Vendor created');
     await logAction(req.user, 'VENDOR_CREATE', `Created vendor ${vendor.name} (${vendor.vendorCode})`, req);
     res.status(201).json({ success: true, vendor });
   } catch (error) {
-    res.status(400).json({ success: false, error: 'Failed to create vendor: ' + error.message, message: error.message });
+    console.error('[VENDORS] Error creating vendor:', error);
+    res.status(400).json({ 
+      success: false, 
+      error: 'Failed to create vendor: ' + error.message, 
+      message: error.message 
+    });
   }
 });
 
 // Update Vendor
 router.put('/:id', auth, restrictTo('Admin', 'Spares'), async (req, res) => {
   try {
+    const { name, mobile, email, gstNumber } = req.body;
+
+    if (name !== undefined) {
+      if (!name || !name.trim()) {
+        console.warn('[VENDORS] Validation failed: Name is empty on update');
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Vendor Name cannot be empty.', 
+          message: 'Vendor Name cannot be empty.' 
+        });
+      }
+    }
+
+    if (mobile !== undefined) {
+      if (!mobile || !mobile.trim()) {
+        console.warn('[VENDORS] Validation failed: Mobile is empty on update');
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Mobile number cannot be empty.', 
+          message: 'Mobile number cannot be empty.' 
+        });
+      }
+    }
+
+    if (email && email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        console.warn('[VENDORS] Validation failed: Invalid email format on update');
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Invalid email format.', 
+          message: 'Invalid email format.' 
+        });
+      }
+    }
+
+    if (gstNumber && gstNumber.trim()) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(gstNumber.trim().toUpperCase())) {
+        console.warn('[VENDORS] Validation failed: Invalid GSTIN format on update');
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Invalid GSTIN format.', 
+          message: 'Invalid GSTIN format.' 
+        });
+      }
+    }
+
     const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!vendor) return res.status(404).json({ success: false, error: 'Vendor not found.', message: 'Vendor not found.' });
 

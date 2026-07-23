@@ -8,6 +8,11 @@ const { logAction } = require('../utils/logger');
 const mongoose = require('mongoose');
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log(`[BACKLOGS] Request received: ${req.method} ${req.baseUrl}${req.path}`);
+  next();
+});
+
 // Helper to generate unique Backlog ID
 const generateBacklogId = async () => {
   const today = new Date();

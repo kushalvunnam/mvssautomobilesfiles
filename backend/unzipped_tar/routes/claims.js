@@ -3,16 +3,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const InsuranceClaim = require('../models/InsuranceClaim');
-const { auth, restrictTo } = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
-
-router.use((req, res, next) => {
-  console.log(`[CLAIMS] Route request received: ${req.method} ${req.baseUrl}${req.path}`);
-  next();
-});
-
-router.use(auth, restrictTo('Admin', 'Service'));
 
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {

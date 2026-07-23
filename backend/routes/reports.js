@@ -7,6 +7,11 @@ const Invoice = require('../models/Invoice');
 const { auth, restrictTo } = require('../middleware/auth');
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log(`[REPORTS] Route request received: ${req.method} ${req.baseUrl}${req.path}`);
+  next();
+});
+
 router.use(auth, restrictTo('Admin', 'Service', 'Spares'));
 
 // 1. Stock Valuation & Statement Report

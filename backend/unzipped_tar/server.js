@@ -1,5 +1,3 @@
-console.log('Starting backend...');
-console.log('Loading environment variables...');
 const dns = require('dns');
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
@@ -14,56 +12,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 
 // Load env vars
-dotenv.config({ path: path.join(__dirname, '.env') });
-
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/autoworkshop';
-const isLocalhostMongo = !MONGODB_URI || MONGODB_URI.includes('localhost') || MONGODB_URI.includes('127.0.0.1');
-
-if (isLocalhostMongo) {
-  console.log('[AI Studio] No remote MONGODB_URI provided (or localhost specified). Running in-memory database fallback.');
-  global.isInMemoryFallback = true;
-} else {
-  global.isInMemoryFallback = false;
-}
-
-// Hijack mongoose.model BEFORE routes require any models
-const originalModel = mongoose.model.bind(mongoose);
-mongoose.model = function(name, schema) {
-  if (global.isInMemoryFallback) {
-    const { getMockModel } = require('./utils/inMemoryDB');
-    return getMockModel(name, schema);
-  }
-  return originalModel(name, schema);
-};
-
-// Mock mongoose.Types.ObjectId
-mongoose.Types = mongoose.Types || {};
-const originalObjectId = mongoose.Types.ObjectId;
-mongoose.Types.ObjectId = function(id) {
-  if (global.isInMemoryFallback) {
-    if (id) return id;
-    const { generateId } = require('./utils/inMemoryDB');
-    return generateId();
-  }
-  return originalObjectId ? new originalObjectId(id) : id;
-};
-
-// Mock mongoose.connect if in-memory fallback
-if (global.isInMemoryFallback) {
-  mongoose.connect = async () => {
-    console.log('[AI Studio] Connected to In-Memory Mock MongoDB successfully');
-    // Trigger seed after next tick so that server startup proceeds
-    process.nextTick(async () => {
-      try {
-        await seedDatabase();
-      } catch (err) {
-        console.error('Seeding fallback DB failed:', err);
-      }
-    });
-    return mongoose;
-  };
-}
-
+dotenv.config();
 
 // Verify required environment variables on startup
 if (!process.env.MONGODB_URI) {
@@ -79,50 +28,23 @@ if (!process.env.JWT_SECRET) {
   console.warn('====================================================');
 }
 
-// Verify required email environment variables on startup
-console.log('--- Email Environment Verification ---');
-console.log(`RESEND_API_KEY: ${process.env.RESEND_API_KEY ? 'Present' : 'Missing'}`);
-console.log(`RESEND_FROM_EMAIL: ${process.env.RESEND_FROM_EMAIL ? 'Present' : 'Missing'}`);
-console.log(`ADMIN_EMAIL: ${process.env.ADMIN_EMAIL ? 'Present' : 'Missing'}`);
-console.log('--------------------------------------');
-
-const compression = require('compression');
-
-console.log('Starting Express...');
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 5000;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/autoworkshop';
 
-// Enable HTTP Response Compression (Gzip / Brotli)
-app.use(compression());
-
-// Enable CORS & Request Parsing
+// Middlewares
 app.use(cors());
-
-// Global Request Logger Middleware
-app.use((req, res, next) => {
-  console.log(`[REQUEST LOGGER] ${req.method} request received on ${req.originalUrl}`);
-  next();
-});
-
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Set Performance & Keep-Alive Headers
-app.use((req, res, next) => {
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Keep-Alive', 'timeout=15, max=100');
-  next();
-});
-
-// Serve static uploaded photos with caching
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
+// Serve static uploaded photos
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database connection health check middleware to prevent 504 gateway timeouts when offline
 app.use('/api', (req, res, next) => {
-  if (req.originalUrl.startsWith('/api/branches')) return next();
-  if (!global.isInMemoryFallback && mongoose.connection.readyState !== 1) {
+  if (mongoose.connection.readyState !== 1) {
     console.warn(`[Database Offline] Request to ${req.originalUrl} failed: mongoose connection state is ${mongoose.connection.readyState}`);
-    return res.status(503).json({ error: 'Database is currently offline. Please ensure MongoDB is running and MONGODB_URI is correct.' });
+    return res.status(503).send({ error: 'Database is currently offline. Please ensure MongoDB is running and MONGODB_URI is correct.' });
   }
   next();
 });
@@ -135,11 +57,6 @@ app.use('/api/jobcards', require('./routes/jobcards'));
 app.use('/api/estimates', require('./routes/estimates'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/inventory', require('./routes/inventory'));
-app.use('/api/vendors', require('./routes/vendors'));
-app.use('/api/adjustments', require('./routes/adjustments'));
-app.use('/api/purchases', require('./routes/purchases'));
-app.use('/api/backlogs', require('./routes/backlogs'));
-app.use('/api/reports', require('./routes/reports'));
 app.use('/api/claims', require('./routes/claims'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/employees', require('./routes/employees'));
@@ -147,83 +64,10 @@ app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/gatepasses', require('./routes/gatepasses'));
-app.use('/api/branches', require('./routes/branches'));
-app.use('/api/expenses', require('./routes/expenses'));
 
-// Resend Email Diagnostic Endpoint
-app.get('/api/test-email', async (req, res) => {
-  const { sendEmail } = require('./services/emailService');
-  const recipient = req.query.to || process.env.ADMIN_EMAIL;
-
-  console.log(`[EMAIL TEST] Sending test email via sendEmail helper to ${recipient}`);
-
-  try {
-    const result = await sendEmail({
-      to: recipient,
-      subject: 'Test Email - MVSS Automobiles Resend Diagnostic',
-      html: '<h3>Test Email</h3><p>This is a test email sent from the MVSS Automobiles Resend SDK Diagnostic Suite.</p>'
-    });
-
-    if (!result.success) {
-      console.error('[EMAIL TEST] sendEmail Helper Error:', result.error);
-      const isMissingVars = result.error?.missingVariables && result.error.missingVariables.length > 0;
-      return res.status(isMissingVars ? 400 : 500).send({
-        status: 'error',
-        message: result.error?.message || 'Failed to send email',
-        error: result.error,
-        missingVariables: result.error?.missingVariables || []
-      });
-    }
-
-    console.log('[EMAIL TEST] Email sent successfully via sendEmail helper. Result:', result.data);
-    res.send({
-      status: 'success',
-      data: result.data
-    });
-  } catch (err) {
-    console.error('[EMAIL TEST] sendEmail Exception:', err);
-    res.status(500).send({
-      status: 'error',
-      message: err.message,
-      stack: err.stack ? err.stack.toString() : ''
-    });
-  }
-});
-
-// Serve built frontend static assets in production/fallback
-const distPath = path.join(__dirname, '../dist');
-app.use(express.static(distPath));
-
-// Base API route
-app.get('/api', (req, res) => {
-  res.json({ success: true, message: 'AutoWorkshop Pro API is running.' });
-});
-
-// JSON 404 Handler for all unmatched API routes across ALL HTTP methods (GET, POST, PUT, DELETE)
-app.all('/api/*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'API endpoint not found.',
-    message: `Cannot ${req.method} ${req.originalUrl}`
-  });
-});
-
-// Global Express JSON Error Handler to prevent HTML error pages
-app.use((err, req, res, next) => {
-  console.error('[API Error]:', err);
-  if (res.headersSent) {
-    return next(err);
-  }
-  res.status(err.status || 500).json({
-    success: false,
-    error: err.message || 'Internal server error',
-    message: err.message || 'Internal server error'
-  });
-});
-
-// Serve frontend SPA index.html for all other non-API routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
+// Base route
+app.get('/', (req, res) => {
+  res.send({ message: 'AutoWorkshop Pro API is running.' });
 });
 
 // Database Seed function
@@ -235,12 +79,11 @@ async function seedDatabase() {
     // 1. Seed Users
     console.log('Configuring default user accounts...');
     const defaultUsers = [
-      { name: 'System Admin', email: 'admin@mvssautomobiles.com', password: 'admin_mvss@2026', role: 'Admin' },
-      { name: 'Accounts Executive', email: 'accounts@mvssautomobiles.com', password: 'accounts_mvss@2026', role: 'Accounts' },
-      { name: 'Service Advisor', email: 'service@mvssautomobiles.com', password: 'service_mvss@2026', role: 'Service' },
-      { name: 'Store Manager', email: 'store@mvssautomobiles.com', password: 'store_mvss@2026', role: 'Spares' },
-      { name: 'Body Shop Manager', email: 'bodyshop@mvssautomobiles.com', password: 'bodyshop_mvss@2026', role: 'Body Shop' },
-      { name: 'Front Desk Receptionist', email: 'reception@mvssautomobiles.com', password: 'reception_mvss@2026', role: 'Reception' }
+      { name: 'System Admin', email: 'admin@autoworkshop.com', password: 'admin123', role: 'Admin' },
+      { name: 'Sarah Accountant', email: 'accounts@autoworkshop.com', password: 'accounts123', role: 'Accounts' },
+      { name: 'John Service Incharge', email: 'service@autoworkshop.com', password: 'service123', role: 'Service' },
+      { name: 'Mike Spares Manager', email: 'spares@autoworkshop.com', password: 'spares123', role: 'Spares' },
+      { name: 'Body Shop Manager', email: 'bodyshop@autoworkshop.com', password: 'bodyshop123', role: 'Body Shop' }
     ];
     for (const u of defaultUsers) {
       const existing = await User.findOne({ email: u.email });
@@ -286,10 +129,10 @@ async function seedDatabase() {
       console.log('Seeded default inventory parts catalog.');
     }
 
-    // 3. Seed Customers, Vehicles, and Job Cards (Enabled for in-memory / testing mode)
+    // 3. Seed Customers, Vehicles, and Job Cards (Disabled for real testing mode)
     const JobCard = require('./models/JobCard');
     const jobCardCount = await JobCard.countDocuments();
-    if (global.isInMemoryFallback && jobCardCount === 0) {
+    if (false) {
       console.log('Seeding default customers, vehicles and job cards...');
       
       const Customer = require('./models/Customer');
@@ -527,7 +370,6 @@ mongoose.connection.on('reconnected', () => {
   console.log('MongoDB Reconnected successfully');
 });
 
-console.log('Connecting MongoDB...');
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -544,7 +386,6 @@ mongoose.connect(MONGODB_URI, {
   console.error('MongoDB connection error (Starting server anyway in warning mode):', err);
 });
 
-console.log('Listening on PORT...');
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
