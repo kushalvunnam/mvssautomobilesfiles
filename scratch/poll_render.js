@@ -4,7 +4,7 @@ console.log('--- Checking Render Production Deployment Status ---');
 
 function checkRenderEndpoint() {
   return new Promise((resolve) => {
-    https.get('https://mvssautomobilesfiles-rkp4.onrender.com/api/vendors', (res) => {
+    https.get('https://mvss-erp-backend.onrender.com/api/vendors', (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
@@ -25,7 +25,7 @@ function checkRenderEndpoint() {
 
 async function poll() {
   for (let i = 1; i <= 30; i++) {
-    console.log(`[Attempt ${i}/30] Fetching https://mvssautomobilesfiles-rkp4.onrender.com/api/vendors ...`);
+    console.log(`[Attempt ${i}/30] Fetching https://mvss-erp-backend.onrender.com/api/vendors ...`);
     const res = await checkRenderEndpoint();
     console.log(`Status Code: ${res.status} | Content-Type: ${res.contentType}`);
     if (res.json) {

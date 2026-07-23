@@ -22,7 +22,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://mvssautomobilesfiles-rkp4.onrender.com/api/:path*"
+      "destination": "https://mvss-erp-backend.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
