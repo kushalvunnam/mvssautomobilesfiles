@@ -182,6 +182,7 @@ export default function Employees({ token, user }) {
   // Attendance states
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().substring(0, 10));
   const [attendanceMap, setAttendanceMap] = useState({}); // { employeeId: status }
+  const [checkedEmployees, setCheckedEmployees] = useState({}); // { employeeId: boolean }
 
   // Salary states
   const [salaryForm, setSalaryForm] = useState({
@@ -577,6 +578,49 @@ export default function Employees({ token, user }) {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleMarkAllStatus = (status) => {
+    const newMap = { ...attendanceMap };
+    employees.forEach(emp => {
+      newMap[emp._id] = status;
+    });
+    setAttendanceMap(newMap);
+  };
+
+  const handleSaveAllAttendance = async () => {
+    const selectedIds = Object.keys(checkedEmployees).filter(id => checkedEmployees[id]);
+    if (selectedIds.length === 0) {
+      alert('Please select at least one employee.');
+      return;
+    }
+
+    const records = selectedIds.map(id => ({
+      employeeId: id,
+      status: attendanceMap[id] || 'Present'
+    }));
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/employees/attendance/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ date: attendanceDate, records })
+      });
+
+      if (res.ok) {
+        fetchEmployees();
+        alert(`Attendance marked for ${records.length} employees.`);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Error: ${err.error || 'Failed to save attendance'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error connecting to server.');
     }
   };
 
@@ -1128,24 +1172,97 @@ export default function Employees({ token, user }) {
             </div>
           </div>
 
+          {employees.length > 0 && (
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 dark:bg-slate-950/50 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/80">
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  id="select-all-attendance"
+                  checked={employees.length > 0 && employees.every(emp => !!checkedEmployees[emp._id])}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    const newChecked = {};
+                    const newMap = { ...attendanceMap };
+                    employees.forEach(emp => {
+                      newChecked[emp._id] = checked;
+                      if (checked) {
+                        newMap[emp._id] = 'Present';
+                      }
+                    });
+                    setCheckedEmployees(newChecked);
+                    if (checked) setAttendanceMap(newMap);
+                  }}
+                  className="w-4 h-4 rounded border-slate-300 dark:border-slate-800 text-emerald-600 focus:ring-emerald-500 bg-white dark:bg-slate-900"
+                />
+                <label htmlFor="select-all-attendance" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  Select All Employees
+                </label>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleMarkAllStatus('Present')}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-lg text-[11px] font-bold transition-all"
+                >
+                  ✓ Mark All Present
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMarkAllStatus('Absent')}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:text-red-400 rounded-lg text-[11px] font-bold transition-all"
+                >
+                  ✗ Mark All Absent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMarkAllStatus('Half Day')}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 rounded-lg text-[11px] font-bold transition-all"
+                >
+                  ◐ Mark All Half Day
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMarkAllStatus('Leave')}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 rounded-lg text-[11px] font-bold transition-all"
+                >
+                  🏖 Mark All Leave
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3">
             {employees.length > 0 ? (
               employees.map(emp => {
                 const currentStatus = attendanceMap[emp._id] || 'Present';
                 return (
-                  <div key={emp._id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-900">
-                    <div>
-                      <span className="font-bold text-slate-800 dark:text-white block">{emp.name}</span>
-                      <span className="text-[10px] text-slate-400 font-mono mt-0.5">{emp.email}</span>
-                      <div className="flex flex-wrap gap-2 text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mt-2 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 w-fit px-2.5 py-1 rounded-lg">
-                        <span className="text-emerald-600 dark:text-emerald-400">Present: {emp.attendance?.filter(a => a.status === 'Present').length || 0}d</span>
-                        <span className="text-red-500">Absent: {emp.attendance?.filter(a => a.status === 'Absent').length || 0}d</span>
-                        <span className="text-amber-500">Half Day: {emp.attendance?.filter(a => a.status === 'Half Day').length || 0}d</span>
-                        <span className="text-blue-500">Leave: {emp.attendance?.filter(a => a.status === 'Leave').length || 0}d</span>
+                  <div key={emp._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-900 gap-4">
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={!!checkedEmployees[emp._id]}
+                        onChange={(e) => {
+                          setCheckedEmployees({
+                            ...checkedEmployees,
+                            [emp._id]: e.target.checked
+                          });
+                        }}
+                        className="w-4 h-4 rounded border-slate-300 dark:border-slate-800 text-emerald-600 focus:ring-emerald-500 bg-white dark:bg-slate-900 mt-1"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-white block">{emp.name}</span>
+                        <span className="text-[10px] text-slate-400 font-mono mt-0.5">{emp.email}</span>
+                        <div className="flex flex-wrap gap-2 text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mt-2 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 w-fit px-2.5 py-1 rounded-lg">
+                          <span className="text-emerald-600 dark:text-emerald-400">Present: {emp.attendance?.filter(a => a.status === 'Present').length || 0}d</span>
+                          <span className="text-red-500">Absent: {emp.attendance?.filter(a => a.status === 'Absent').length || 0}d</span>
+                          <span className="text-amber-500">Half Day: {emp.attendance?.filter(a => a.status === 'Half Day').length || 0}d</span>
+                          <span className="text-blue-500">Leave: {emp.attendance?.filter(a => a.status === 'Leave').length || 0}d</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 self-end sm:self-auto">
                       <select
                         value={currentStatus}
                         onChange={(e) => setAttendanceMap({ ...attendanceMap, [emp._id]: e.target.value })}
@@ -1172,6 +1289,19 @@ export default function Employees({ token, user }) {
               <p className="text-center text-slate-400 italic py-10">Add employees first to track attendance.</p>
             )}
           </div>
+
+          {employees.length > 0 && (
+            <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={handleSaveAllAttendance}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+              >
+                <Save className="w-4 h-4" />
+                Save Checked Attendance
+              </button>
+            </div>
+          )}
         </div>
       )}
 

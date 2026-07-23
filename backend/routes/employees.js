@@ -7,6 +7,11 @@ const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log(`[EMPLOYEES] Route request received: ${req.method} ${req.baseUrl}${req.path}`);
+  next();
+});
+
 // Multer Storage Configuration for Resume uploads
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -188,6 +193,41 @@ router.put('/:id', upload.fields([
     res.send(employee);
   } catch (error) {
     res.status(400).send({ error: 'Failed to update employee: ' + error.message });
+  }
+});
+
+// Save bulk attendance
+router.post('/attendance/bulk', async (req, res) => {
+  try {
+    const { date, records } = req.body;
+    if (!date || !records || !Array.isArray(records)) {
+      return res.status(400).json({ error: 'Date and records array are required.' });
+    }
+
+    const attendanceDate = new Date(date);
+    attendanceDate.setHours(0, 0, 0, 0);
+
+    const updatedEmployees = [];
+    for (const record of records) {
+      const { employeeId, status } = record;
+      const employee = await Employee.findById(employeeId);
+      if (employee) {
+        employee.attendance = employee.attendance.filter(a => {
+          const d = new Date(a.date);
+          d.setHours(0, 0, 0, 0);
+          return d.getTime() !== attendanceDate.getTime();
+        });
+        employee.attendance.push({ date: attendanceDate, status });
+        await employee.save();
+        updatedEmployees.push(employee);
+      }
+    }
+    
+    await logAction(req.user, 'EMPLOYEE_ATTENDANCE_BULK', `Updated attendance for ${updatedEmployees.length} employees`, req);
+    res.json({ success: true, count: updatedEmployees.length });
+  } catch (error) {
+    console.error('[EMPLOYEES] Bulk attendance save error:', error);
+    res.status(400).json({ error: 'Failed to save attendance: ' + error.message });
   }
 });
 
