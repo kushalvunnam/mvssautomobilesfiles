@@ -1,3 +1,5 @@
+console.log('Starting backend...');
+console.log('Loading environment variables...');
 const dns = require('dns');
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
@@ -77,10 +79,18 @@ if (!process.env.JWT_SECRET) {
   console.warn('====================================================');
 }
 
+// Verify required email environment variables on startup
+console.log('--- Email Environment Verification ---');
+console.log(`RESEND_API_KEY: ${process.env.RESEND_API_KEY ? 'Present' : 'Missing'}`);
+console.log(`RESEND_FROM_EMAIL: ${process.env.RESEND_FROM_EMAIL ? 'Present' : 'Missing'}`);
+console.log(`ADMIN_EMAIL: ${process.env.ADMIN_EMAIL ? 'Present' : 'Missing'}`);
+console.log('--------------------------------------');
+
 const compression = require('compression');
 
+console.log('Starting Express...');
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 
 // Enable HTTP Response Compression (Gzip / Brotli)
 app.use(compression());
@@ -136,7 +146,7 @@ app.use('/api/expenses', require('./routes/expenses'));
 // Resend Email Diagnostic Endpoint
 app.get('/api/test-email', async (req, res) => {
   const { sendEmail } = require('./services/emailService');
-  const recipient = req.query.to || 'accounts@auto4m.in';
+  const recipient = req.query.to || process.env.ADMIN_EMAIL;
 
   console.log(`[EMAIL TEST] Sending test email via sendEmail helper to ${recipient}`);
 
@@ -149,10 +159,12 @@ app.get('/api/test-email', async (req, res) => {
 
     if (!result.success) {
       console.error('[EMAIL TEST] sendEmail Helper Error:', result.error);
-      return res.status(500).send({
+      const isMissingVars = result.error?.missingVariables && result.error.missingVariables.length > 0;
+      return res.status(isMissingVars ? 400 : 500).send({
         status: 'error',
         message: result.error?.message || 'Failed to send email',
-        error: result.error
+        error: result.error,
+        missingVariables: result.error?.missingVariables || []
       });
     }
 
@@ -508,6 +520,7 @@ mongoose.connection.on('reconnected', () => {
   console.log('MongoDB Reconnected successfully');
 });
 
+console.log('Connecting MongoDB...');
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -524,6 +537,7 @@ mongoose.connect(MONGODB_URI, {
   console.error('MongoDB connection error (Starting server anyway in warning mode):', err);
 });
 
-app.listen(PORT, () => {
+console.log('Listening on PORT...');
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
 });

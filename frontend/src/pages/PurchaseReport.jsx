@@ -839,26 +839,26 @@ export default function PurchaseReport({ token, user }) {
             </div>
 
             {/* Line Items Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1100px]">
+            <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+              <table className="w-full text-left border-collapse" style={{ minWidth: '2060px', tableLayout: 'fixed' }}>
                 <thead>
                   <tr className="bg-slate-100 dark:bg-slate-800/80 text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
-                    <th className="py-2.5 px-3 w-10">#</th>
-                    <th className="py-2.5 px-3 w-48">SKU / Search Inventory</th>
-                    <th className="py-2.5 px-3 w-44">Part Name *</th>
-                    <th className="py-2.5 px-3 w-36">Part Number *</th>
-                    <th className="py-2.5 px-3 w-24">HSN</th>
-                    <th className="py-2.5 px-3 w-20">Qty *</th>
-                    <th className="py-2.5 px-3 w-28">Rate (₹) *</th>
-                    <th className="py-2.5 px-3 w-28">MRP (₹) *</th>
-                    <th className="py-2.5 px-3 w-24">Disc %</th>
-                    <th className="py-2.5 px-3 w-28">Disc Amt (₹)</th>
-                    <th className="py-2.5 px-3 w-20">GST %</th>
-                    <th className="py-2.5 px-3 w-28">Taxable (₹)</th>
-                    <th className="py-2.5 px-3 w-28">GST (₹)</th>
-                    <th className="py-2.5 px-3 w-32">Total (₹)</th>
-                    <th className="py-2.5 px-3 w-36">Warehouse</th>
-                    <th className="py-2.5 px-3 w-12 text-center">Action</th>
+                    <th className="py-2.5 px-3" style={{ width: '50px', minWidth: '50px', verticalAlign: 'middle', textAlign: 'left' }}>#</th>
+                    <th className="py-2.5 px-3" style={{ width: '220px', minWidth: '220px', verticalAlign: 'middle', textAlign: 'left' }}>SKU / Search Inventory</th>
+                    <th className="py-2.5 px-3" style={{ width: '220px', minWidth: '220px', verticalAlign: 'middle', textAlign: 'left' }}>Part Name *</th>
+                    <th className="py-2.5 px-3" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>Part Number *</th>
+                    <th className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>HSN</th>
+                    <th className="py-2.5 px-3" style={{ width: '90px', minWidth: '90px', verticalAlign: 'middle', textAlign: 'left' }}>Qty *</th>
+                    <th className="py-2.5 px-3" style={{ width: '120px', minWidth: '120px', verticalAlign: 'middle', textAlign: 'left' }}>Rate (₹) *</th>
+                    <th className="py-2.5 px-3" style={{ width: '120px', minWidth: '120px', verticalAlign: 'middle', textAlign: 'left' }}>MRP (₹) *</th>
+                    <th className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>Disc %</th>
+                    <th className="py-2.5 px-3" style={{ width: '120px', minWidth: '120px', verticalAlign: 'middle', textAlign: 'left' }}>Disc Amt (₹)</th>
+                    <th className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>GST %</th>
+                    <th className="py-2.5 px-3" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>Taxable (₹)</th>
+                    <th className="py-2.5 px-3" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>GST Amt (₹)</th>
+                    <th className="py-2.5 px-3" style={{ width: '160px', minWidth: '160px', verticalAlign: 'middle', textAlign: 'left' }}>Total (₹)</th>
+                    <th className="py-2.5 px-3" style={{ width: '180px', minWidth: '180px', verticalAlign: 'middle', textAlign: 'left' }}>Warehouse</th>
+                    <th className="py-2.5 px-3" style={{ width: '80px', minWidth: '80px', verticalAlign: 'middle', textAlign: 'left' }}>Action</th>
                   </tr>
                 </thead>
 
@@ -868,16 +868,16 @@ export default function PurchaseReport({ token, user }) {
                     return (
                       <tr key={row.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                         {/* Index */}
-                        <td className="py-2.5 px-3 font-bold text-slate-400">
+                        <td className="py-2.5 px-3 font-bold text-slate-400" style={{ width: '50px', minWidth: '50px', verticalAlign: 'middle', textAlign: 'left' }}>
                           {idx + 1}
                         </td>
 
                         {/* Existing SKU Select */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '220px', minWidth: '220px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <select
                             value={row.selectedPartId}
                             onChange={(e) => handleSelectSKU(row.id, e.target.value)}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           >
                             <option value="">-- New / Select Part --</option>
                             {inventoryList.map(p => (
@@ -889,54 +889,54 @@ export default function PurchaseReport({ token, user }) {
                         </td>
 
                         {/* Part Name */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '220px', minWidth: '220px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <input
                             type="text"
                             placeholder="e.g. Front Brake Pads"
                             value={row.partName}
                             onChange={(e) => handleRowChange(row.id, 'partName', e.target.value)}
                             required
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           />
                         </td>
 
                         {/* Part Number */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <input
                             type="text"
                             placeholder="e.g. BP-8821"
                             value={row.partNumber}
                             onChange={(e) => handleRowChange(row.id, 'partNumber', e.target.value)}
                             required
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           />
                         </td>
 
                         {/* HSN Code */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <input
                             type="text"
                             placeholder="8708"
                             value={row.hsnCode}
                             onChange={(e) => handleRowChange(row.id, 'hsnCode', e.target.value)}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           />
                         </td>
 
                         {/* Qty */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '90px', minWidth: '90px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <input
                             type="number"
                             min="1"
                             value={row.qty}
                             onChange={(e) => handleRowChange(row.id, 'qty', e.target.value)}
                             required
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-bold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-bold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           />
                         </td>
 
                         {/* Purchase Rate */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '120px', minWidth: '120px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <input
                             type="number"
                             step="0.01"
@@ -945,12 +945,12 @@ export default function PurchaseReport({ token, user }) {
                             value={row.purchasePrice}
                             onChange={(e) => handleRowChange(row.id, 'purchasePrice', e.target.value)}
                             required
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-bold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-bold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           />
                         </td>
 
                         {/* MRP (GST Inclusive) */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '120px', minWidth: '120px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <input
                             type="number"
                             step="0.01"
@@ -959,12 +959,12 @@ export default function PurchaseReport({ token, user }) {
                             value={row.mrp}
                             onChange={(e) => handleRowChange(row.id, 'mrp', e.target.value)}
                             required
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-bold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-bold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           />
                         </td>
 
                         {/* Discount % */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <input
                             type="number"
                             step="0.1"
@@ -973,12 +973,12 @@ export default function PurchaseReport({ token, user }) {
                             placeholder="0"
                             value={row.discountPercent || ''}
                             onChange={(e) => handleRowChange(row.id, 'discountPercent', e.target.value)}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           />
                         </td>
 
                         {/* Discount Amount */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '120px', minWidth: '120px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <input
                             type="number"
                             step="0.01"
@@ -986,16 +986,16 @@ export default function PurchaseReport({ token, user }) {
                             placeholder="0.00"
                             value={row.discountAmount || ''}
                             onChange={(e) => handleRowChange(row.id, 'discountAmount', e.target.value)}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           />
                         </td>
 
                         {/* GST % */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <select
                             value={row.gstPercent}
                             onChange={(e) => handleRowChange(row.id, 'gstPercent', Number(e.target.value))}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           >
                             <option value={0}>0%</option>
                             <option value={5}>5%</option>
@@ -1006,17 +1006,17 @@ export default function PurchaseReport({ token, user }) {
                         </td>
 
                         {/* Taxable Amount (Calculated) */}
-                        <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300">
+                        <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>
                           ₹{rowCalc.taxable.toFixed(2)}
                         </td>
 
                         {/* GST Amount (Calculated) */}
-                        <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300">
+                        <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>
                           ₹{rowCalc.gstAmt.toFixed(2)}
                         </td>
 
                         {/* Total Amount (Calculated) */}
-                        <td className="py-2.5 px-3 font-black text-indigo-600 dark:text-indigo-400">
+                        <td className="py-2.5 px-3 font-black text-indigo-600 dark:text-indigo-400" style={{ width: '160px', minWidth: '160px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <div>₹{rowCalc.total.toFixed(2)}</div>
                           {row.qty > 1 && (
                             <div className="text-[9px] text-slate-400 font-semibold mt-0.5" title="Net Cost Per Unit (Final Amount / Quantity)">
@@ -1026,11 +1026,11 @@ export default function PurchaseReport({ token, user }) {
                         </td>
 
                         {/* Warehouse Location */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3" style={{ width: '180px', minWidth: '180px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <select
                             value={row.warehouse || 'Main Store'}
                             onChange={(e) => handleRowChange(row.id, 'warehouse', e.target.value)}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           >
                             <option value="Main Store">Main Store</option>
                             <option value="Spares Warehouse">Spares Warehouse</option>
@@ -1040,7 +1040,7 @@ export default function PurchaseReport({ token, user }) {
                         </td>
 
                         {/* Remove Row Button */}
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-2.5 px-3 text-left" style={{ width: '80px', minWidth: '80px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <button
                             type="button"
                             onClick={() => handleRemoveRow(row.id)}

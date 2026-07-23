@@ -100,6 +100,7 @@ router.post('/', async (req, res) => {
     } = req.body;
 
     console.log(`[BOOKING ROUTE] Booking received for ${customerName} (${vehicleNumber})`);
+    console.log('Booking request received');
 
     // Validate required fields
     if (!customerName || !mobile || !vehicleNumber || !serviceType) {
@@ -186,6 +187,7 @@ router.post('/', async (req, res) => {
 
     await booking.save();
     console.log(`[BOOKING ROUTE] Booking saved with ID: ${booking._id}`);
+    console.log('Booking saved');
 
 
     // ==========================================
@@ -265,8 +267,8 @@ router.post('/', async (req, res) => {
     let emailLogs = [];
 
     try {
-      const recipientEmail = 'accounts@auto4m.in';
-      const senderEmail = process.env.RESEND_FROM_EMAIL || 'MVSS Automobiles <onboarding@resend.dev>';
+      const recipientEmail = process.env.ADMIN_EMAIL;
+      const senderEmail = process.env.RESEND_FROM_EMAIL;
 
       console.log(`[BOOKING ROUTE] Booking saved with ID: ${booking._id}`);
       console.log(`[BOOKING ROUTE] Calling Resend...`);
@@ -294,6 +296,7 @@ router.post('/', async (req, res) => {
         </div>
       `;
 
+      console.log('Email sending started');
       const emailResult = await sendEmail({
         to: recipientEmail,
         subject: `New Service Booking - MVSS Automobiles`,
@@ -303,16 +306,19 @@ router.post('/', async (req, res) => {
 
       if (emailResult.success) {
         emailSent = true;
-        emailId = emailResult.data?.id || 'N/A';
+        emailId = emailResult.emailId || emailResult.data?.id || 'N/A';
         console.log(`[BOOKING ROUTE SUCCESS] Email ID: ${emailId}`);
+        console.log('Email sent successfully');
         emailLogs.push(`Admin email sent successfully to ${recipientEmail} (ID: ${emailId})`);
       } else {
         emailError = emailResult.error?.message || JSON.stringify(emailResult.error);
+        console.log('Email failed');
         emailLogs.push(`Admin email failed: ${emailError}`);
         console.error(`[BOOKING ROUTE ERROR] Error message if sending fails: ${emailError}`);
       }
     } catch (emailErr) {
       emailError = emailErr.message || String(emailErr);
+      console.log('Email failed');
       console.error('[BOOKING ROUTE EXCEPTION] Error message if sending fails:', emailErr);
     }
 
@@ -321,6 +327,7 @@ router.post('/', async (req, res) => {
     // 8. RETURN SUCCESS RESPONSE
     // ==========================================
 
+    console.log('Booking response returned');
     return res.status(201).json({
       success: true,
       message: 'Booking created successfully',

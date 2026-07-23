@@ -23,7 +23,7 @@ async function testEmail() {
   
   console.log('\nSending test email...');
   const result = await sendEmail({
-    to: 'accounts@auto4m.in',
+    to: process.env.ADMIN_EMAIL || 'accounts@auto4m.in',
     subject: 'Test Email - MVSS Automobiles Diagnostic Flow',
     html: `
       <h3>Resend Diagnostic Integration Test</h3>
