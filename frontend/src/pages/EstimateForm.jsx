@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
 import { Plus, Trash2, Save, ShoppingCart, Activity, AlertCircle } from 'lucide-react';
+import { calculatePricing } from '../utils/pricingEngine';
 
 const STANDARD_SERVICES = [
   { description: 'General Servicing', rate: 1500, gstPercent: 18 },
@@ -476,24 +477,27 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
     let gstTotal = 0;
 
     partsList.forEach(part => {
-      const qty = Number(part.qty) || 0;
-      const rate = Number(part.rate) || 0;
-      const discount = Number(part.discount) || 0;
-      const taxable = (qty * rate) - discount;
-      const gstPercent = Number(part.gstPercent) || 0;
-      const gst = taxable * (gstPercent / 100);
-      partsTotal += taxable;
-      gstTotal += gst;
+      const pricing = calculatePricing({
+        sellingPrice: part.rate,
+        quantity: part.qty,
+        discountAmount: part.discount,
+        lastDiscountEdited: 'amount',
+        gstPercent: part.gstPercent
+      });
+      partsTotal += pricing.taxableAmount;
+      gstTotal += pricing.gstAmount;
     });
 
     labourList.forEach(lab => {
-      const rate = Number(lab.rate) || 0;
-      const discount = Number(lab.discount) || 0;
-      const taxable = rate - discount;
-      const gstPercent = Number(lab.gstPercent) || 0;
-      const gst = taxable * (gstPercent / 100);
-      labourTotal += taxable;
-      gstTotal += gst;
+      const pricing = calculatePricing({
+        sellingPrice: lab.rate,
+        quantity: lab.qty || 1,
+        discountAmount: lab.discount,
+        lastDiscountEdited: 'amount',
+        gstPercent: lab.gstPercent
+      });
+      labourTotal += pricing.taxableAmount;
+      gstTotal += pricing.gstAmount;
     });
 
     setTotals({

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
 import { Save, ShoppingBag, ShieldCheck, Scale, Receipt, Plus, Trash2, Activity, ShoppingCart } from 'lucide-react';
+import { calculatePricing } from '../utils/pricingEngine';
 
 const STANDARD_SERVICES = [
   { description: 'General Servicing', rate: 1500, gstPercent: 18 },
@@ -343,29 +344,20 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
     let discountTotal = 0;
 
     partsList.forEach(part => {
-      const qty = Number(part.qty) || 0;
-      const rate = Number(part.rate) || 0;
-      const discountPercent = Number(part.discountPercent) || 0;
-      const discountAmountInput = Number(part.discountAmount) || 0;
-      const gstPercent = Number(part.gstPercent) || 0;
+      const pricing = calculatePricing({
+        sellingPrice: part.rate,
+        quantity: part.qty,
+        discountPercent: part.discountPercent,
+        discountAmount: part.discountAmount,
+        lastDiscountEdited: part.discountType === 'Fixed' ? 'amount' : 'percent',
+        gstPercent: part.gstPercent
+      });
 
-      const grossAmount = roundToTwo(qty * rate);
-      
-      let discountAmount = 0;
-      if (part.discountType === 'Fixed') {
-        discountAmount = roundToTwo(discountAmountInput);
-      } else {
-        discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
-      }
-
-      if (discountAmount > grossAmount) discountAmount = grossAmount;
-      if (discountAmount < 0) discountAmount = 0;
-
-      const amount = roundToTwo(grossAmount - discountAmount); // taxable amount
-      const gstAmount = roundToTwo(amount * (gstPercent / 100));
+      const amount = roundToTwo(pricing.taxableAmount);
+      const gstAmount = roundToTwo(pricing.gstAmount);
 
       partsTotal += amount;
-      discountTotal += discountAmount;
+      discountTotal += pricing.discountAmount;
       gstTotal += gstAmount;
 
       if (gstDetails.isInterstate) {
@@ -379,29 +371,20 @@ export default function InvoiceForm({ token, onSaved, onCancel, editId = null })
     });
 
     labourList.forEach(lab => {
-      const qty = Number(lab.qty) !== undefined && lab.qty !== null && lab.qty !== '' ? Number(lab.qty) : 1;
-      const rate = Number(lab.rate) || 0;
-      const discountPercent = Number(lab.discountPercent) || 0;
-      const discountAmountInput = Number(lab.discountAmount) || 0;
-      const gstPercent = Number(lab.gstPercent) || 0;
+      const pricing = calculatePricing({
+        sellingPrice: lab.rate,
+        quantity: lab.qty || 1,
+        discountPercent: lab.discountPercent,
+        discountAmount: lab.discountAmount,
+        lastDiscountEdited: lab.discountType === 'Fixed' ? 'amount' : 'percent',
+        gstPercent: lab.gstPercent
+      });
 
-      const grossAmount = roundToTwo(qty * rate);
-      
-      let discountAmount = 0;
-      if (lab.discountType === 'Fixed') {
-        discountAmount = roundToTwo(discountAmountInput);
-      } else {
-        discountAmount = roundToTwo(grossAmount * (discountPercent / 100));
-      }
-
-      if (discountAmount > grossAmount) discountAmount = grossAmount;
-      if (discountAmount < 0) discountAmount = 0;
-
-      const amount = roundToTwo(grossAmount - discountAmount); // taxable amount
-      const gstAmount = roundToTwo(amount * (gstPercent / 100));
+      const amount = roundToTwo(pricing.taxableAmount);
+      const gstAmount = roundToTwo(pricing.gstAmount);
 
       labourTotal += amount;
-      discountTotal += discountAmount;
+      discountTotal += pricing.discountAmount;
       gstTotal += gstAmount;
 
       if (gstDetails.isInterstate) {

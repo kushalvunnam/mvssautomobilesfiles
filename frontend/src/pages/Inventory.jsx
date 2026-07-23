@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
+import { calculatePricing } from '../utils/pricingEngine';
 import { 
   Search, 
   Plus, 
@@ -1006,49 +1007,59 @@ function PartsMasterBillingModal({
     lastDiscountEdited: 'percent'
   }));
 
-  // Automatic Calculation Utilities
-  const cost = parseFloat(form.purchasePrice) || 0;
-  const sell = parseFloat(form.sellingPrice) || 0;
-  const qty = Math.max(1, parseFloat(form.quantity) || 1);
-  const gstP = parseFloat(form.gstPercent) || 0;
-  const discPercent = parseFloat(form.discountPercent) || 0;
-  const discAmtInput = parseFloat(form.discountAmount) || 0;
+  const [manualFinalTotal, setManualFinalTotal] = useState(
+    initialData?.manualFinalTotal !== undefined ? initialData.manualFinalTotal : null
+  );
+  const [mrpOverride, setMrpOverride] = useState(false);
 
-  // Calculation Engine
-  const grossAmount = Math.round((qty * sell + Number.EPSILON) * 100) / 100;
+  // pricing calculations
+  const pricing = calculatePricing({
+    purchasePrice: form.purchasePrice,
+    marginPercent: form.marginPercent,
+    sellingPrice: form.sellingPrice,
+    quantity: form.quantity,
+    discountPercent: form.discountPercent,
+    discountAmount: form.discountAmount,
+    lastDiscountEdited: form.lastDiscountEdited,
+    gstPercent: form.gstPercent,
+    mrp: form.mrp,
+    manualFinalTotal
+  });
 
-  let discAmount = discAmtInput;
-  if (form.lastDiscountEdited === 'percent' || !form.discountAmount) {
-    discAmount = Math.round((grossAmount * (discPercent / 100) + Number.EPSILON) * 100) / 100;
-  }
-  if (discAmount > grossAmount) discAmount = grossAmount;
-  if (discAmount < 0) discAmount = 0;
+  const cost = pricing.cost;
+  const sell = pricing.sellingPrice;
+  const qty = pricing.quantity;
+  const gstP = pricing.gstPercent;
+  const discPercent = pricing.discountPercent;
+  const discAmount = pricing.discountAmount;
+  const grossAmount = pricing.subtotal;
+  const taxableAmount = pricing.taxableAmount;
+  const gstAmount = pricing.gstAmount;
+  const finalTotalAmount = pricing.finalTotalAmount;
+  const unitChargeRate = pricing.unitChargeRate;
+  const marginP = pricing.marginPercent;
+  const mrpVal = pricing.mrp;
+  const customerSaving = pricing.customerSaving;
+  const customerSavingPercent = pricing.customerSavingPercent;
+  const sellingExceedsMrp = pricing.sellingExceedsMrp;
 
-  const taxableAmount = Math.max(0, Math.round((grossAmount - discAmount + Number.EPSILON) * 100) / 100);
-  const gstAmount = Math.round((taxableAmount * (gstP / 100) + Number.EPSILON) * 100) / 100;
-  const finalTotalAmount = Math.round((taxableAmount + gstAmount + Number.EPSILON) * 100) / 100;
-  const unitChargeRate = qty > 0 ? Math.round((finalTotalAmount / qty + Number.EPSILON) * 100) / 100 : 0;
-
-  const marginP = cost > 0 && sell > 0 ? Math.round(((sell - cost) / cost) * 100 * 100) / 100 : (parseFloat(form.marginPercent) || 0);
-  const profitVal = Math.max(0, sell - cost);
-  const mrpVal = parseFloat(form.mrp) || Math.ceil(unitChargeRate || (sell + Math.round((sell * (gstP / 100)) * 100) / 100));
-
-  // Input Handlers with Real-Time Dynamic Sync
+  // Input Handlers
   const handlePurchasePriceChange = (val) => {
     const newCost = parseFloat(val) || 0;
     const currentMargin = parseFloat(form.marginPercent) || 0;
     let newSell = form.sellingPrice;
-    if (newCost > 0 && currentMargin > 0) {
+    if (newCost > 0 && currentMargin >= 0) {
       newSell = (newCost * (1 + currentMargin / 100)).toFixed(2);
     }
     const newGross = qty * (parseFloat(newSell) || 0);
-    const newDiscAmt = (newGross * (discPercent / 100)).toFixed(2);
+    const newDiscAmt = (newGross * (parseFloat(form.discountPercent) || 0) / 100).toFixed(2);
     setForm(prev => ({
       ...prev,
       purchasePrice: val,
       sellingPrice: newSell,
       discountAmount: newDiscAmt
     }));
+    setManualFinalTotal(null);
   };
 
   const handleSellingPriceChange = (val) => {
@@ -1059,13 +1070,14 @@ function PartsMasterBillingModal({
       newMargin = (((newSell - currentCost) / currentCost) * 100).toFixed(2);
     }
     const newGross = qty * newSell;
-    const newDiscAmt = (newGross * (discPercent / 100)).toFixed(2);
+    const newDiscAmt = (newGross * (parseFloat(form.discountPercent) || 0) / 100).toFixed(2);
     setForm(prev => ({
       ...prev,
       sellingPrice: val,
       marginPercent: newMargin,
       discountAmount: newDiscAmt
     }));
+    setManualFinalTotal(null);
   };
 
   const handleMarginChange = (val) => {
@@ -1076,24 +1088,26 @@ function PartsMasterBillingModal({
       newSell = (currentCost * (1 + newMargin / 100)).toFixed(2);
     }
     const newGross = qty * (parseFloat(newSell) || 0);
-    const newDiscAmt = (newGross * (discPercent / 100)).toFixed(2);
+    const newDiscAmt = (newGross * (parseFloat(form.discountPercent) || 0) / 100).toFixed(2);
     setForm(prev => ({
       ...prev,
       marginPercent: val,
       sellingPrice: newSell,
       discountAmount: newDiscAmt
     }));
+    setManualFinalTotal(null);
   };
 
   const handleQuantityChange = (val) => {
     const newQty = Math.max(1, parseFloat(val) || 1);
     const newGross = newQty * (parseFloat(form.sellingPrice) || 0);
-    const newDiscAmt = (newGross * (discPercent / 100)).toFixed(2);
+    const newDiscAmt = (newGross * (parseFloat(form.discountPercent) || 0) / 100).toFixed(2);
     setForm(prev => ({
       ...prev,
       quantity: val,
       discountAmount: newDiscAmt
     }));
+    setManualFinalTotal(null);
   };
 
   const handleDiscountPercentChange = (val) => {
@@ -1106,6 +1120,7 @@ function PartsMasterBillingModal({
       discountAmount: calculatedAmt,
       lastDiscountEdited: 'percent'
     }));
+    setManualFinalTotal(null);
   };
 
   const handleDiscountAmountChange = (val) => {
@@ -1118,6 +1133,7 @@ function PartsMasterBillingModal({
       discountPercent: calculatedPercent,
       lastDiscountEdited: 'amount'
     }));
+    setManualFinalTotal(null);
   };
 
   const handleSubmit = (e) => {
@@ -1126,6 +1142,41 @@ function PartsMasterBillingModal({
       alert('Part Name / Description and Part Number are required.');
       return;
     }
+
+    const q = parseFloat(form.quantity) || 0;
+    if (q < 1) {
+      alert('Quantity must be greater than or equal to 1.');
+      return;
+    }
+
+    const gst = parseFloat(form.gstPercent) || 0;
+    if (gst < 0 || gst > 100) {
+      alert('GST Rate must be between 0% and 100%.');
+      return;
+    }
+
+    const margin = parseFloat(form.marginPercent) || 0;
+    if (margin < 0) {
+      alert('Profit Margin must be greater than or equal to 0%.');
+      return;
+    }
+
+    if (sellingExceedsMrp && !mrpOverride) {
+      alert('Selling Price cannot exceed MRP unless Manual Override is confirmed.');
+      return;
+    }
+
+    const disc = parseFloat(form.discountAmount) || 0;
+    if (disc > grossAmount) {
+      alert('Discount cannot exceed the subtotal.');
+      return;
+    }
+
+    if (finalTotalAmount < 0) {
+      alert('Final Total cannot be negative.');
+      return;
+    }
+
     onSubmit({
       ...form,
       stockQuantity: Number(form.stockQuantity) || 0,
@@ -1143,7 +1194,8 @@ function PartsMasterBillingModal({
       marginPercent: Number(form.marginPercent) || marginP,
       gstPercent: Number(form.gstPercent) || 0,
       chargeAmount: Number(unitChargeRate) || 0,
-      finalTotalAmount: Number(finalTotalAmount) || 0
+      finalTotalAmount: Number(finalTotalAmount) || 0,
+      manualFinalTotal: manualFinalTotal
     });
   };
 
@@ -1187,32 +1239,42 @@ function PartsMasterBillingModal({
 
         {/* Real-Time Billing Live Summary Bar */}
         <div className="bg-slate-900 text-white px-5 py-3 border-b border-slate-800 shrink-0">
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 text-center sm:text-left">
-            <div className="border-r border-slate-800 pr-2">
+          <div className="flex flex-wrap items-center justify-between gap-4 text-center sm:text-left text-xs">
+            <div>
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Cost Price</span>
-              <span className="text-sm font-black font-mono text-slate-200">₹{cost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <span className="text-xs font-black font-mono text-slate-200">₹{cost.toFixed(2)}</span>
             </div>
-            <div className="border-r border-slate-800 pr-2">
+            <div>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">MRP</span>
+              <span className="text-xs font-black font-mono text-slate-250">₹{mrpVal.toFixed(2)}</span>
+            </div>
+            <div>
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Profit Margin</span>
-              <span className="text-sm font-black font-mono text-emerald-400">
-                {marginP}% <span className="text-[10px] text-emerald-300 font-semibold">(+₹{profitVal.toFixed(2)})</span>
-              </span>
+              <span className="text-xs font-black font-mono text-emerald-400">{marginP}%</span>
             </div>
-            <div className="border-r border-slate-800 pr-2">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Qty / Selling</span>
-              <span className="text-sm font-black font-mono text-blue-400">{qty} × ₹{sell.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            <div>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Selling Price</span>
+              <span className="text-xs font-black font-mono text-blue-400">₹{sell.toFixed(2)}</span>
             </div>
-            <div className="border-r border-slate-800 pr-2">
+            <div>
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Discount</span>
-              <span className="text-sm font-black font-mono text-amber-400">-₹{discAmount.toFixed(2)} <span className="text-[10px] font-semibold">({discPercent}%)</span></span>
+              <span className="text-xs font-black font-mono text-amber-400">-₹{discAmount.toFixed(2)} ({discPercent.toFixed(1)}%)</span>
             </div>
-            <div className="border-r border-slate-800 pr-2">
+            <div>
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">GST ({gstP}%)</span>
-              <span className="text-sm font-black font-mono text-purple-400">+₹{gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <span className="text-xs font-black font-mono text-purple-400">+₹{gstAmount.toFixed(2)}</span>
+            </div>
+            <div>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Customer Saving</span>
+              <span className="text-xs font-black font-mono text-emerald-350">₹{customerSaving.toFixed(2)} ({customerSavingPercent.toFixed(0)}%)</span>
+            </div>
+            <div>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Net Charge</span>
+              <span className="text-xs font-black font-mono text-cyan-400">₹{unitChargeRate.toFixed(2)}</span>
             </div>
             <div>
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Final Total</span>
-              <span className="text-base font-black font-mono text-emerald-300">₹{finalTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <span className="text-sm font-black font-mono text-emerald-300">₹{finalTotalAmount.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -1521,12 +1583,30 @@ function PartsMasterBillingModal({
                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
                   Final Total Amount (₹)
                 </label>
-                <input
-                  type="text"
-                  readOnly
-                  value={`₹ ${finalTotalAmount.toFixed(2)}`}
-                  className="w-full px-3.5 py-2 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 rounded-xl font-mono text-emerald-800 dark:text-emerald-200 font-black text-sm"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={manualFinalTotal !== null ? manualFinalTotal : finalTotalAmount.toFixed(2)}
+                    onChange={(e) => setManualFinalTotal(e.target.value !== '' ? parseFloat(e.target.value) || 0 : null)}
+                    className="w-full px-3.5 py-2 pr-16 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 rounded-xl font-mono text-emerald-800 dark:text-emerald-200 font-black text-sm focus:outline-none"
+                  />
+                  {manualFinalTotal !== null && (
+                    <div className="absolute right-2 top-2 flex items-center gap-1">
+                      <span className="text-[8px] bg-red-500 text-white font-extrabold px-1.5 py-0.5 rounded uppercase">Override</span>
+                      <button
+                        type="button"
+                        onClick={() => setManualFinalTotal(null)}
+                        className="text-[9px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded font-extrabold hover:bg-slate-300"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {manualFinalTotal !== null && (
+                  <span className="text-[10px] font-bold text-red-500 mt-1 block">Manual Override Enabled</span>
+                )}
               </div>
 
               <div>
@@ -1538,9 +1618,33 @@ function PartsMasterBillingModal({
                   step="0.01"
                   value={form.mrp}
                   onChange={(e) => setForm({ ...form, mrp: e.target.value })}
-                  placeholder={mrpVal ? mrpVal.toString() : '0.00'}
+                  placeholder="0.00"
                   className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-slate-900 dark:text-white font-bold focus:outline-none focus:border-indigo-500"
                 />
+                {mrpVal > 0 && (
+                  <div className="mt-1 space-y-1">
+                    {sell <= mrpVal ? (
+                      <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-450 block">
+                        You Save: ₹{(mrpVal - sell).toFixed(2)} ({Math.round(customerSavingPercent)}%)
+                      </span>
+                    ) : (
+                      <div className="space-y-1.5 p-2 bg-rose-50 dark:bg-rose-950/20 border border-rose-250 dark:border-rose-900/50 rounded-lg">
+                        <span className="text-[10px] font-black text-rose-600 dark:text-rose-450 block">
+                          Selling price exceeds MRP.
+                        </span>
+                        <label className="flex items-center gap-1.5 text-[9px] font-extrabold text-slate-650 dark:text-slate-350 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={mrpOverride}
+                            onChange={(e) => setMrpOverride(e.target.checked)}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3 h-3"
+                          />
+                          <span>Allow Price to exceed MRP (Manual Override)</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
