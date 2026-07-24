@@ -51,6 +51,16 @@ const purchaseItemSchema = new mongoose.Schema({
     default: 0,
     min: 0,
   },
+  discountType: {
+    type: String,
+    enum: ['Percent', 'Flat'],
+    default: 'Percent'
+  },
+  discountValue: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   gstPercent: {
     type: Number,
     default: 18,
@@ -62,6 +72,22 @@ const purchaseItemSchema = new mongoose.Schema({
   gstAmount: {
     type: Number,
     required: true,
+  },
+  cgst: {
+    type: Number,
+    default: 0
+  },
+  sgst: {
+    type: Number,
+    default: 0
+  },
+  igst: {
+    type: Number,
+    default: 0
+  },
+  rackLocation: {
+    type: String,
+    default: ''
   },
   total: {
     type: Number,
@@ -103,6 +129,10 @@ const purchaseSchema = new mongoose.Schema({
     totalDiscount: { type: Number, required: true, default: 0 },
     taxableAmount: { type: Number, required: true, default: 0 },
     gstTotal: { type: Number, required: true, default: 0 },
+    cgstTotal: { type: Number, required: true, default: 0 },
+    sgstTotal: { type: Number, required: true, default: 0 },
+    igstTotal: { type: Number, required: true, default: 0 },
+    roundOff: { type: Number, required: true, default: 0 },
     grandTotal: { type: Number, required: true, default: 0 },
   },
   paymentStatus: {

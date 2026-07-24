@@ -81,10 +81,11 @@ export default function PurchaseReport({ token, user }) {
     purchasePrice: '',
     sellingPrice: '',
     mrp: '',
-    discountPercent: 0,
-    discountAmount: 0,
+    discountType: 'Percent',
+    discountValue: 0,
     gstPercent: 18,
-    warehouse: 'Main Store'
+    warehouse: 'Main Store',
+    rackLocation: ''
   });
 
   const [purchaseHeader, setPurchaseHeader] = useState({
@@ -247,30 +248,7 @@ export default function PurchaseReport({ token, user }) {
   const handleRowChange = (rowId, field, value) => {
     setPurchaseItems(prev => prev.map(row => {
       if (row.id !== rowId) return row;
-
-      const updated = { ...row, [field]: value };
-
-      const qty = Number(field === 'qty' ? value : updated.qty) || 0;
-      const rate = Number(field === 'purchasePrice' ? value : updated.purchasePrice) || 0;
-      const gross = qty * rate;
-
-      if (field === 'discountPercent') {
-        const discPct = Math.max(0, Math.min(100, Number(value) || 0));
-        const discAmt = gross > 0 ? round2((gross * discPct) / 100) : 0;
-        updated.discountPercent = discPct;
-        updated.discountAmount = discAmt;
-      } else if (field === 'discountAmount') {
-        const discAmt = Math.max(0, Number(value) || 0);
-        const discPct = gross > 0 ? round2((discAmt / gross) * 100) : 0;
-        updated.discountAmount = discAmt;
-        updated.discountPercent = discPct;
-      } else if (field === 'qty' || field === 'purchasePrice') {
-        // Recalculate discount amount based on existing discountPercent
-        const discPct = Number(updated.discountPercent) || 0;
-        updated.discountAmount = gross > 0 ? round2((gross * discPct) / 100) : 0;
-      }
-
-      return updated;
+      return { ...row, [field]: value };
     }));
   };
 
@@ -279,41 +257,84 @@ export default function PurchaseReport({ token, user }) {
     const qty = Number(row.qty) || 0;
     const rate = Number(row.purchasePrice) || 0;
     const gross = qty * rate;
-    const discAmt = Number(row.discountAmount) || 0;
-    const taxable = Math.max(0, gross - discAmt);
-    const gstPct = Number(row.gstPercent) !== undefined ? Number(row.gstPercent) : 18;
+
+    const discountType = row.discountType || 'Percent';
+    const discountValue = Number(row.discountValue) || 0;
+
+    let discountAmount = 0;
+    if (discountType === 'Percent') {
+      discountAmount = (gross * discountValue) / 100;
+    } else {
+      discountAmount = discountValue;
+    }
+    discountAmount = Math.max(0, Math.min(gross, discountAmount));
+
+    const taxable = Math.max(0, gross - discountAmount);
+    const gstPct = !isNaN(Number(row.gstPercent)) ? Number(row.gstPercent) : 18;
     const gstAmt = taxable * (gstPct / 100);
     const total = taxable + gstAmt;
 
+    const selectedVendor = vendorsList.find(v => v._id === purchaseHeader.vendorId);
+    const isInterstate = selectedVendor && selectedVendor.gstNumber 
+      ? !selectedVendor.gstNumber.trim().startsWith('36') 
+      : false;
+
+    const cgst = isInterstate ? 0 : gstAmt / 2;
+    const sgst = isInterstate ? 0 : gstAmt / 2;
+    const igst = isInterstate ? gstAmt : 0;
+
     return {
       gross: round2(gross),
+      discountAmount: round2(discountAmount),
       taxable: round2(taxable),
       gstAmt: round2(gstAmt),
+      cgst: round2(cgst),
+      sgst: round2(sgst),
+      igst: round2(igst),
       total: round2(total)
     };
   };
 
   // Overall Purchase Summary Calculation (Live Footer)
-  const summaryTotals = purchaseItems.reduce((acc, row) => {
-    const qty = Number(row.qty) || 0;
-    const { gross, taxable, gstAmt, total } = calculateRowTotals(row);
-    const discAmt = Number(row.discountAmount) || 0;
+  const getSummaryTotals = () => {
+    const selectedVendor = vendorsList.find(v => v._id === purchaseHeader.vendorId);
+    const isInterstate = selectedVendor && selectedVendor.gstNumber 
+      ? !selectedVendor.gstNumber.trim().startsWith('36') 
+      : false;
 
-    acc.totalQty += qty;
-    acc.subtotal += gross;
-    acc.totalDiscount += discAmt;
-    acc.taxableAmount += taxable;
-    acc.gstTotal += gstAmt;
-    acc.grandTotal += total;
-    return acc;
-  }, {
-    totalQty: 0,
-    subtotal: 0,
-    totalDiscount: 0,
-    taxableAmount: 0,
-    gstTotal: 0,
-    grandTotal: 0
-  });
+    return purchaseItems.reduce((acc, row) => {
+      const qty = Number(row.qty) || 0;
+      const { gross, discountAmount, taxable, gstAmt, cgst, sgst, igst, total } = calculateRowTotals(row);
+
+      acc.totalQty += qty;
+      acc.subtotal += gross;
+      acc.totalDiscount += discountAmount;
+      acc.taxableAmount += taxable;
+      acc.gstTotal += gstAmt;
+      acc.cgstTotal += cgst;
+      acc.sgstTotal += sgst;
+      acc.igstTotal += igst;
+      
+      const targetGrandTotal = acc.taxableAmount + acc.gstTotal;
+      acc.grandTotal = Math.round(targetGrandTotal);
+      acc.roundOff = round2(acc.grandTotal - targetGrandTotal);
+
+      return acc;
+    }, {
+      totalQty: 0,
+      subtotal: 0,
+      totalDiscount: 0,
+      taxableAmount: 0,
+      gstTotal: 0,
+      cgstTotal: 0,
+      sgstTotal: 0,
+      igstTotal: 0,
+      roundOff: 0,
+      grandTotal: 0
+    });
+  };
+
+  const summaryTotals = getSummaryTotals();
 
   const handleStartEdit = async (p) => {
     // 1. Check if the purchase items are already in use
@@ -358,6 +379,8 @@ export default function PurchaseReport({ token, user }) {
       purchasePrice: item.purchasePrice !== undefined ? item.purchasePrice.toString() : '',
       sellingPrice: item.sellingPrice !== undefined ? item.sellingPrice.toString() : '',
       mrp: item.mrp !== undefined ? item.mrp.toString() : '',
+      discountType: item.discountType || 'Percent',
+      discountValue: item.discountValue !== undefined ? item.discountValue : (item.discountPercent !== undefined ? item.discountPercent : 0),
       discountPercent: item.discountPercent !== undefined ? item.discountPercent : 0,
       discountAmount: item.discountAmount !== undefined ? item.discountAmount : 0,
       gstPercent: item.gstPercent !== undefined ? item.gstPercent : 18,
@@ -446,14 +469,19 @@ export default function PurchaseReport({ token, user }) {
         purchasePrice: Number(row.purchasePrice) || 0,
         sellingPrice: Number(row.sellingPrice) || Number(row.purchasePrice) || 0,
         mrp: Number(row.mrp) || 0,
-        discountPercent: Number(row.discountPercent) || 0,
-        discountAmount: Number(row.discountAmount) || 0,
+        discountType: row.discountType || 'Percent',
+        discountValue: Number(row.discountValue) || 0,
+        discountPercent: row.discountType === 'Percent' ? (Number(row.discountValue) || 0) : 0,
+        discountAmount: Number(rowCalc.discountAmount) || 0,
         gstPercent: Number(row.gstPercent) !== undefined ? Number(row.gstPercent) : 18,
         warehouse: row.warehouse || 'Main Store',
         rackLocation: row.rackLocation || '',
-        taxableAmount: taxable,
-        gstAmount: gstAmt,
-        total: total
+        taxableAmount: rowCalc.taxable,
+        gstAmount: rowCalc.gstAmt,
+        cgst: rowCalc.cgst,
+        sgst: rowCalc.sgst,
+        igst: rowCalc.igst,
+        total: rowCalc.total
       };
     });
 
@@ -925,7 +953,7 @@ export default function PurchaseReport({ token, user }) {
 
             {/* Line Items Table */}
             <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
-              <table className="w-full text-left border-collapse" style={{ minWidth: '2060px', tableLayout: 'fixed' }}>
+              <table className="w-full text-left border-collapse" style={{ minWidth: '2640px', tableLayout: 'fixed' }}>
                 <thead>
                   <tr className="bg-slate-100 dark:bg-slate-800/80 text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
                     <th className="py-2.5 px-3" style={{ width: '50px', minWidth: '50px', verticalAlign: 'middle', textAlign: 'left' }}>#</th>
@@ -936,11 +964,14 @@ export default function PurchaseReport({ token, user }) {
                     <th className="py-2.5 px-3" style={{ width: '90px', minWidth: '90px', verticalAlign: 'middle', textAlign: 'left' }}>Qty *</th>
                     <th className="py-2.5 px-3" style={{ width: '120px', minWidth: '120px', verticalAlign: 'middle', textAlign: 'left' }}>Rate (₹) *</th>
                     <th className="py-2.5 px-3" style={{ width: '120px', minWidth: '120px', verticalAlign: 'middle', textAlign: 'left' }}>MRP (₹) *</th>
-                    <th className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>Disc %</th>
-                    <th className="py-2.5 px-3" style={{ width: '120px', minWidth: '120px', verticalAlign: 'middle', textAlign: 'left' }}>Disc Amt (₹)</th>
+                    <th className="py-2.5 px-3" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>Discount Type</th>
+                    <th className="py-2.5 px-3" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>Discount Value</th>
+                    <th className="py-2.5 px-3" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>Disc Amt (₹)</th>
                     <th className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>GST %</th>
                     <th className="py-2.5 px-3" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>Taxable (₹)</th>
-                    <th className="py-2.5 px-3" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>GST Amt (₹)</th>
+                    <th className="py-2.5 px-3" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>CGST (₹)</th>
+                    <th className="py-2.5 px-3" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>SGST (₹)</th>
+                    <th className="py-2.5 px-3" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>IGST (₹)</th>
                     <th className="py-2.5 px-3" style={{ width: '160px', minWidth: '160px', verticalAlign: 'middle', textAlign: 'left' }}>Total (₹)</th>
                     <th className="py-2.5 px-3" style={{ width: '180px', minWidth: '180px', verticalAlign: 'middle', textAlign: 'left' }}>Warehouse</th>
                     <th className="py-2.5 px-3" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>Rack Location</th>
@@ -1049,35 +1080,37 @@ export default function PurchaseReport({ token, user }) {
                           />
                         </td>
 
-                        {/* Discount % */}
-                        <td className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>
+                        {/* Discount Type */}
+                        <td className="py-2.5 px-3" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>
+                          <select
+                            value={row.discountType || 'Percent'}
+                            onChange={(e) => handleRowChange(row.id, 'discountType', e.target.value)}
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-2 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          >
+                            <option value="Percent">Percentage</option>
+                            <option value="Flat">Flat Amount</option>
+                          </select>
+                        </td>
+
+                        {/* Discount Value */}
+                        <td className="py-2.5 px-3" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <input
                             type="number"
-                            step="0.1"
                             min="0"
-                            max="100"
                             placeholder="0"
-                            value={row.discountPercent || ''}
-                            onChange={(e) => handleRowChange(row.id, 'discountPercent', e.target.value)}
+                            value={row.discountValue || ''}
+                            onChange={(e) => handleRowChange(row.id, 'discountValue', e.target.value)}
                             className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                           />
                         </td>
 
-                        {/* Discount Amount */}
-                        <td className="py-2.5 px-3" style={{ width: '120px', minWidth: '120px', verticalAlign: 'middle', textAlign: 'left' }}>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            value={row.discountAmount || ''}
-                            onChange={(e) => handleRowChange(row.id, 'discountAmount', e.target.value)}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                          />
+                        {/* Discount Amount (Calculated) */}
+                        <td className="py-2.5 px-3 font-semibold text-slate-600 dark:text-slate-400" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>
+                          ₹{rowCalc.discountAmount.toFixed(2)}
                         </td>
 
                         {/* GST % */}
-                        <td className="py-2.5 px-3" style={{ width: '150px', minWidth: '150px', verticalAlign: 'middle', textAlign: 'left' }}>
+                        <td className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <div className="flex gap-1 items-center">
                             <select
                               value={[0, 3, 5, 12, 18, 28].includes(Number(row.gstPercent)) ? Number(row.gstPercent) : 'custom'}
@@ -1121,9 +1154,19 @@ export default function PurchaseReport({ token, user }) {
                           ₹{rowCalc.taxable.toFixed(2)}
                         </td>
 
-                        {/* GST Amount (Calculated) */}
-                        <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>
-                          ₹{rowCalc.gstAmt.toFixed(2)}
+                        {/* CGST Amount (Calculated) */}
+                        <td className="py-2.5 px-3 font-semibold text-slate-600 dark:text-slate-400" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>
+                          ₹{rowCalc.cgst.toFixed(2)}
+                        </td>
+
+                        {/* SGST Amount (Calculated) */}
+                        <td className="py-2.5 px-3 font-semibold text-slate-600 dark:text-slate-400" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>
+                          ₹{rowCalc.sgst.toFixed(2)}
+                        </td>
+
+                        {/* IGST Amount (Calculated) */}
+                        <td className="py-2.5 px-3 font-semibold text-slate-600 dark:text-slate-400" style={{ width: '110px', minWidth: '110px', verticalAlign: 'middle', textAlign: 'left' }}>
+                          ₹{rowCalc.igst.toFixed(2)}
                         </td>
 
                         {/* Total Amount (Calculated) */}
@@ -1193,43 +1236,52 @@ export default function PurchaseReport({ token, user }) {
           </div>
 
           {/* Live Purchase Summary Footer Card */}
-          <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="grid grid-cols-2 sm:grid-cols-6 gap-6 text-left w-full md:w-auto">
+          <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-800 flex flex-col items-center gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-6 text-left w-full border-b border-slate-800 pb-5">
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Parts</span>
-                <span className="text-base font-black text-white">{purchaseItems.length} Parts</span>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Gross Purchase Value</span>
+                <span className="text-xs font-black text-slate-200">₹{summaryTotals.subtotal.toFixed(2)}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Quantity</span>
-                <span className="text-base font-black text-white">{summaryTotals.totalQty} Pcs</span>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Discount</span>
+                <span className="text-xs font-black text-emerald-400">₹{summaryTotals.totalDiscount.toFixed(2)}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Purchase Value</span>
-                <span className="text-base font-black text-slate-200">₹{summaryTotals.subtotal.toFixed(2)}</span>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Net Taxable Amount</span>
+                <span className="text-xs font-black text-slate-200">₹{summaryTotals.taxableAmount.toFixed(2)}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Discount</span>
-                <span className="text-base font-black text-emerald-400">₹{summaryTotals.totalDiscount.toFixed(2)}</span>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">CGST Total</span>
+                <span className="text-xs font-black text-slate-300">₹{summaryTotals.cgstTotal.toFixed(2)}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Taxable Amount</span>
-                <span className="text-base font-black text-slate-200">₹{summaryTotals.taxableAmount.toFixed(2)}</span>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">SGST Total</span>
+                <span className="text-xs font-black text-slate-300">₹{summaryTotals.sgstTotal.toFixed(2)}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total GST</span>
-                <span className="text-base font-black text-indigo-300 font-semibold">₹{summaryTotals.gstTotal.toFixed(2)}</span>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">IGST Total</span>
+                <span className="text-xs font-black text-slate-300">₹{summaryTotals.igstTotal.toFixed(2)}</span>
+              </div>
+
+              <div>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 block">Round Off</span>
+                <span className="text-xs font-black text-slate-400">₹{summaryTotals.roundOff.toFixed(2)}</span>
+              </div>
+
+              <div>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-indigo-400 block">Grand Total</span>
+                <span className="text-sm font-black text-emerald-400">₹{summaryTotals.grandTotal.toFixed(2)}</span>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-6">
-              <div className="text-right">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400 block">Grand Total Amount</span>
-                <span className="text-2xl font-black text-emerald-400">₹{summaryTotals.grandTotal.toFixed(2)}</span>
+            <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-4 pt-1">
+              <div className="text-left">
+                <span className="text-[10px] font-bold text-slate-400">Items: {purchaseItems.length} | Qty: {summaryTotals.totalQty} Pcs</span>
               </div>
 
               {editPurchaseId && (
@@ -1777,43 +1829,94 @@ export default function PurchaseReport({ token, user }) {
                   <tr className="bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300">
                     <th className="p-2 border-b">Part Name</th>
                     <th className="p-2 border-b">Part #</th>
+                    <th className="p-2 border-b">HSN</th>
                     <th className="p-2 border-b">Qty</th>
                     <th className="p-2 border-b">Rate</th>
                     <th className="p-2 border-b">MRP</th>
-                    <th className="p-2 border-b">Disc</th>
+                    <th className="p-2 border-b">Discount</th>
                     <th className="p-2 border-b">Taxable</th>
-                    <th className="p-2 border-b">GST %</th>
+                    {!(vendorsList.find(v => v._id === selectedVoucher.vendorId || v.name === selectedVoucher.vendorName)?.gstNumber?.trim().startsWith('36') === false) && <th className="p-2 border-b">CGST</th>}
+                    {!(vendorsList.find(v => v._id === selectedVoucher.vendorId || v.name === selectedVoucher.vendorName)?.gstNumber?.trim().startsWith('36') === false) && <th className="p-2 border-b">SGST</th>}
+                    {(vendorsList.find(v => v._id === selectedVoucher.vendorId || v.name === selectedVoucher.vendorName)?.gstNumber?.trim().startsWith('36') === false) && <th className="p-2 border-b">IGST</th>}
                     <th className="p-2 border-b">Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(selectedVoucher.items || []).map((item, idx) => (
-                    <tr key={idx} className="border-b border-slate-100 dark:border-slate-800">
-                      <td className="p-2 font-bold">{item.partName}</td>
-                      <td className="p-2 font-mono text-slate-500">{item.partNumber}</td>
-                      <td className="p-2 font-bold">{item.qty}</td>
-                      <td className="p-2">₹{(item.purchasePrice || 0).toFixed(2)}</td>
-                      <td className="p-2">₹{(item.mrp || 0).toFixed(2)}</td>
-                      <td className="p-2 text-emerald-600">₹{(item.discountAmount || 0).toFixed(2)}</td>
-                      <td className="p-2">₹{(item.taxableAmount || 0).toFixed(2)}</td>
-                      <td className="p-2">{item.gstPercent || 18}%</td>
-                      <td className="p-2 font-black text-indigo-600">₹{(item.total || 0).toFixed(2)}</td>
-                    </tr>
-                  ))}
+                  {(selectedVoucher.items || []).map((item, idx) => {
+                    const selectedVoucherVendor = vendorsList.find(v => v._id === selectedVoucher.vendorId || v.name === selectedVoucher.vendorName);
+                    const isVoucherInterstate = selectedVoucherVendor && selectedVoucherVendor.gstNumber 
+                      ? !selectedVoucherVendor.gstNumber.trim().startsWith('36') 
+                      : false;
+                    
+                    const discountTypeStr = item.discountType === 'Flat' ? '₹' : '%';
+                    const discountValStr = item.discountValue !== undefined ? item.discountValue : (item.discountPercent || 0);
+                    
+                    const gstVal = item.gstAmount || 0;
+                    const cgstItem = item.cgst !== undefined ? item.cgst : (isVoucherInterstate ? 0 : gstVal / 2);
+                    const sgstItem = item.sgst !== undefined ? item.sgst : (isVoucherInterstate ? 0 : gstVal / 2);
+                    const igstItem = item.igst !== undefined ? item.igst : (isVoucherInterstate ? gstVal : 0);
+
+                    return (
+                      <tr key={idx} className="border-b border-slate-100 dark:border-slate-800">
+                        <td className="p-2 font-bold">{item.partName}</td>
+                        <td className="p-2 font-mono text-slate-500">{item.partNumber}</td>
+                        <td className="p-2">{item.hsnCode || '8708'}</td>
+                        <td className="p-2 font-bold">{item.qty}</td>
+                        <td className="p-2">₹{(item.purchasePrice || 0).toFixed(2)}</td>
+                        <td className="p-2">₹{(item.mrp || 0).toFixed(2)}</td>
+                        <td className="p-2 text-emerald-600">
+                          {discountValStr > 0 ? `${discountValStr}${discountTypeStr} (₹${(item.discountAmount || 0).toFixed(2)})` : '0'}
+                        </td>
+                        <td className="p-2">₹{(item.taxableAmount || 0).toFixed(2)}</td>
+                        {!isVoucherInterstate && <td className="p-2">₹{cgstItem.toFixed(2)} ({((item.gstPercent || 18)/2)}%)</td>}
+                        {!isVoucherInterstate && <td className="p-2">₹{sgstItem.toFixed(2)} ({((item.gstPercent || 18)/2)}%)</td>}
+                        {isVoucherInterstate && <td className="p-2">₹{igstItem.toFixed(2)} ({(item.gstPercent || 18)}%)</td>}
+                        <td className="p-2 font-black text-indigo-600">₹{(item.total || 0).toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
 
               {/* Voucher Totals Summary */}
               <div className="flex justify-end pt-2">
-                <div className="w-64 space-y-1 text-right">
+                <div className="w-80 space-y-1 text-right">
                   <div className="flex justify-between text-slate-500">
-                    <span>Taxable Amount:</span>
+                    <span>Gross Purchase Value:</span>
+                    <span>₹{(selectedVoucher.totals?.subtotal || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Total Discount:</span>
+                    <span>₹{(selectedVoucher.totals?.totalDiscount || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Net Taxable Amount:</span>
                     <span>₹{(selectedVoucher.totals?.taxableAmount || 0).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>Total GST:</span>
-                    <span>₹{(selectedVoucher.totals?.gstTotal || 0).toFixed(2)}</span>
-                  </div>
+                  {!(vendorsList.find(v => v._id === selectedVoucher.vendorId || v.name === selectedVoucher.vendorName)?.gstNumber?.trim().startsWith('36') === false) && (
+                    <>
+                      <div className="flex justify-between text-slate-500">
+                        <span>CGST Total:</span>
+                        <span>₹{(selectedVoucher.totals?.cgstTotal !== undefined ? selectedVoucher.totals.cgstTotal : (selectedVoucher.totals?.gstTotal || 0) / 2).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-500">
+                        <span>SGST Total:</span>
+                        <span>₹{(selectedVoucher.totals?.sgstTotal !== undefined ? selectedVoucher.totals.sgstTotal : (selectedVoucher.totals?.gstTotal || 0) / 2).toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                  {(vendorsList.find(v => v._id === selectedVoucher.vendorId || v.name === selectedVoucher.vendorName)?.gstNumber?.trim().startsWith('36') === false) && (
+                    <div className="flex justify-between text-slate-500">
+                      <span>IGST Total:</span>
+                      <span>₹{(selectedVoucher.totals?.igstTotal !== undefined ? selectedVoucher.totals.igstTotal : (selectedVoucher.totals?.gstTotal || 0)).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {selectedVoucher.totals?.roundOff !== undefined && selectedVoucher.totals.roundOff !== 0 && (
+                    <div className="flex justify-between text-slate-500">
+                      <span>Round Off:</span>
+                      <span>₹{selectedVoucher.totals.roundOff.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-700">
                     <span>Grand Total:</span>
                     <span className="text-emerald-600 dark:text-emerald-400">₹{(selectedVoucher.totals?.grandTotal || 0).toFixed(2)}</span>

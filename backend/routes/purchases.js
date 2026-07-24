@@ -76,6 +76,9 @@ router.post('/', async (req, res) => {
     let totalDiscountSum = 0;
     let taxableAmountSum = 0;
     let gstTotalSum = 0;
+    let cgstTotalSum = 0;
+    let sgstTotalSum = 0;
+    let igstTotalSum = 0;
     let grandTotalSum = 0;
 
     const processedItems = [];
@@ -92,27 +95,40 @@ router.post('/', async (req, res) => {
       
       const grossItemValue = roundToTwo(qty * purchasePrice);
       
-      let discountPercent = Math.max(0, Math.min(100, Number(item.discountPercent) || 0));
-      let discountAmount = Math.max(0, Number(item.discountAmount) || 0);
+      const discountType = item.discountType || 'Percent';
+      const discountValue = Number(item.discountValue) || 0;
 
-      if (item.discountAmount !== undefined && item.discountAmount !== '' && Number(item.discountAmount) > 0) {
-        discountAmount = roundToTwo(Number(item.discountAmount));
-        discountPercent = grossItemValue > 0 ? roundToTwo((discountAmount / grossItemValue) * 100) : 0;
-      } else if (discountPercent > 0) {
-        discountAmount = roundToTwo(grossItemValue * (discountPercent / 100));
+      let discountAmount = 0;
+      if (discountType === 'Percent') {
+        discountAmount = roundToTwo((grossItemValue * discountValue) / 100);
+      } else {
+        discountAmount = roundToTwo(discountValue);
       }
+      discountAmount = Math.max(0, Math.min(grossItemValue, discountAmount));
+      
+      const discountPercent = discountType === 'Percent' ? discountValue : (grossItemValue > 0 ? roundToTwo((discountAmount / grossItemValue) * 100) : 0);
+
+      const isInterstate = vendor.gstNumber 
+        ? !vendor.gstNumber.trim().startsWith('36') 
+        : false;
 
       const itemTaxable = Math.max(0, roundToTwo(grossItemValue - discountAmount));
       const gstPercent = Number(item.gstPercent) !== undefined ? Number(item.gstPercent) : 18;
       const itemGst = roundToTwo(itemTaxable * (gstPercent / 100));
       const itemTotal = roundToTwo(itemTaxable + itemGst);
 
+      const cgst = isInterstate ? 0 : roundToTwo(itemGst / 2);
+      const sgst = isInterstate ? 0 : roundToTwo(itemGst / 2);
+      const igst = isInterstate ? itemGst : 0;
+
       totalQtySum += qty;
       subtotalSum += grossItemValue;
       totalDiscountSum += discountAmount;
       taxableAmountSum += itemTaxable;
       gstTotalSum += itemGst;
-      grandTotalSum += itemTotal;
+      cgstTotalSum += cgst;
+      sgstTotalSum += sgst;
+      igstTotalSum += igst;
 
       let partId = item.partId;
       let inventoryItem = null;
@@ -166,17 +182,27 @@ router.post('/', async (req, res) => {
         purchasePrice,
         sellingPrice,
         mrp,
+        discountType,
+        discountValue,
         discountPercent,
         discountAmount,
         gstPercent,
         taxableAmount: itemTaxable,
         gstAmount: itemGst,
+        cgst,
+        sgst,
+        igst,
+        rackLocation: item.rackLocation || '',
         total: itemTotal
       });
     }
 
+    const targetGrandTotal = taxableAmountSum + gstTotalSum;
+    const grandTotalRounded = Math.round(targetGrandTotal);
+    const roundOff = roundToTwo(grandTotalRounded - targetGrandTotal);
+
     const paidAmt = Number(amountPaid) || 0;
-    let rawStatus = paymentStatus || (paidAmt >= grandTotalSum ? 'Paid' : (paidAmt > 0 ? 'Partially Paid' : 'Credit'));
+    let rawStatus = paymentStatus || (paidAmt >= grandTotalRounded ? 'Paid' : (paidAmt > 0 ? 'Partially Paid' : 'Credit'));
     if (rawStatus === 'Unpaid') rawStatus = 'Credit';
 
     const purchase = new Purchase({
@@ -193,7 +219,11 @@ router.post('/', async (req, res) => {
         totalDiscount: roundToTwo(totalDiscountSum),
         taxableAmount: roundToTwo(taxableAmountSum),
         gstTotal: roundToTwo(gstTotalSum),
-        grandTotal: roundToTwo(grandTotalSum)
+        cgstTotal: roundToTwo(cgstTotalSum),
+        sgstTotal: roundToTwo(sgstTotalSum),
+        igstTotal: roundToTwo(igstTotalSum),
+        roundOff: roundOff,
+        grandTotal: grandTotalRounded
       },
       paymentStatus: rawStatus,
       amountPaid: paidAmt,
@@ -204,7 +234,7 @@ router.post('/', async (req, res) => {
     await purchase.save();
 
     // Update Vendor Purchase Statistics & Outstanding Balance
-    vendor.totalPurchaseValue = roundToTwo((vendor.totalPurchaseValue || 0) + grandTotalSum);
+    vendor.totalPurchaseValue = roundToTwo((vendor.totalPurchaseValue || 0) + grandTotalRounded);
     vendor.totalPaidAmount = roundToTwo((vendor.totalPaidAmount || 0) + paidAmt);
     vendor.outstandingBalance = Math.max(0, roundToTwo(vendor.totalPurchaseValue - vendor.totalPaidAmount));
     await vendor.save();
@@ -363,6 +393,9 @@ router.put('/:id', async (req, res) => {
     let totalDiscountSum = 0;
     let taxableAmountSum = 0;
     let gstTotalSum = 0;
+    let cgstTotalSum = 0;
+    let sgstTotalSum = 0;
+    let igstTotalSum = 0;
     let grandTotalSum = 0;
 
     const processedItems = [];
@@ -379,27 +412,40 @@ router.put('/:id', async (req, res) => {
       
       const grossItemValue = roundToTwo(qty * purchasePrice);
       
-      let discountPercent = Math.max(0, Math.min(100, Number(item.discountPercent) || 0));
-      let discountAmount = Math.max(0, Number(item.discountAmount) || 0);
+      const discountType = item.discountType || 'Percent';
+      const discountValue = Number(item.discountValue) || 0;
 
-      if (item.discountAmount !== undefined && item.discountAmount !== '' && Number(item.discountAmount) > 0) {
-        discountAmount = roundToTwo(Number(item.discountAmount));
-        discountPercent = grossItemValue > 0 ? roundToTwo((discountAmount / grossItemValue) * 100) : 0;
-      } else if (discountPercent > 0) {
-        discountAmount = roundToTwo(grossItemValue * (discountPercent / 100));
+      let discountAmount = 0;
+      if (discountType === 'Percent') {
+        discountAmount = roundToTwo((grossItemValue * discountValue) / 100);
+      } else {
+        discountAmount = roundToTwo(discountValue);
       }
+      discountAmount = Math.max(0, Math.min(grossItemValue, discountAmount));
+      
+      const discountPercent = discountType === 'Percent' ? discountValue : (grossItemValue > 0 ? roundToTwo((discountAmount / grossItemValue) * 100) : 0);
+
+      const isInterstate = newVendor.gstNumber 
+        ? !newVendor.gstNumber.trim().startsWith('36') 
+        : false;
 
       const itemTaxable = Math.max(0, roundToTwo(grossItemValue - discountAmount));
       const gstPercent = Number(item.gstPercent) !== undefined ? Number(item.gstPercent) : 18;
       const itemGst = roundToTwo(itemTaxable * (gstPercent / 100));
       const itemTotal = roundToTwo(itemTaxable + itemGst);
 
+      const cgst = isInterstate ? 0 : roundToTwo(itemGst / 2);
+      const sgst = isInterstate ? 0 : roundToTwo(itemGst / 2);
+      const igst = isInterstate ? itemGst : 0;
+
       totalQtySum += qty;
       subtotalSum += grossItemValue;
       totalDiscountSum += discountAmount;
       taxableAmountSum += itemTaxable;
       gstTotalSum += itemGst;
-      grandTotalSum += itemTotal;
+      cgstTotalSum += cgst;
+      sgstTotalSum += sgst;
+      igstTotalSum += igst;
 
       let partId = item.partId;
       let inventoryItem = null;
@@ -453,17 +499,26 @@ router.put('/:id', async (req, res) => {
         purchasePrice,
         sellingPrice,
         mrp,
+        discountType,
+        discountValue,
         discountPercent,
         discountAmount,
         gstPercent,
         taxableAmount: itemTaxable,
         gstAmount: itemGst,
+        cgst,
+        sgst,
+        igst,
         total: itemTotal
       });
     }
 
+    const targetGrandTotal = taxableAmountSum + gstTotalSum;
+    const grandTotalRounded = Math.round(targetGrandTotal);
+    const roundOff = roundToTwo(grandTotalRounded - targetGrandTotal);
+
     const paidAmt = Number(amountPaid) || 0;
-    let rawStatus = paymentStatus || (paidAmt >= grandTotalSum ? 'Paid' : (paidAmt > 0 ? 'Partially Paid' : 'Credit'));
+    let rawStatus = paymentStatus || (paidAmt >= grandTotalRounded ? 'Paid' : (paidAmt > 0 ? 'Partially Paid' : 'Credit'));
     if (rawStatus === 'Unpaid') rawStatus = 'Credit';
 
     // 4. Update purchase record fields
@@ -478,7 +533,11 @@ router.put('/:id', async (req, res) => {
       totalDiscount: roundToTwo(totalDiscountSum),
       taxableAmount: roundToTwo(taxableAmountSum),
       gstTotal: roundToTwo(gstTotalSum),
-      grandTotal: roundToTwo(grandTotalSum)
+      cgstTotal: roundToTwo(cgstTotalSum),
+      sgstTotal: roundToTwo(sgstTotalSum),
+      igstTotal: roundToTwo(igstTotalSum),
+      roundOff: roundOff,
+      grandTotal: grandTotalRounded
     };
     purchase.paymentStatus = rawStatus;
     purchase.amountPaid = paidAmt;
@@ -488,7 +547,7 @@ router.put('/:id', async (req, res) => {
     await purchase.save();
 
     // 5. Update New Vendor totals
-    newVendor.totalPurchaseValue = roundToTwo((newVendor.totalPurchaseValue || 0) + grandTotalSum);
+    newVendor.totalPurchaseValue = roundToTwo((newVendor.totalPurchaseValue || 0) + grandTotalRounded);
     newVendor.totalPaidAmount = roundToTwo((newVendor.totalPaidAmount || 0) + paidAmt);
     newVendor.outstandingBalance = roundToTwo(Math.max(0, newVendor.totalPurchaseValue - newVendor.totalPaidAmount));
     await newVendor.save();
