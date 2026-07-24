@@ -22,7 +22,7 @@ const generatePurchaseNo = async () => {
   const sequence = String(count + 1).padStart(4, '0');
   return `PUR-${dateStr}-${sequence}`;
 };
-router.use(auth, restrictTo('Admin', 'Spares'));
+router.use(auth, restrictTo('Super Admin', 'Admin', 'Spares', 'Purchase Manager', 'Accounts Manager', 'Accounts', 'Purchase Executive'));
 
 // List all purchases with search & vendor filter
 router.get('/', async (req, res) => {
@@ -244,6 +244,284 @@ router.put('/:id/payment', async (req, res) => {
     res.send(purchase);
   } catch (error) {
     res.status(400).send({ error: 'Failed to update purchase payment: ' + error.message });
+  }
+});
+
+// Check if items in purchase are in use in other transactions
+router.get('/:id/check-in-use', async (req, res) => {
+  try {
+    const purchase = await Purchase.findById(req.params.id);
+    if (!purchase) return res.status(404).send({ error: 'Purchase entry not found.' });
+
+    const Invoice = require('../models/Invoice');
+    const Estimate = require('../models/Estimate');
+    const JobCard = require('../models/JobCard');
+    const StockAdjustment = require('../models/StockAdjustment');
+
+    let warnings = [];
+    for (const item of purchase.items) {
+      const queries = [];
+      if (item.partId) {
+        queries.push({ 'parts.partId': item.partId });
+      }
+      queries.push({ 'parts.partNo': item.partNumber });
+
+      const usedInEstimate = await Estimate.findOne({ $or: queries });
+      const usedInInvoice = await Invoice.findOne({ $or: queries });
+      const usedInJobCard = await JobCard.findOne({ $or: queries });
+      const usedInAdjustment = await StockAdjustment.findOne({
+        $or: [
+          ...(item.partId ? [{ partId: item.partId }] : []),
+          { partNumber: item.partNumber }
+        ]
+      });
+
+      if (usedInEstimate || usedInInvoice || usedInJobCard || usedInAdjustment) {
+        let usages = [];
+        if (usedInEstimate) usages.push('Estimates');
+        if (usedInInvoice) usages.push('Invoices');
+        if (usedInJobCard) usages.push('Job Cards');
+        if (usedInAdjustment) usages.push('Stock Adjustments');
+
+        warnings.push({
+          partNumber: item.partNumber,
+          partName: item.partName,
+          usages
+        });
+      }
+    }
+
+    res.send({ isInUse: warnings.length > 0, warnings });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to check in-use status: ' + error.message });
+  }
+});
+
+// Edit Purchase Entry
+router.put('/:id', async (req, res) => {
+  try {
+    const editAuthorized = ['Super Admin', 'Admin', 'Purchase Manager', 'Accounts Manager'].includes(req.user?.role);
+    if (!editAuthorized) {
+      return res.status(403).send({ error: 'You are not authorized to edit purchases.' });
+    }
+
+    const { vendorId, invoiceNo, invoiceDate, items, paymentStatus, amountPaid, notes, reason } = req.body;
+    if (!vendorId || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).send({ error: 'Vendor ID and at least one purchase item are required.' });
+    }
+
+    const purchase = await Purchase.findById(req.params.id);
+    if (!purchase) return res.status(404).send({ error: 'Purchase entry not found.' });
+
+    const oldVendor = await Vendor.findById(purchase.vendorId);
+    const newVendor = await Vendor.findById(vendorId);
+    if (!newVendor) return res.status(404).send({ error: 'New Vendor not found.' });
+
+    // Save old values for audit logging
+    const oldValues = {
+      vendorId: purchase.vendorId,
+      vendorName: purchase.vendorName,
+      invoiceNo: purchase.invoiceNo,
+      invoiceDate: purchase.invoiceDate,
+      items: purchase.items.map(item => ({
+        partId: item.partId,
+        partNumber: item.partNumber,
+        partName: item.partName,
+        qty: item.qty,
+        purchasePrice: item.purchasePrice,
+        total: item.total
+      })),
+      totals: { ...purchase.totals },
+      paymentStatus: purchase.paymentStatus,
+      amountPaid: purchase.amountPaid
+    };
+
+    const roundToTwo = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
+
+    // 1. Revert inventory quantities of the old items
+    for (const oldItem of purchase.items) {
+      if (oldItem.partId) {
+        const invItem = await Inventory.findById(oldItem.partId);
+        if (invItem) {
+          invItem.stockQuantity = Math.max(0, invItem.stockQuantity - oldItem.qty);
+          await invItem.save();
+        }
+      }
+    }
+
+    // 2. Revert old vendor totals
+    if (oldVendor) {
+      oldVendor.totalPurchaseValue = roundToTwo(Math.max(0, (oldVendor.totalPurchaseValue || 0) - purchase.totals.grandTotal));
+      oldVendor.totalPaidAmount = roundToTwo(Math.max(0, (oldVendor.totalPaidAmount || 0) - purchase.amountPaid));
+      oldVendor.outstandingBalance = roundToTwo(Math.max(0, oldVendor.totalPurchaseValue - oldVendor.totalPaidAmount));
+      await oldVendor.save();
+    }
+
+    // 3. Process new/edited items
+    let totalQtySum = 0;
+    let subtotalSum = 0;
+    let totalDiscountSum = 0;
+    let taxableAmountSum = 0;
+    let gstTotalSum = 0;
+    let grandTotalSum = 0;
+
+    const processedItems = [];
+
+    for (const item of items) {
+      if (item.mrp !== undefined && Number(item.mrp) < 0) {
+        return res.status(400).send({ error: `MRP cannot be negative for part ${item.partName || ''}.` });
+      }
+
+      const qty = Math.max(1, Number(item.qty) || 1);
+      const purchasePrice = Math.max(0, Number(item.purchasePrice) || 0);
+      const sellingPrice = Math.max(0, Number(item.sellingPrice) || purchasePrice);
+      const mrp = Math.max(0, Number(item.mrp) || sellingPrice);
+      
+      const grossItemValue = roundToTwo(qty * purchasePrice);
+      
+      let discountPercent = Math.max(0, Math.min(100, Number(item.discountPercent) || 0));
+      let discountAmount = Math.max(0, Number(item.discountAmount) || 0);
+
+      if (item.discountAmount !== undefined && item.discountAmount !== '' && Number(item.discountAmount) > 0) {
+        discountAmount = roundToTwo(Number(item.discountAmount));
+        discountPercent = grossItemValue > 0 ? roundToTwo((discountAmount / grossItemValue) * 100) : 0;
+      } else if (discountPercent > 0) {
+        discountAmount = roundToTwo(grossItemValue * (discountPercent / 100));
+      }
+
+      const itemTaxable = Math.max(0, roundToTwo(grossItemValue - discountAmount));
+      const gstPercent = Number(item.gstPercent) !== undefined ? Number(item.gstPercent) : 18;
+      const itemGst = roundToTwo(itemTaxable * (gstPercent / 100));
+      const itemTotal = roundToTwo(itemTaxable + itemGst);
+
+      totalQtySum += qty;
+      subtotalSum += grossItemValue;
+      totalDiscountSum += discountAmount;
+      taxableAmountSum += itemTaxable;
+      gstTotalSum += itemGst;
+      grandTotalSum += itemTotal;
+
+      let partId = item.partId;
+      let inventoryItem = null;
+
+      if (partId) {
+        inventoryItem = await Inventory.findById(partId);
+      }
+      if (!inventoryItem && item.partNumber) {
+        inventoryItem = await Inventory.findOne({ partNumber: item.partNumber.trim() });
+      }
+
+      if (inventoryItem) {
+        inventoryItem.stockQuantity += qty;
+        inventoryItem.purchasePrice = purchasePrice;
+        if (sellingPrice > 0) inventoryItem.sellingPrice = sellingPrice;
+        if (mrp > 0) inventoryItem.mrp = mrp;
+        inventoryItem.vendorId = newVendor._id;
+        inventoryItem.vendorName = newVendor.name;
+        if (gstPercent !== undefined) inventoryItem.gstPercent = gstPercent;
+        if (item.warehouse) inventoryItem.warehouse = item.warehouse;
+        if (item.rackLocation) inventoryItem.rackLocation = item.rackLocation;
+        await inventoryItem.save();
+        partId = inventoryItem._id;
+      } else {
+        inventoryItem = new Inventory({
+          partName: item.partName || 'Unknown Part',
+          partNumber: item.partNumber || `PN-${Date.now()}`,
+          hsnCode: item.hsnCode || '8708',
+          stockQuantity: qty,
+          purchasePrice,
+          sellingPrice: sellingPrice || purchasePrice,
+          mrp: mrp || sellingPrice || purchasePrice,
+          gstPercent,
+          vendorId: newVendor._id,
+          vendorName: newVendor.name,
+          warehouse: item.warehouse || 'Main Store',
+          rackLocation: item.rackLocation || ''
+        });
+        await inventoryItem.save();
+        partId = inventoryItem._id;
+      }
+
+      processedItems.push({
+        partId,
+        partNumber: inventoryItem.partNumber,
+        partName: inventoryItem.partName,
+        hsnCode: item.hsnCode || inventoryItem.hsnCode || '8708',
+        warehouse: item.warehouse || inventoryItem.warehouse || 'Main Store',
+        rackLocation: item.rackLocation || inventoryItem.rackLocation || '',
+        qty,
+        purchasePrice,
+        sellingPrice,
+        mrp,
+        discountPercent,
+        discountAmount,
+        gstPercent,
+        taxableAmount: itemTaxable,
+        gstAmount: itemGst,
+        total: itemTotal
+      });
+    }
+
+    const paidAmt = Number(amountPaid) || 0;
+    let rawStatus = paymentStatus || (paidAmt >= grandTotalSum ? 'Paid' : (paidAmt > 0 ? 'Partially Paid' : 'Credit'));
+    if (rawStatus === 'Unpaid') rawStatus = 'Credit';
+
+    // 4. Update purchase record fields
+    purchase.vendorId = newVendor._id;
+    purchase.vendorName = newVendor.name;
+    purchase.invoiceNo = invoiceNo || '';
+    purchase.invoiceDate = invoiceDate ? new Date(invoiceDate) : new Date();
+    purchase.items = processedItems;
+    purchase.totals = {
+      totalQty: totalQtySum,
+      subtotal: roundToTwo(subtotalSum),
+      totalDiscount: roundToTwo(totalDiscountSum),
+      taxableAmount: roundToTwo(taxableAmountSum),
+      gstTotal: roundToTwo(gstTotalSum),
+      grandTotal: roundToTwo(grandTotalSum)
+    };
+    purchase.paymentStatus = rawStatus;
+    purchase.amountPaid = paidAmt;
+    purchase.notes = notes || '';
+    purchase.updatedBy = req.user ? req.user.name : 'Staff';
+
+    await purchase.save();
+
+    // 5. Update New Vendor totals
+    newVendor.totalPurchaseValue = roundToTwo((newVendor.totalPurchaseValue || 0) + grandTotalSum);
+    newVendor.totalPaidAmount = roundToTwo((newVendor.totalPaidAmount || 0) + paidAmt);
+    newVendor.outstandingBalance = roundToTwo(Math.max(0, newVendor.totalPurchaseValue - newVendor.totalPaidAmount));
+    await newVendor.save();
+
+    const newValues = {
+      vendorId: purchase.vendorId,
+      vendorName: purchase.vendorName,
+      invoiceNo: purchase.invoiceNo,
+      invoiceDate: purchase.invoiceDate,
+      items: purchase.items.map(item => ({
+        partId: item.partId,
+        partNumber: item.partNumber,
+        partName: item.partName,
+        qty: item.qty,
+        purchasePrice: item.purchasePrice,
+        total: item.total
+      })),
+      totals: { ...purchase.totals },
+      paymentStatus: purchase.paymentStatus,
+      amountPaid: purchase.amountPaid
+    };
+
+    await logAction(
+      req.user,
+      'PURCHASE_EDIT',
+      `Edited purchase entry ${purchase.purchaseNo}. Reason: ${reason || 'None'}. Old Grand Total: ₹${oldValues.totals.grandTotal}, New Grand Total: ₹${purchase.totals.grandTotal}`,
+      req,
+      { oldValues, newValues }
+    );
+
+    res.send(purchase);
+  } catch (error) {
+    res.status(400).send({ error: 'Failed to edit purchase entry: ' + error.message });
   }
 });
 

@@ -25,12 +25,14 @@ import {
   ChevronUp,
   CreditCard,
   Eye,
-  Percent
+  Percent,
+  Pencil
 } from 'lucide-react';
 
 export default function PurchaseReport({ token, user }) {
   // Active Module Sub-Tab: 'entry' | 'history' | 'reports'
   const [activeTab, setActiveTab] = useState('entry');
+  const [editPurchaseId, setEditPurchaseId] = useState(null);
 
   // Datasets
   const [vendorsList, setVendorsList] = useState([]);
@@ -313,6 +315,78 @@ export default function PurchaseReport({ token, user }) {
     grandTotal: 0
   });
 
+  const handleStartEdit = async (p) => {
+    // 1. Check if the purchase items are already in use
+    try {
+      const res = await fetch(`${API_BASE_URL}/purchases/${p._id}/check-in-use`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const check = await res.json();
+        if (check.isInUse) {
+          const partList = check.warnings.map(w => `• ${w.partName} (${w.partNumber}) used in: ${w.usages.join(', ')}`).join('\n');
+          const confirm = window.confirm(
+            `WARNING: The following parts in this purchase entry are already used in active transactions:\n\n${partList}\n\nEditing this purchase will recalculate inventory stock levels and totals. Do you want to proceed?`
+          );
+          if (!confirm) return;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check in-use status:", err);
+    }
+
+    // 2. Prefill form state
+    setEditPurchaseId(p._id);
+    setPurchaseHeader({
+      vendorId: p.vendorId?._id || p.vendorId || '',
+      invoiceNo: p.invoiceNo || '',
+      invoiceDate: p.invoiceDate ? p.invoiceDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      paymentStatus: p.paymentStatus || 'Credit',
+      amountPaid: p.amountPaid !== undefined ? p.amountPaid.toString() : '',
+      notes: p.notes || '',
+      updatePurchasePrice: true,
+      updateMRP: true
+    });
+
+    const prefilledItems = p.items.map(item => ({
+      id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 4)}_${item._id || Math.random()}`,
+      selectedPartId: item.partId || '',
+      partName: item.partName || '',
+      partNumber: item.partNumber || '',
+      hsnCode: item.hsnCode || '8708',
+      qty: item.qty || 1,
+      purchasePrice: item.purchasePrice !== undefined ? item.purchasePrice.toString() : '',
+      sellingPrice: item.sellingPrice !== undefined ? item.sellingPrice.toString() : '',
+      mrp: item.mrp !== undefined ? item.mrp.toString() : '',
+      discountPercent: item.discountPercent !== undefined ? item.discountPercent : 0,
+      discountAmount: item.discountAmount !== undefined ? item.discountAmount : 0,
+      gstPercent: item.gstPercent !== undefined ? item.gstPercent : 18,
+      warehouse: item.warehouse || 'Main Store',
+      rackLocation: item.rackLocation || ''
+    }));
+
+    setPurchaseItems(prefilledItems);
+    setActiveTab('entry');
+  };
+
+  const handleCancelEdit = () => {
+    setEditPurchaseId(null);
+    setPurchaseHeader({
+      vendorId: '',
+      invoiceNo: '',
+      invoiceDate: new Date().toISOString().slice(0, 10),
+      paymentStatus: 'Credit',
+      amountPaid: '',
+      notes: '',
+      updatePurchasePrice: true,
+      updateMRP: true
+    });
+    setPurchaseItems([createEmptyRow()]);
+    setPurchaseFormError('');
+    setPurchaseSuccess('');
+    setActiveTab('history');
+  };
+
   // Handle Form Submit
   const handlePurchaseSubmit = async (e) => {
     e.preventDefault();
@@ -376,11 +450,18 @@ export default function PurchaseReport({ token, user }) {
         discountAmount: Number(row.discountAmount) || 0,
         gstPercent: Number(row.gstPercent) !== undefined ? Number(row.gstPercent) : 18,
         warehouse: row.warehouse || 'Main Store',
+        rackLocation: row.rackLocation || '',
         taxableAmount: taxable,
         gstAmount: gstAmt,
         total: total
       };
     });
+
+    const isEdit = editPurchaseId !== null;
+    let reason = '';
+    if (isEdit) {
+      reason = window.prompt("Please enter the reason for this edit (optional):") || 'No reason provided';
+    }
 
     const payload = {
       vendorId: purchaseHeader.vendorId,
@@ -391,13 +472,16 @@ export default function PurchaseReport({ token, user }) {
       notes: purchaseHeader.notes,
       items: payloadItems,
       updatePurchasePrice: purchaseHeader.updatePurchasePrice,
-      updateMRP: purchaseHeader.updateMRP
+      updateMRP: purchaseHeader.updateMRP,
+      reason
     };
 
     setPurchaseSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/purchases`, {
-        method: 'POST',
+      const url = isEdit ? `${API_BASE_URL}/purchases/${editPurchaseId}` : `${API_BASE_URL}/purchases`;
+      const method = isEdit ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
@@ -406,9 +490,10 @@ export default function PurchaseReport({ token, user }) {
       });
 
       if (res.ok) {
-        setPurchaseSuccess('Purchase Entry saved successfully! Inventory stock automatically updated.');
+        setPurchaseSuccess(isEdit ? 'Purchase Entry updated successfully! Inventory stock levels updated.' : 'Purchase Entry saved successfully! Inventory stock automatically updated.');
         setTimeout(() => {
           setPurchaseSuccess('');
+          setEditPurchaseId(null);
           // Reset Header & Items
           setPurchaseHeader({
             vendorId: '',
@@ -610,7 +695,7 @@ export default function PurchaseReport({ token, user }) {
             }`}
           >
             <Plus className="w-4 h-4" />
-            Purchase Entry
+            {editPurchaseId ? '✏️ Edit Purchase' : 'Purchase Entry'}
           </button>
 
           <button
@@ -858,6 +943,7 @@ export default function PurchaseReport({ token, user }) {
                     <th className="py-2.5 px-3" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>GST Amt (₹)</th>
                     <th className="py-2.5 px-3" style={{ width: '160px', minWidth: '160px', verticalAlign: 'middle', textAlign: 'left' }}>Total (₹)</th>
                     <th className="py-2.5 px-3" style={{ width: '180px', minWidth: '180px', verticalAlign: 'middle', textAlign: 'left' }}>Warehouse</th>
+                    <th className="py-2.5 px-3" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>Rack Location</th>
                     <th className="py-2.5 px-3" style={{ width: '80px', minWidth: '80px', verticalAlign: 'middle', textAlign: 'left' }}>Action</th>
                   </tr>
                 </thead>
@@ -1064,6 +1150,17 @@ export default function PurchaseReport({ token, user }) {
                           </select>
                         </td>
 
+                        {/* Rack Location */}
+                        <td className="py-2.5 px-3" style={{ width: '140px', minWidth: '140px', verticalAlign: 'middle', textAlign: 'left' }}>
+                          <input
+                            type="text"
+                            placeholder="A-1, B-3..."
+                            value={row.rackLocation || ''}
+                            onChange={(e) => handleRowChange(row.id, 'rackLocation', e.target.value)}
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          />
+                        </td>
+
                         {/* Remove Row Button */}
                         <td className="py-2.5 px-3 text-left" style={{ width: '80px', minWidth: '80px', verticalAlign: 'middle', textAlign: 'left' }}>
                           <button
@@ -1135,12 +1232,22 @@ export default function PurchaseReport({ token, user }) {
                 <span className="text-2xl font-black text-emerald-400">₹{summaryTotals.grandTotal.toFixed(2)}</span>
               </div>
 
+              {editPurchaseId && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="w-full sm:w-auto px-5 py-3.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                >
+                  Cancel Edit
+                </button>
+              )}
+
               <button
                 type="submit"
                 disabled={purchaseSubmitting}
                 className="w-full sm:w-auto px-7 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {purchaseSubmitting ? 'Saving Purchase...' : 'Save Purchase Entry'}
+                {purchaseSubmitting ? 'Saving Purchase...' : (editPurchaseId ? 'Update Purchase' : 'Save Purchase Entry')}
               </button>
             </div>
           </div>
@@ -1281,6 +1388,17 @@ export default function PurchaseReport({ token, user }) {
                                 >
                                   <Eye className="w-4 h-4" />
                                 </button>
+
+                                {['Super Admin', 'Admin', 'Purchase Manager', 'Accounts Manager'].includes(user?.role) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEdit(p)}
+                                    className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
+                                    title="Edit Purchase Entry"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                )}
 
                                 <button
                                   type="button"
