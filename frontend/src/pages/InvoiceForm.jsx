@@ -615,8 +615,8 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
             return;
           }
         }
-        if (!validGstRates.includes(gstVal)) {
-          alert(`Invalid GST rate ${gstVal}% for part "${part.name}". Supported rates are: 0%, 5%, 12%, 18%, 28%.`);
+        if (gstVal < 0 || gstVal > 100) {
+          alert(`Invalid GST rate ${gstVal}% for part "${part.name}". Rate must be between 0% and 100%.`);
           return;
         }
 
@@ -665,8 +665,8 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
             return;
           }
         }
-        if (!validGstRates.includes(gstVal)) {
-          alert(`Invalid GST rate ${gstVal}% for labour "${lab.description}". Supported rates are: 0%, 5%, 12%, 18%, 28%.`);
+        if (gstVal < 0 || gstVal > 100) {
+          alert(`Invalid GST rate ${gstVal}% for labour "${lab.description}". Rate must be between 0% and 100%.`);
           return;
         }
       }

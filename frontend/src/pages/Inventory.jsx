@@ -1139,6 +1139,38 @@ function PartsMasterBillingModal({
     setManualFinalTotal(null);
   };
 
+  const handleManualFinalTotalChange = (val) => {
+    if (val === '') {
+      setManualFinalTotal(null);
+      return;
+    }
+    const finalTotal = parseFloat(val) || 0;
+    setManualFinalTotal(finalTotal);
+
+    const gstP = parseFloat(form.gstPercent) || 0;
+    const qty = parseFloat(form.quantity) || 1;
+    const costVal = parseFloat(form.purchasePrice) || 0;
+    const mrpVal = parseFloat(form.mrp) || 0;
+    const discAmt = parseFloat(form.discountAmount) || 0;
+
+    const reversePricing = calculatePricing({
+      purchasePrice: costVal,
+      quantity: qty,
+      discountAmount: discAmt,
+      gstPercent: gstP,
+      mrp: mrpVal,
+      manualFinalTotal: finalTotal
+    });
+
+    setForm(prev => ({
+      ...prev,
+      sellingPrice: reversePricing.sellingPrice.toFixed(2),
+      marginPercent: reversePricing.marginPercent.toFixed(2),
+      discountAmount: reversePricing.discountAmount.toFixed(2),
+      discountPercent: reversePricing.discountPercent.toFixed(2)
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.partName || !form.partNumber) {
@@ -1158,20 +1190,27 @@ function PartsMasterBillingModal({
       return;
     }
 
-    const margin = parseFloat(form.marginPercent) || 0;
-    if (margin < 0) {
-      alert('Profit Margin must be greater than or equal to 0%.');
+    const sellPrice = parseFloat(form.sellingPrice) || 0;
+    const costPrice = parseFloat(form.purchasePrice) || 0;
+    const mrpValue = parseFloat(form.mrp) || 0;
+    const isAuthorized = ['Admin', 'Accounts'].includes(user?.role);
+
+    // 1. Profit margin / selling price below cost validation
+    if (sellPrice < costPrice && !isAuthorized) {
+      alert('Selling Price cannot be below Cost Price unless authorized.');
       return;
     }
 
-    if (sellingExceedsMrp && !mrpOverride) {
-      alert('Selling Price cannot exceed MRP unless Manual Override is confirmed.');
+    // 2. Selling Price above MRP validation
+    if (mrpValue > 0 && sellPrice > mrpValue && !isAuthorized && !mrpOverride) {
+      alert('Selling Price cannot exceed MRP unless authorized.');
       return;
     }
 
+    // 3. Discount greater than Selling Price validation
     const disc = parseFloat(form.discountAmount) || 0;
     if (disc > grossAmount) {
-      alert('Discount cannot exceed the subtotal.');
+      alert('Discount cannot exceed the total Selling Price (Subtotal).');
       return;
     }
 
@@ -1616,7 +1655,7 @@ function PartsMasterBillingModal({
                     type="number"
                     step="0.01"
                     value={manualFinalTotal !== null ? manualFinalTotal : finalTotalAmount.toFixed(2)}
-                    onChange={(e) => setManualFinalTotal(e.target.value !== '' ? parseFloat(e.target.value) || 0 : null)}
+                    onChange={(e) => handleManualFinalTotalChange(e.target.value)}
                     className="w-full px-3.5 py-2 pr-16 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 rounded-xl font-mono text-emerald-800 dark:text-emerald-200 font-black text-sm focus:outline-none"
                   />
                   {manualFinalTotal !== null && (
