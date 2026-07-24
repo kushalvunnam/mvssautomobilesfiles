@@ -190,9 +190,10 @@ app.get('/api/test-email', async (req, res) => {
   }
 });
 
-// Serve built frontend static assets in production/fallback
-const distPath = path.join(__dirname, '../dist');
-app.use(express.static(distPath));
+// Base status endpoint
+app.get('/', (req, res) => {
+  res.json({ status: "API Running" });
+});
 
 // Base API route
 app.get('/api', (req, res) => {
@@ -221,9 +222,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Serve frontend SPA index.html for all other non-API routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
+// Fallback JSON 404 Handler for all other unmatched routes
+app.all('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Not Found',
+    message: `Cannot ${req.method} ${req.originalUrl}`
+  });
 });
 
 // Database Seed function
