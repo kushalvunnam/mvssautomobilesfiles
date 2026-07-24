@@ -249,24 +249,26 @@ export default function Reports({ token, user }) {
               const pct = Number(p.gstPercent) || 0;
               const tax = base * (pct / 100);
               const key = `${pct}%`;
-              if (taxBrackets[key]) {
-                taxBrackets[key].taxable += base;
-                if (isInterstate) taxBrackets[key].igst += tax;
-                else { taxBrackets[key].cgst += tax / 2; taxBrackets[key].sgst += tax / 2; }
-                taxBrackets[key].total += tax;
+              if (!taxBrackets[key]) {
+                taxBrackets[key] = { bracket: `${pct}% GST`, taxable: 0, cgst: 0, sgst: 0, igst: 0, total: 0 };
               }
+              taxBrackets[key].taxable += base;
+              if (isInterstate) taxBrackets[key].igst += tax;
+              else { taxBrackets[key].cgst += tax / 2; taxBrackets[key].sgst += tax / 2; }
+              taxBrackets[key].total += tax;
             });
             (inv.labour || []).forEach(l => {
               const base = l.rate || 0;
               const pct = Number(l.gstPercent) || 0;
               const tax = base * (pct / 100);
               const key = `${pct}%`;
-              if (taxBrackets[key]) {
-                taxBrackets[key].taxable += base;
-                if (isInterstate) taxBrackets[key].igst += tax;
-                else { taxBrackets[key].cgst += tax / 2; taxBrackets[key].sgst += tax / 2; }
-                taxBrackets[key].total += tax;
+              if (!taxBrackets[key]) {
+                taxBrackets[key] = { bracket: `${pct}% GST`, taxable: 0, cgst: 0, sgst: 0, igst: 0, total: 0 };
               }
+              taxBrackets[key].taxable += base;
+              if (isInterstate) taxBrackets[key].igst += tax;
+              else { taxBrackets[key].cgst += tax / 2; taxBrackets[key].sgst += tax / 2; }
+              taxBrackets[key].total += tax;
             });
           });
           return Object.values(taxBrackets).filter(t => t.taxable > 0);

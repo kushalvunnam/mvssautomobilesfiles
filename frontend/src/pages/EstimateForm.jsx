@@ -179,7 +179,7 @@ const INSPECTION_MAPPING_RULES = {
   }
 };
 
-export default function EstimateForm({ token, onSaved, onCancel, editId = null }) {
+export default function EstimateForm({ token, user, onSaved, onCancel, editId = null }) {
   const [jobCards, setJobCards] = useState([]);
   const [inventory, setInventory] = useState([]);
   
@@ -896,16 +896,49 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
                   </span>
                 </div>
 
-                <div className="w-16">
+                <div className="w-36">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">GST %</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={part.gstPercent}
-                    onChange={(e) => handleRowNumericChange(e, partsList, setPartsList, idx, 'gstPercent', true, 100)}
-                    placeholder="Enter GST %"
-                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
-                  />
+                  <div className="flex gap-1 items-center">
+                    <select
+                      value={[0, 3, 5, 12, 18, 28].includes(Number(part.gstPercent)) ? Number(part.gstPercent) : 'custom'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const list = [...partsList];
+                        if (val === 'custom') {
+                          list[idx].gstPercent = '18';
+                        } else {
+                          list[idx].gstPercent = val;
+                        }
+                        setPartsList(list);
+                      }}
+                      disabled={!['Admin', 'Accounts'].includes(user?.role)}
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none flex-1"
+                    >
+                      <option value={0}>0%</option>
+                      <option value={3}>3%</option>
+                      <option value={5}>5%</option>
+                      <option value={12}>12%</option>
+                      <option value={18}>18%</option>
+                      <option value={28}>28%</option>
+                      <option value="custom">Custom...</option>
+                    </select>
+                    {![0, 3, 5, 12, 18, 28].includes(Number(part.gstPercent)) && (
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={part.gstPercent}
+                        onChange={(e) => {
+                          const list = [...partsList];
+                          list[idx].gstPercent = e.target.value;
+                          setPartsList(list);
+                        }}
+                        disabled={!['Admin', 'Accounts'].includes(user?.role)}
+                        className="w-14 px-1.5 py-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="w-24 text-right pr-2">
@@ -1017,16 +1050,49 @@ export default function EstimateForm({ token, onSaved, onCancel, editId = null }
                   </span>
                 </div>
 
-                <div className="w-16">
+                <div className="w-36">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">GST %</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={lab.gstPercent}
-                    onChange={(e) => handleRowNumericChange(e, labourList, setLabourList, idx, 'gstPercent', true, 100)}
-                    placeholder="Enter GST %"
-                    className="w-full px-3.5 py-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
-                  />
+                  <div className="flex gap-1 items-center">
+                    <select
+                      value={[0, 3, 5, 12, 18, 28].includes(Number(lab.gstPercent)) ? Number(lab.gstPercent) : 'custom'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const list = [...labourList];
+                        if (val === 'custom') {
+                          list[idx].gstPercent = '18';
+                        } else {
+                          list[idx].gstPercent = val;
+                        }
+                        setLabourList(list);
+                      }}
+                      disabled={!['Admin', 'Accounts'].includes(user?.role)}
+                      className="w-full px-2 py-1 bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none flex-1"
+                    >
+                      <option value={0}>0%</option>
+                      <option value={3}>3%</option>
+                      <option value={5}>5%</option>
+                      <option value={12}>12%</option>
+                      <option value={18}>18%</option>
+                      <option value={28}>28%</option>
+                      <option value="custom">Custom...</option>
+                    </select>
+                    {![0, 3, 5, 12, 18, 28].includes(Number(lab.gstPercent)) && (
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={lab.gstPercent}
+                        onChange={(e) => {
+                          const list = [...labourList];
+                          list[idx].gstPercent = e.target.value;
+                          setLabourList(list);
+                        }}
+                        disabled={!['Admin', 'Accounts'].includes(user?.role)}
+                        className="w-14 px-1.5 py-1 bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-850 rounded-lg text-xs font-semibold focus:outline-none font-mono"
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="w-28 text-right pr-2">

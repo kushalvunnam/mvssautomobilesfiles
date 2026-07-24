@@ -991,18 +991,42 @@ export default function PurchaseReport({ token, user }) {
                         </td>
 
                         {/* GST % */}
-                        <td className="py-2.5 px-3" style={{ width: '100px', minWidth: '100px', verticalAlign: 'middle', textAlign: 'left' }}>
-                          <select
-                            value={row.gstPercent}
-                            onChange={(e) => handleRowChange(row.id, 'gstPercent', Number(e.target.value))}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-3 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                          >
-                            <option value={0}>0%</option>
-                            <option value={5}>5%</option>
-                            <option value={12}>12%</option>
-                            <option value={18}>18%</option>
-                            <option value={28}>28%</option>
-                          </select>
+                        <td className="py-2.5 px-3" style={{ width: '150px', minWidth: '150px', verticalAlign: 'middle', textAlign: 'left' }}>
+                          <div className="flex gap-1 items-center">
+                            <select
+                              value={[0, 3, 5, 12, 18, 28].includes(Number(row.gstPercent)) ? Number(row.gstPercent) : 'custom'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === 'custom') {
+                                  handleRowChange(row.id, 'gstPercent', 18);
+                                } else {
+                                  handleRowChange(row.id, 'gstPercent', Number(val));
+                                }
+                              }}
+                              disabled={!['Admin', 'Accounts', 'Spares'].includes(user?.role)}
+                              className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-2 py-2.5 font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none flex-1"
+                            >
+                              <option value={0}>0%</option>
+                              <option value={3}>3%</option>
+                              <option value={5}>5%</option>
+                              <option value={12}>12%</option>
+                              <option value={18}>18%</option>
+                              <option value={28}>28%</option>
+                              <option value="custom">Custom...</option>
+                            </select>
+                            {![0, 3, 5, 12, 18, 28].includes(Number(row.gstPercent)) && (
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={row.gstPercent}
+                                onChange={(e) => handleRowChange(row.id, 'gstPercent', e.target.value)}
+                                disabled={!['Admin', 'Accounts', 'Spares'].includes(user?.role)}
+                                className="w-16 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-2 py-2.5 font-mono font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                              />
+                            )}
+                          </div>
                         </td>
 
                         {/* Taxable Amount (Calculated) */}

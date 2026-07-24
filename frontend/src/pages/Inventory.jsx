@@ -607,6 +607,7 @@ export default function Inventory({ token, user }) {
       <PartsMasterBillingModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
+        user={user}
         onSubmit={async (formData) => {
           try {
             const res = await fetch(`${API_BASE_URL}/inventory`, {
@@ -723,6 +724,7 @@ export default function Inventory({ token, user }) {
         onClose={() => setShowEditModal(false)}
         initialData={editForm}
         mode="edit"
+        user={user}
         onDelete={(itemData) => {
           setShowEditModal(false);
           triggerDelete(itemData);
@@ -967,7 +969,8 @@ function PartsMasterBillingModal({
   onSubmit,
   onDelete,
   initialData,
-  mode = 'add'
+  mode = 'add',
+  user
 }) {
   if (!isOpen) return null;
 
@@ -1542,17 +1545,41 @@ function PartsMasterBillingModal({
                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
                   GST Rate (%)
                 </label>
-                <select
-                  value={form.gstPercent}
-                  onChange={(e) => setForm({ ...form, gstPercent: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-bold focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="0">0% (Exempted)</option>
-                  <option value="5">5% (GST)</option>
-                  <option value="12">12% (GST)</option>
-                  <option value="18">18% (Standard GST)</option>
-                  <option value="28">28% (Luxury / Spares)</option>
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={['0', '3', '5', '12', '18', '28'].includes(form.gstPercent) ? form.gstPercent : 'custom'}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'custom') {
+                        setForm({ ...form, gstPercent: '18' });
+                      } else {
+                        setForm({ ...form, gstPercent: val });
+                      }
+                    }}
+                    disabled={!['Admin', 'Accounts', 'Spares'].includes(user?.role)}
+                    className="flex-1 px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-bold focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="0">0% (Exempted)</option>
+                    <option value="3">3% (GST)</option>
+                    <option value="5">5% (GST)</option>
+                    <option value="12">12% (GST)</option>
+                    <option value="18">18% (Standard GST)</option>
+                    <option value="28">28% (Luxury / Spares)</option>
+                    <option value="custom">Custom...</option>
+                  </select>
+                  {!['0', '3', '5', '12', '18', '28'].includes(form.gstPercent) && (
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={form.gstPercent}
+                      onChange={(e) => setForm({ ...form, gstPercent: e.target.value })}
+                      disabled={!['Admin', 'Accounts', 'Spares'].includes(user?.role)}
+                      className="w-24 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-indigo-500"
+                    />
+                  )}
+                </div>
               </div>
 
               <div>

@@ -924,9 +924,9 @@ export default function Invoices({ token, user, setActiveTab }) {
 
       {/* List */}
       {viewMode === 'create' ? (
-        <InvoiceForm token={token} onSaved={handleSaved} onCancel={handleCancel} />
+        <InvoiceForm token={token} user={user} onSaved={handleSaved} onCancel={handleCancel} />
       ) : viewMode === 'edit' ? (
-        <InvoiceForm token={token} editId={selectedInvoiceId} onSaved={handleSaved} onCancel={handleCancel} />
+        <InvoiceForm token={token} user={user} editId={selectedInvoiceId} onSaved={handleSaved} onCancel={handleCancel} />
       ) : (
         <div className={`grid grid-cols-1 ${selectedInvoice ? 'lg:grid-cols-3' : ''} gap-6`}>
           <div className={`${selectedInvoice ? 'lg:col-span-2' : ''} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm`}>

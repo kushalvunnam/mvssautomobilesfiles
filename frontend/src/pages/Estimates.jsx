@@ -74,11 +74,11 @@ export default function Estimates({ token, user, setActiveTab }) {
   };
 
   if (viewMode === 'create') {
-    return <EstimateForm token={token} onSaved={handleSaved} onCancel={handleCancel} />;
+    return <EstimateForm token={token} user={user} onSaved={handleSaved} onCancel={handleCancel} />;
   }
 
   if (viewMode === 'edit') {
-    return <EstimateForm token={token} editId={selectedEstId} onSaved={handleSaved} onCancel={handleCancel} />;
+    return <EstimateForm token={token} user={user} editId={selectedEstId} onSaved={handleSaved} onCancel={handleCancel} />;
   }
 
   const printEstimate = (est) => {
