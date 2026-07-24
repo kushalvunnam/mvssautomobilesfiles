@@ -5,7 +5,7 @@ const JobCard = require('../models/JobCard');
 const Estimate = require('../models/Estimate');
 const Invoice = require('../models/Invoice');
 const InsuranceClaim = require('../models/InsuranceClaim');
-const { auth } = require('../middleware/auth');
+const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
 
@@ -249,7 +249,7 @@ router.get('/:id/timeline', auth, async (req, res) => {
 });
 
 // Delete Customer
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
   try {
     const customer = await Customer.findByIdAndDelete(req.params.id);
     if (!customer) return res.status(404).send({ error: 'Customer not found.' });

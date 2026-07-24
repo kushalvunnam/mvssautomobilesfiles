@@ -319,13 +319,15 @@ export default function Customers({ token, user }) {
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={(e) => handleDeleteCustomer(c._id, e)}
-                              className="text-slate-400 hover:text-red-650 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                              title="Delete Customer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {user?.role === 'Admin' && (
+                              <button
+                                onClick={(e) => handleDeleteCustomer(c._id, e)}
+                                className="text-slate-400 hover:text-red-650 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                title="Delete Customer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         )}
                       </td>

@@ -2,7 +2,7 @@ const express = require('express');
 const Vehicle = require('../models/Vehicle');
 const Customer = require('../models/Customer');
 const JobCard = require('../models/JobCard');
-const { auth } = require('../middleware/auth');
+const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
 const router = express.Router();
 
@@ -113,7 +113,7 @@ router.get('/customer/:customerId', auth, async (req, res) => {
 });
 
 // Delete Vehicle
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
   try {
     const vehicle = await Vehicle.findByIdAndDelete(req.params.id);
     if (!vehicle) return res.status(404).send({ error: 'Vehicle not found.' });
