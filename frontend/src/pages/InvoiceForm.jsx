@@ -1041,7 +1041,7 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
                         const val = e.target.value;
                         const list = [...partsList];
                         if (val === 'custom') {
-                          list[idx].gstPercent = '18';
+                          list[idx].gstPercent = 'custom';
                         } else {
                           list[idx].gstPercent = val;
                         }
@@ -1064,7 +1064,8 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
                         min="0"
                         max="100"
                         step="0.01"
-                        value={part.gstPercent}
+                        placeholder="0.00"
+                        value={part.gstPercent === 'custom' ? '' : part.gstPercent}
                         onChange={(e) => {
                           const list = [...partsList];
                           list[idx].gstPercent = e.target.value;
@@ -1249,7 +1250,7 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
                         const val = e.target.value;
                         const list = [...labourList];
                         if (val === 'custom') {
-                          list[idx].gstPercent = '18';
+                          list[idx].gstPercent = 'custom';
                         } else {
                           list[idx].gstPercent = val;
                         }
@@ -1272,7 +1273,8 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
                         min="0"
                         max="100"
                         step="0.01"
-                        value={lab.gstPercent}
+                        placeholder="0.00"
+                        value={lab.gstPercent === 'custom' ? '' : lab.gstPercent}
                         onChange={(e) => {
                           const list = [...labourList];
                           list[idx].gstPercent = e.target.value;

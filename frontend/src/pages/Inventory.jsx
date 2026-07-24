@@ -1551,7 +1551,7 @@ function PartsMasterBillingModal({
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val === 'custom') {
-                        setForm({ ...form, gstPercent: '18' });
+                        setForm({ ...form, gstPercent: 'custom' });
                       } else {
                         setForm({ ...form, gstPercent: val });
                       }
@@ -1573,7 +1573,8 @@ function PartsMasterBillingModal({
                       min="0"
                       max="100"
                       step="0.01"
-                      value={form.gstPercent}
+                      placeholder="0.00"
+                      value={form.gstPercent === 'custom' ? '' : form.gstPercent}
                       onChange={(e) => setForm({ ...form, gstPercent: e.target.value })}
                       disabled={!['Admin', 'Accounts', 'Spares'].includes(user?.role)}
                       className="w-24 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-indigo-500"

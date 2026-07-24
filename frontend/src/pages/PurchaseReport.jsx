@@ -998,7 +998,7 @@ export default function PurchaseReport({ token, user }) {
                               onChange={(e) => {
                                 const val = e.target.value;
                                 if (val === 'custom') {
-                                  handleRowChange(row.id, 'gstPercent', 18);
+                                  handleRowChange(row.id, 'gstPercent', 'custom');
                                 } else {
                                   handleRowChange(row.id, 'gstPercent', Number(val));
                                 }
@@ -1020,7 +1020,8 @@ export default function PurchaseReport({ token, user }) {
                                 min="0"
                                 max="100"
                                 step="0.01"
-                                value={row.gstPercent}
+                                placeholder="0.00"
+                                value={row.gstPercent === 'custom' ? '' : row.gstPercent}
                                 onChange={(e) => handleRowChange(row.id, 'gstPercent', e.target.value)}
                                 disabled={!['Admin', 'Accounts', 'Spares'].includes(user?.role)}
                                 className="w-16 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg h-11 px-2 py-2.5 font-mono font-semibold text-slate-800 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
