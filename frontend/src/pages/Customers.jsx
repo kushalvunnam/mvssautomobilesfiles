@@ -422,6 +422,11 @@ export default function Customers({ token, user }) {
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-slate-800 dark:text-slate-250">{event.type}</span>
                             <span className="text-[10px] text-slate-400 font-semibold">{event.number}</span>
+                            {event.status && (
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-350">
+                                {event.status}
+                              </span>
+                            )}
                           </div>
                           <p className="text-slate-500 dark:text-slate-400 font-medium mt-0.5">{event.details}</p>
                           <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block mt-1">

@@ -130,6 +130,7 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
       <JobCardDetails
         jcId={selectedJcId}
         token={token}
+        user={user}
         onBack={handleCancel}
         onCreateEstimate={handleCreateEstimate}
         onConvertInvoice={handleConvertInvoice}
@@ -174,6 +175,12 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
           className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-750 dark:text-slate-300 text-xs font-bold focus:outline-none focus:border-indigo-500"
         >
           <option value="">All Card Statuses</option>
+          <option value="Waiting for Customer Approval">Waiting for Customer Approval</option>
+          <option value="Parts Procuring">Parts Procuring</option>
+          <option value="Work in Progress">Work in Progress</option>
+          <option value="Quality Test">Quality Test</option>
+          <option value="Ready for Delivery">Ready for Delivery</option>
+          <option value="Delivered">Delivered</option>
           <option value="Created">Created</option>
           <option value="Inspect Stage">Inspect Stage</option>
           <option value="Estimation">Estimation</option>
@@ -181,8 +188,7 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
           <option value="Work In Progress">Work In Progress</option>
           <option value="Body Shop">Body Shop</option>
           <option value="Quality Check">Quality Check</option>
-          <option value="Ready for Delivery">Ready for Delivery</option>
-          <option value="Delivered">Delivered</option>
+          <option value="Closed">Closed</option>
         </select>
       </div>
 
@@ -195,11 +201,13 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
             if (jc.status === 'Inspect Stage') statusColor = 'bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400';
             if (jc.status === 'Estimation') statusColor = 'bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400';
             if (jc.status === 'Customer Approval') statusColor = 'bg-pink-50 text-pink-700 dark:bg-pink-950/20 dark:text-pink-400';
-            if (jc.status === 'Work In Progress') statusColor = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400';
+            if (jc.status === 'Work In Progress' || jc.status === 'Work in Progress') statusColor = 'bg-pink-50 text-pink-850 dark:bg-pink-950/20 dark:text-pink-300';
             if (jc.status === 'Body Shop') statusColor = 'bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400';
-            if (jc.status === 'Quality Check') statusColor = 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/20 dark:text-cyan-400';
+            if (jc.status === 'Quality Check' || jc.status === 'Quality Test') statusColor = 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/20 dark:text-cyan-400';
             if (jc.status === 'Ready for Delivery') statusColor = 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400';
             if (jc.status === 'Delivered') statusColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400';
+            if (jc.status === 'Waiting for Customer Approval') statusColor = 'bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400';
+            if (jc.status === 'Parts Procuring') statusColor = 'bg-amber-50 text-amber-705 dark:bg-amber-950/20 dark:text-amber-400';
 
             return (
               <div

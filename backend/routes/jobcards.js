@@ -107,11 +107,19 @@ router.post('/', auth, restrictTo('Admin', 'Service', 'Accounts', 'Body Shop', '
     const today = new Date();
     const timeStr = today.toTimeString().split(' ')[0].slice(0, 5); // HH:MM
 
+    const initialStatus = req.body.status || 'Waiting for Customer Approval';
     const jobCardData = {
       ...req.body,
       jobCardNo,
       time: req.body.time || timeStr,
       serviceAdvisorId: req.user._id,
+      status: initialStatus,
+      statusHistory: [{
+        status: initialStatus,
+        changedAt: new Date(),
+        changedBy: req.user ? req.user.name : 'System',
+        remarks: 'Initial Job Card Creation'
+      }]
     };
 
     const jobCard = new JobCard(jobCardData);
@@ -172,10 +180,47 @@ router.post('/:id/photo', auth, upload.single('photo'), async (req, res) => {
 // Update digital job card
 router.put('/:id', auth, async (req, res) => {
   try {
-    const jobCard = await JobCard.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const jobCard = await JobCard.findById(req.params.id);
     if (!jobCard) return res.status(404).send({ error: 'Job Card not found.' });
 
-    if (req.body.status) {
+    let statusChanged = false;
+    if (req.body.status && req.body.status !== jobCard.status) {
+      statusChanged = true;
+      
+      // Prevent "Delivered" unless billing is completed and Gate Pass is generated (or allow only Admin to override)
+      if (req.body.status === 'Delivered') {
+        const isAdmin = ['Super Admin', 'Admin'].includes(req.user?.role);
+        if (!isAdmin) {
+          const Invoice = require('../models/Invoice');
+          const invoice = await Invoice.findOne({ jobCardId: jobCard._id, status: 'Finalized' });
+          if (!invoice) {
+            return res.status(400).send({ error: 'Billing is not completed. You must finalize the tax invoice before marking the job card as Delivered.' });
+          }
+
+          const GatePass = require('../models/GatePass');
+          const gatePass = await GatePass.findOne({ jobCardNumber: jobCard.jobCardNo });
+          if (!gatePass) {
+            return res.status(400).send({ error: 'Gate Pass has not been generated. You must generate a gate pass before marking the job card as Delivered.' });
+          }
+        }
+      }
+
+      jobCard.statusHistory.push({
+        status: req.body.status,
+        changedAt: new Date(),
+        changedBy: req.user ? req.user.name : 'System',
+        remarks: req.body.statusRemarks || ''
+      });
+    }
+
+    // Apply updates
+    const updates = { ...req.body };
+    delete updates.statusHistory;
+
+    Object.assign(jobCard, updates);
+    await jobCard.save();
+
+    if (statusChanged) {
       const { calculateBillingSummary } = require('../utils/billing');
       await calculateBillingSummary(jobCard._id);
     }
@@ -187,7 +232,7 @@ router.put('/:id', auth, async (req, res) => {
     await logAction(req.user, 'JOBCARD_UPDATE', `Updated Job Card ${jobCard.jobCardNo}. Status: ${jobCard.status}`, req);
     res.send(jobCard);
   } catch (error) {
-    res.status(400).send({ error: 'Failed to update job card.' });
+    res.status(400).send({ error: 'Failed to update job card: ' + error.message });
   }
 });
 

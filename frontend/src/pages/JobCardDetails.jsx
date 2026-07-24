@@ -14,7 +14,29 @@ import {
   Users
 } from 'lucide-react';
 
-export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, onViewEstimate, onConvertInvoice }) {
+const getStatusBadgeClass = (status) => {
+  switch (status) {
+    case 'Waiting for Customer Approval':
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border-purple-205/40';
+    case 'Parts Procuring':
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-205/40';
+    case 'Work In Progress':
+    case 'Work in Progress':
+      return 'bg-pink-100 text-pink-850 dark:bg-pink-950/60 dark:text-pink-300 border-pink-205/40';
+    case 'Quality Check':
+    case 'Quality Test':
+      return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300 border-cyan-205/40';
+    case 'Ready for Delivery':
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/60 dark:text-yellow-350 border-yellow-250/40';
+    case 'Delivered':
+    case 'Closed':
+      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-255/40';
+    default:
+      return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border-slate-200';
+  }
+};
+
+export default function JobCardDetails({ jcId, token, user, onBack, onCreateEstimate, onViewEstimate, onConvertInvoice }) {
   const [jc, setJc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -154,9 +176,13 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
       });
       if (res.ok) {
         fetchDetails();
+      } else {
+        const errObj = await res.json().catch(() => ({}));
+        alert(errObj.error || 'Failed to update job card.');
       }
     } catch (err) {
       console.error(err);
+      alert('Failed to connect to the server.');
     } finally {
       setUpdating(false);
     }
@@ -399,7 +425,47 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
             </span>
             <p className="text-xs text-slate-400 font-semibold">Date: {new Date(jc.date).toLocaleDateString('en-IN')}</p>
             <p className="text-xs text-slate-400 font-semibold">Time: {jc.time}</p>
-            <p className="text-xs text-slate-400 font-semibold mt-1">Status: <span className="font-bold text-slate-800 dark:text-slate-200 uppercase">{jc.status}</span></p>
+            <div className="text-xs text-slate-400 font-semibold mt-1.5 flex items-center justify-end gap-1.5 select-none">
+              <span>Status:</span>
+              {['Super Admin', 'Admin', 'Branch Manager', 'Service Advisor', 'Workshop Manager'].includes(user?.role) ? (
+                <select
+                  value={jc.status}
+                  onChange={(e) => {
+                    const nextStatus = e.target.value;
+                    const confirmChange = window.confirm(`Are you sure you want to update the job card status to "${nextStatus}"?`);
+                    if (confirmChange) {
+                      updateStatus(nextStatus);
+                    }
+                  }}
+                  className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-805 dark:text-white font-bold text-xs uppercase tracking-wider focus:outline-none"
+                >
+                  {[
+                    'Waiting for Customer Approval',
+                    'Parts Procuring',
+                    'Work in Progress',
+                    'Quality Test',
+                    'Ready for Delivery',
+                    'Delivered',
+                    'Created',
+                    'Inspect Stage',
+                    'Estimation',
+                    'Customer Approval',
+                    'Work In Progress',
+                    'Body Shop',
+                    'Surveyor Approval',
+                    'Repair',
+                    'Quality Check',
+                    'Closed'
+                  ].map(statusOpt => (
+                    <option key={statusOpt} value={statusOpt}>{statusOpt}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className={`px-2 py-0.5 rounded font-extrabold text-[10px] uppercase border ${getStatusBadgeClass(jc.status)}`}>
+                  {jc.status}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -922,6 +988,42 @@ export default function JobCardDetails({ jcId, token, onBack, onCreateEstimate, 
               </div>
 
             </form>
+          </div>
+        </div>
+      )}
+      {/* Job Card Status History Timeline */}
+      {jc && jc.statusHistory && jc.statusHistory.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs mt-6 select-none">
+          <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-1.5">
+            <Clock className="w-4 h-4 text-indigo-500" /> Job Card Workflow Status History
+          </h4>
+          <div className="relative pl-6 border-l-2 border-indigo-100 dark:border-indigo-950 space-y-5">
+            {jc.statusHistory.map((history, idx) => (
+              <div key={idx} className="relative">
+                {/* Timeline Dot */}
+                <div className="absolute -left-[31px] top-1.5 w-3.5 h-3.5 rounded-full bg-indigo-500 border-2 border-white dark:border-slate-900 shadow-sm" />
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded font-extrabold text-[9px] uppercase border ${getStatusBadgeClass(history.status)}`}>
+                      {history.status}
+                    </span>
+                    {history.changedBy && (
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                        by {history.changedBy}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-400 font-mono">
+                    {new Date(history.changedAt).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                {history.remarks && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 pl-1 bg-slate-50 dark:bg-slate-850 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                    Remarks: {history.remarks}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
