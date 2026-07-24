@@ -21,89 +21,182 @@ const { checkLowStockAlerts } = require('../utils/alerts');
 router.get('/stats', auth, async (req, res) => {
   try {
     await checkLowStockAlerts();
-    const totalCustomers = await Customer.countDocuments();
-    const totalVehicles = await Vehicle.countDocuments();
     
-    const activeJobCards = await JobCard.countDocuments({
-      status: { $ne: 'Delivered' }
-    });
-    const completedJobCards = await JobCard.countDocuments({ status: 'Delivered' });
+    // Parse query date
+    const dateParam = req.query.date;
+    let targetDate = new Date();
+    let isHistorical = false;
+    if (dateParam) {
+      targetDate = new Date(dateParam);
+      isHistorical = true;
+    }
+    
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0,0,0,0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23,59,59,999);
 
-    const pendingJobCards = await JobCard.countDocuments({
-      status: { $in: ['Created', 'Inspect Stage', 'Estimation', 'Customer Approval'] }
-    });
+    // Calculate total activity for historical date check
+    let noData = false;
+    if (isHistorical) {
+      const Customer = require('../models/Customer');
+      const Vehicle = require('../models/Vehicle');
+      const JobCard = require('../models/JobCard');
+      const Invoice = require('../models/Invoice');
+      const GatePass = require('../models/GatePass');
+      const InsuranceClaim = require('../models/InsuranceClaim');
+      const Expense = require('../models/Expense');
 
-    // Revenue This Month: Invoices finalized in the current calendar month
-    const startOfMonth = new Date();
+      const activityCounts = await Promise.all([
+        Customer.countDocuments({ createdAt: { $gte: startOfDay, $lte: endOfDay } }),
+        Vehicle.countDocuments({ createdAt: { $gte: startOfDay, $lte: endOfDay } }),
+        JobCard.countDocuments({ createdAt: { $gte: startOfDay, $lte: endOfDay } }),
+        JobCard.countDocuments({ updatedAt: { $gte: startOfDay, $lte: endOfDay } }),
+        Invoice.countDocuments({ date: { $gte: startOfDay, $lte: endOfDay } }),
+        GatePass.countDocuments({ createdAt: { $gte: startOfDay, $lte: endOfDay } }),
+        InsuranceClaim.countDocuments({ createdAt: { $gte: startOfDay, $lte: endOfDay } }),
+        Expense.countDocuments({ date: { $gte: startOfDay, $lte: endOfDay } })
+      ]);
+      const totalActivity = activityCounts.reduce((a, b) => a + b, 0);
+      if (totalActivity === 0) {
+        noData = true;
+      }
+    }
+
+    const queryFilter = isHistorical ? { createdAt: { $lte: endOfDay } } : {};
+    const invoiceFilter = isHistorical ? { date: { $lte: endOfDay } } : {};
+
+    const totalCustomers = await Customer.countDocuments(queryFilter);
+    const totalVehicles = await Vehicle.countDocuments(queryFilter);
+    
+    let activeJobCards, completedJobCards, pendingJobCards, bodyShopJobs;
+    if (isHistorical) {
+      activeJobCards = await JobCard.countDocuments({
+        createdAt: { $lte: endOfDay },
+        $or: [
+          { status: { $ne: 'Delivered' } },
+          { updatedAt: { $gt: endOfDay } }
+        ]
+      });
+      completedJobCards = await JobCard.countDocuments({
+        status: 'Delivered',
+        updatedAt: { $lte: endOfDay }
+      });
+      pendingJobCards = await JobCard.countDocuments({
+        createdAt: { $lte: endOfDay },
+        status: { $in: ['Created', 'Inspect Stage', 'Estimation', 'Customer Approval'] },
+        $or: [
+          { status: { $ne: 'Delivered' } },
+          { updatedAt: { $gt: endOfDay } }
+        ]
+      });
+      bodyShopJobs = await JobCard.countDocuments({
+        createdAt: { $lte: endOfDay },
+        $or: [
+          { status: 'Body Shop' },
+          { workCategory: 'B/P' }
+        ],
+        $or: [
+          { status: { $ne: 'Delivered' } },
+          { updatedAt: { $gt: endOfDay } }
+        ]
+      });
+    } else {
+      activeJobCards = await JobCard.countDocuments({ status: { $ne: 'Delivered' } });
+      completedJobCards = await JobCard.countDocuments({ status: 'Delivered' });
+      pendingJobCards = await JobCard.countDocuments({
+        status: { $in: ['Created', 'Inspect Stage', 'Estimation', 'Customer Approval'] }
+      });
+      bodyShopJobs = await JobCard.countDocuments({
+        $or: [
+          { status: 'Body Shop' },
+          { workCategory: 'B/P' }
+        ]
+      });
+    }
+
+    // Revenue This Month relative to targetDate
+    const startOfMonth = new Date(targetDate);
     startOfMonth.setDate(1);
     startOfMonth.setHours(0,0,0,0);
     const monthlyInvoices = await Invoice.find({
       status: 'Finalized',
-      date: { $gte: startOfMonth }
+      date: { $gte: startOfMonth, $lte: endOfDay }
     });
     const revenueThisMonth = monthlyInvoices.reduce((sum, inv) => sum + inv.totals.grandTotal, 0);
 
-    // Revenue This Year: Invoices finalized in the current calendar year
-    const startOfYear = new Date();
+    // Revenue This Year relative to targetDate
+    const startOfYear = new Date(targetDate);
     startOfYear.setMonth(0);
     startOfYear.setDate(1);
     startOfYear.setHours(0,0,0,0);
     const yearlyInvoices = await Invoice.find({
       status: 'Finalized',
-      date: { $gte: startOfYear }
+      date: { $gte: startOfYear, $lte: endOfDay }
     });
     const revenueThisYear = yearlyInvoices.reduce((sum, inv) => sum + inv.totals.grandTotal, 0);
 
-    // Pending Payments: Unpaid finalized invoices
-    const unpaidInvoices = await Invoice.find({
-      status: 'Finalized',
-      paymentStatus: { $ne: 'Paid' }
-    });
+    // Pending Payments as of endOfDay
+    let unpaidInvoices;
+    if (isHistorical) {
+      unpaidInvoices = await Invoice.find({
+        status: 'Finalized',
+        date: { $lte: endOfDay },
+        $or: [
+          { paymentStatus: { $ne: 'Paid' } },
+          { updatedAt: { $gt: endOfDay } }
+        ]
+      });
+    } else {
+      unpaidInvoices = await Invoice.find({
+        status: 'Finalized',
+        paymentStatus: { $ne: 'Paid' }
+      });
+    }
     const pendingPayments = unpaidInvoices.reduce((sum, inv) => sum + inv.totals.grandTotal, 0);
 
-    // Inventory Value, Vendors, and Stock Items
     const VendorModel = require('../models/Vendor');
     const PurchaseModel = require('../models/Purchase');
-    const allInventory = await Inventory.find({});
+    const allInventory = await Inventory.find(isHistorical ? { createdAt: { $lte: endOfDay } } : {});
     const inventoryValue = allInventory.reduce((sum, item) => sum + ((item.stockQuantity || 0) * (item.purchasePrice || 0)), 0);
     const sellingValuation = allInventory.reduce((sum, item) => sum + ((item.stockQuantity || 0) * (item.sellingPrice || 0)), 0);
     const lowStockItems = allInventory.filter(item => (item.stockQuantity || 0) <= (item.lowStockThreshold || 5) && (item.stockQuantity || 0) > 0).length;
     const outOfStockItems = allInventory.filter(item => (item.stockQuantity || 0) <= 0).length;
-    const totalVendors = await VendorModel.countDocuments();
-    const recentPurchases = await PurchaseModel.find().sort({ createdAt: -1 }).limit(5);
-
-    // Insurance Claims
-    const insuranceClaims = await InsuranceClaim.countDocuments();
-
-    // Body Shop Jobs
-    const bodyShopJobs = await JobCard.countDocuments({
-      $or: [
-        { status: 'Body Shop' },
-        { workCategory: 'B/P' }
-      ]
-    });
-
-    // Gate Passes stats calculations
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
     
-    const totalGatePasses = await GatePass.countDocuments();
-    const issuedToday = await GatePass.countDocuments({
-      createdAt: { $gte: startOfToday }
-    });
-    const pendingReturns = await GatePass.countDocuments({
-      status: 'Pending'
-    });
-    const returnedMaterials = await GatePass.countDocuments({
-      status: 'Returned'
-    });
+    const totalVendors = await VendorModel.countDocuments(isHistorical ? { createdAt: { $lte: endOfDay } } : {});
+    const recentPurchases = await PurchaseModel.find(isHistorical ? { createdAt: { $lte: endOfDay } } : {}).sort({ createdAt: -1 }).limit(5);
 
-    // Fetch latest 10 audit logs
-    const latestAuditLogs = await AuditLog.find({})
+    const insuranceClaims = await InsuranceClaim.countDocuments(isHistorical ? { createdAt: { $lte: endOfDay } } : {});
+
+    // Gate passes
+    const totalGatePasses = await GatePass.countDocuments(isHistorical ? { createdAt: { $lte: endOfDay } } : {});
+    const issuedToday = await GatePass.countDocuments({
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+    
+    let pendingReturns, returnedMaterials;
+    if (isHistorical) {
+      pendingReturns = await GatePass.countDocuments({
+        createdAt: { $lte: endOfDay },
+        status: 'Pending',
+        $or: [
+          { status: 'Pending' },
+          { updatedAt: { $gt: endOfDay } }
+        ]
+      });
+      returnedMaterials = await GatePass.countDocuments({
+        status: 'Returned',
+        updatedAt: { $lte: endOfDay }
+      });
+    } else {
+      pendingReturns = await GatePass.countDocuments({ status: 'Pending' });
+      returnedMaterials = await GatePass.countDocuments({ status: 'Returned' });
+    }
+
+    const latestAuditLogs = await AuditLog.find(isHistorical ? { createdAt: { $lte: endOfDay } } : {})
       .sort({ createdAt: -1 })
       .limit(10);
 
-    // Fetch low stock items list
     const lowStockItemsList = allInventory
       .filter(item => (item.currentStock || item.stockQuantity || 0) <= (item.minimumStock || item.lowStockThreshold || 5))
       .map(item => ({
@@ -115,6 +208,7 @@ router.get('/stats', auth, async (req, res) => {
       }));
 
     res.send({
+      noData,
       totalCustomers,
       totalVehicles,
       activeJobCards,
@@ -147,23 +241,33 @@ router.get('/stats', auth, async (req, res) => {
 // Get chart data
 router.get('/charts', auth, async (req, res) => {
   try {
-    // 1. Revenue by Month (last 6 months)
-    const sixMonthsAgo = new Date();
+    const dateParam = req.query.date;
+    let targetDate = new Date();
+    let isHistorical = false;
+    if (dateParam) {
+      targetDate = new Date(dateParam);
+      isHistorical = true;
+    }
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23,59,59,999);
+
+    // 1. Revenue by Month (last 6 months relative to targetDate)
+    const sixMonthsAgo = new Date(targetDate);
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
     sixMonthsAgo.setDate(1);
     sixMonthsAgo.setHours(0,0,0,0);
 
     const invoices = await Invoice.find({
       status: 'Finalized',
-      date: { $gte: sixMonthsAgo }
+      date: { $gte: sixMonthsAgo, $lte: endOfDay }
     });
 
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const revenueMap = {};
 
-    // Initialize last 6 months
+    // Initialize last 6 months relative to targetDate
     for (let i = 5; i >= 0; i--) {
-      const d = new Date();
+      const d = new Date(targetDate);
       d.setMonth(d.getMonth() - i);
       const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
       revenueMap[key] = 0;
@@ -182,19 +286,29 @@ router.get('/charts', auth, async (req, res) => {
       amount: Math.round(amount * 100) / 100
     }));
 
-    // 2. Service Type Analytics (grouped by job cards)
-    const serviceTypeAgg = await JobCard.aggregate([
-      { $group: { _id: '$serviceType', count: { $sum: 1 } } }
-    ]);
+    // 2. Service Type Analytics (grouped by job cards created on or before endOfDay)
+    let serviceTypeAgg;
+    if (isHistorical) {
+      serviceTypeAgg = await JobCard.aggregate([
+        { $match: { createdAt: { $lte: endOfDay } } },
+        { $group: { _id: '$serviceType', count: { $sum: 1 } } }
+      ]);
+    } else {
+      serviceTypeAgg = await JobCard.aggregate([
+        { $group: { _id: '$serviceType', count: { $sum: 1 } } }
+      ]);
+    }
     const serviceTypeChart = serviceTypeAgg.map(item => ({
       name: item._id || 'General Servicing',
       value: item.count
     }));
 
-    // 3. Top Used Spare Parts
-    // Look at finalized invoices, list parts and aggregate quantities
+    // 3. Top Used Spare Parts (finalized on or before endOfDay)
     const partUsage = {};
-    const finalizedInvsWithParts = await Invoice.find({ status: 'Finalized' });
+    const finalizedInvsWithParts = await Invoice.find({
+      status: 'Finalized',
+      date: { $lte: endOfDay }
+    });
     finalizedInvsWithParts.forEach(inv => {
       inv.parts.forEach(part => {
         if (partUsage[part.name]) {
@@ -210,7 +324,7 @@ router.get('/charts', auth, async (req, res) => {
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 5);
 
-    // 4. Domain spent/billed breakdown (Spare parts vs. Labour vs. GST)
+    // 4. Domain spent/billed breakdown
     let totalSpentParts = 0;
     let totalSpentLabour = 0;
     let totalSpentGst = 0;
@@ -517,36 +631,36 @@ router.get('/search', auth, async (req, res) => {
 // Get dashboard summary with filters and comparisons
 router.get('/summary', auth, async (req, res) => {
   try {
-    const { filter, startDate, endDate } = req.query;
+    const { filter, startDate, endDate, date } = req.query;
 
+    const targetDate = date ? new Date(date) : new Date();
     let start, end;
-    const now = new Date();
 
     if (filter === 'Today') {
-      start = new Date();
+      start = new Date(targetDate);
       start.setHours(0, 0, 0, 0);
-      end = new Date();
+      end = new Date(targetDate);
       end.setHours(23, 59, 59, 999);
     } else if (filter === 'Yesterday') {
-      start = new Date();
+      start = new Date(targetDate);
       start.setDate(start.getDate() - 1);
       start.setHours(0, 0, 0, 0);
-      end = new Date();
+      end = new Date(targetDate);
       end.setDate(end.getDate() - 1);
       end.setHours(23, 59, 59, 999);
     } else if (filter === 'This Week') {
-      start = new Date();
+      start = new Date(targetDate);
       const day = start.getDay();
       const diff = start.getDate() - day + (day === 0 ? -6 : 1);
       start.setDate(diff);
       start.setHours(0, 0, 0, 0);
-      end = new Date();
+      end = new Date(targetDate);
       end.setHours(23, 59, 59, 999);
     } else if (filter === 'This Month') {
-      start = new Date();
+      start = new Date(targetDate);
       start.setDate(1);
       start.setHours(0, 0, 0, 0);
-      end = new Date();
+      end = new Date(targetDate);
       end.setHours(23, 59, 59, 999);
     } else if (filter === 'Custom' && startDate && endDate) {
       start = new Date(startDate);
@@ -555,10 +669,10 @@ router.get('/summary', auth, async (req, res) => {
       end.setHours(23, 59, 59, 999);
     } else {
       // Default to This Month
-      start = new Date();
+      start = new Date(targetDate);
       start.setDate(1);
       start.setHours(0, 0, 0, 0);
-      end = new Date();
+      end = new Date(targetDate);
       end.setHours(23, 59, 59, 999);
     }
 
@@ -615,17 +729,19 @@ router.get('/summary', auth, async (req, res) => {
     const periodStats = await getDashboardSummaryData(start, end);
 
     // Today's Stats
-    const todayStart = new Date();
+    const todayStart = new Date(targetDate);
     todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
+    const todayEnd = new Date(targetDate);
     todayEnd.setHours(23, 59, 59, 999);
     const todayStats = await getDashboardSummaryData(todayStart, todayEnd);
 
     // Monthly Stats
-    const monthStart = new Date();
+    const monthStart = new Date(targetDate);
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
-    const monthEnd = new Date();
+    const monthEnd = new Date(targetDate);
+    monthEnd.setMonth(monthEnd.getMonth() + 1);
+    monthEnd.setDate(0);
     monthEnd.setHours(23, 59, 59, 999);
     const monthlyStats = await getDashboardSummaryData(monthStart, monthEnd);
 
@@ -655,11 +771,19 @@ router.get('/reports', auth, async (req, res) => {
     const JobCard = require('../models/JobCard');
     const Expense = require('../models/Expense');
 
+    const dateParam = req.query.date;
+    const targetDate = dateParam ? new Date(dateParam) : new Date();
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
     const closedCards = await JobCard.find({
-      status: { $in: ['Delivered', 'Closed'] }
+      status: { $in: ['Delivered', 'Closed'] },
+      updatedAt: { $lte: endOfDay }
     });
 
-    const expenses = await Expense.find({});
+    const expenses = await Expense.find({
+      date: { $lte: endOfDay }
+    });
 
     const groups = {};
 

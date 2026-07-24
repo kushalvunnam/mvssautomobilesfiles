@@ -23,6 +23,45 @@ import StatsCard from '../components/StatsCard';
 import { getCachedData, setCachedData } from '../utils/apiCache';
 
 export default function Dashboard({ token, user, setActiveTab }) {
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+
+  const formatDateLabel = (date) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+  };
+
+  const handlePrevDay = () => {
+    setSelectedDate(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 1);
+      return d;
+    });
+  };
+
+  const handleNextDay = () => {
+    setSelectedDate(prev => {
+      const d = new Date(prev);
+      const today = new Date();
+      today.setHours(23,59,59,999);
+      d.setDate(d.getDate() + 1);
+      if (d > today && user?.role !== 'Admin') {
+        return prev;
+      }
+      return d;
+    });
+  };
+
+  const handleToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const isNextDayDisabled = (() => {
+    const today = new Date();
+    today.setHours(23,59,59,999);
+    const tomorrow = new Date(selectedDate);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow > today && user?.role !== 'Admin';
+  })();
   // 1. Restore the original stats cards state fields with cached fallback
   const [stats, setStats] = useState(() => getCachedData(`${API_BASE_URL}/dashboard/stats`) || {
     totalCustomers: 0,
@@ -100,7 +139,8 @@ export default function Dashboard({ token, user, setActiveTab }) {
   const fetchSummaryData = async () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      let url = `${API_BASE_URL}/dashboard/summary?filter=${summaryFilter}`;
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      let url = `${API_BASE_URL}/dashboard/summary?filter=${summaryFilter}&date=${dateStr}`;
       if (summaryFilter === 'Custom' && customStartDate && customEndDate) {
         url += `&startDate=${customStartDate}&endDate=${customEndDate}`;
       }
@@ -117,7 +157,8 @@ export default function Dashboard({ token, user, setActiveTab }) {
   const fetchReportsData = async () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      const res = await fetch(`${API_BASE_URL}/dashboard/reports?type=${reportType}`, { headers });
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const res = await fetch(`${API_BASE_URL}/dashboard/reports?type=${reportType}&date=${dateStr}`, { headers });
       if (res.ok) {
         const data = await res.json();
         setReportsData(data.reports || []);
@@ -132,8 +173,9 @@ export default function Dashboard({ token, user, setActiveTab }) {
     const fetchDashboardData = async () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const statsUrl = `${API_BASE_URL}/dashboard/stats`;
-        const chartsUrl = `${API_BASE_URL}/dashboard/charts`;
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        const statsUrl = `${API_BASE_URL}/dashboard/stats?date=${dateStr}`;
+        const chartsUrl = `${API_BASE_URL}/dashboard/charts?date=${dateStr}`;
 
         const [statsRes, chartsRes] = await Promise.all([
           fetch(statsUrl, { headers }),
@@ -160,7 +202,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, 10000);
     return () => clearInterval(interval);
-  }, [token, summaryFilter, customStartDate, customEndDate, reportType]);
+  }, [token, selectedDate, summaryFilter, customStartDate, customEndDate, reportType]);
 
   if (loading) {
     return (
@@ -196,7 +238,11 @@ export default function Dashboard({ token, user, setActiveTab }) {
 
   // Mini calendar widget with dynamic navigation and today highlighting
   const CalendarWidget = () => {
-    const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentDate, setCurrentDate] = useState(selectedDate);
+
+    useEffect(() => {
+      setCurrentDate(selectedDate);
+    }, [selectedDate]);
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth(); // 0-indexed
@@ -238,6 +284,32 @@ export default function Dashboard({ token, user, setActiveTab }) {
              today.getFullYear() === year;
     };
 
+    const isSelected = (d) => {
+      return d !== '' &&
+             selectedDate.getDate() === d &&
+             selectedDate.getMonth() === month &&
+             selectedDate.getFullYear() === year;
+    };
+
+    const isFutureDate = (d) => {
+      if (d === '') return false;
+      const dateToCheck = new Date(year, month, d, 23, 59, 59, 999);
+      const todayVal = new Date();
+      return dateToCheck > todayVal;
+    };
+
+    const handleDateClick = (d) => {
+      if (d === '') return;
+      const clickDate = new Date(year, month, d);
+      const todayVal = new Date();
+      todayVal.setHours(23, 59, 59, 999);
+      if (clickDate > todayVal && user?.role !== 'Admin') {
+        alert("Future dates can only be viewed by Administrators.");
+        return;
+      }
+      setSelectedDate(clickDate);
+    };
+
     return (
       <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 p-4 rounded-xl shadow-sm flex flex-col justify-between h-full select-none">
         <div>
@@ -246,7 +318,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
             <div className="flex items-center gap-2">
               <button 
                 onClick={prevMonth} 
-                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-indigo-655 dark:text-slate-400 dark:hover:text-indigo-400 border-none outline-none"
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-indigo-655 dark:text-slate-400 dark:hover:text-indigo-400 border-none outline-none cursor-pointer"
                 title="Previous Month"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -256,7 +328,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
               </span>
               <button 
                 onClick={nextMonth} 
-                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-indigo-650 dark:text-slate-400 dark:hover:text-indigo-400 border-none outline-none"
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-indigo-650 dark:text-slate-400 dark:hover:text-indigo-400 border-none outline-none cursor-pointer"
                 title="Next Month"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -267,20 +339,34 @@ export default function Dashboard({ token, user, setActiveTab }) {
             {days.map(d => <span key={d}>{d}</span>)}
           </div>
           <div className="grid grid-cols-7 gap-1 mt-2 text-center text-[10px]">
-            {dates.map((d, idx) => (
-              <span 
-                key={idx} 
-                className={`py-1 rounded font-medium transition-all ${
-                  d === '' 
-                    ? 'text-transparent pointer-events-none' 
-                    : isToday(d)
-                      ? 'bg-indigo-600 text-white shadow-sm font-bold scale-105' 
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-55 dark:hover:bg-slate-800 cursor-pointer'
-                }`}
-              >
-                {d}
-              </span>
-            ))}
+            {dates.map((d, idx) => {
+              const selected = isSelected(d);
+              const todayVal = isToday(d);
+              const future = isFutureDate(d) && user?.role !== 'Admin';
+              
+              let classNames = "py-1 rounded text-[10px] font-semibold transition-all ";
+              if (d === '') {
+                classNames += "text-transparent pointer-events-none";
+              } else if (future) {
+                classNames += "text-slate-200 dark:text-slate-850 cursor-not-allowed opacity-30";
+              } else if (selected) {
+                classNames += "bg-indigo-600 text-white shadow-sm font-black scale-105 cursor-pointer";
+              } else if (todayVal) {
+                classNames += "border border-indigo-500 text-indigo-600 dark:text-indigo-400 font-black cursor-pointer bg-indigo-50/40 dark:bg-indigo-950/20";
+              } else {
+                classNames += "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer";
+              }
+
+              return (
+                <span 
+                  key={idx} 
+                  onClick={() => !future && handleDateClick(d)}
+                  className={classNames}
+                >
+                  {d}
+                </span>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -307,8 +393,95 @@ export default function Dashboard({ token, user, setActiveTab }) {
   return (
     <div className="space-y-6 p-1 select-none w-full animate-fade-in">
       
-      {/* Workshop ERP Billing & Profit Summary Panel */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs p-6 space-y-6">
+      {/* Historical Navigation Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-850 flex flex-col md:flex-row md:items-center md:justify-between gap-4 select-none">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-450 animate-pulse" />
+            <h1 className="text-xs font-black uppercase tracking-wider text-slate-200">
+              Viewing Dashboard for: <span className="text-emerald-400 font-mono">{formatDateLabel(selectedDate)}</span>
+            </h1>
+          </div>
+          <p className="text-[10px] font-semibold text-slate-400 mt-1">
+            Historical Reporting Mode — Click any calendar date to view the complete snapshot of that day
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handlePrevDay}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-xl text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" /> Prev Day
+          </button>
+
+          <button
+            type="button"
+            onClick={handleToday}
+            className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-black transition-all cursor-pointer"
+          >
+            Today
+          </button>
+
+          <button
+            type="button"
+            onClick={handleNextDay}
+            disabled={isNextDayDisabled}
+            className={`px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all flex items-center gap-1 ${
+              isNextDayDisabled
+                ? 'bg-slate-800/40 text-slate-500 border-slate-850 cursor-not-allowed'
+                : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-700 cursor-pointer'
+            }`}
+          >
+            Next Day <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Date Picker Input */}
+          <div className="relative flex items-center ml-1">
+            <input
+              type="date"
+              value={selectedDate.toISOString().split('T')[0]}
+              max={new Date().toISOString().split('T')[0]}
+              onChange={(e) => {
+                const newDate = new Date(e.target.value);
+                if (!isNaN(newDate.getTime())) {
+                  const today = new Date();
+                  today.setHours(23,59,59,999);
+                  if (newDate > today && user?.role !== 'Admin') {
+                    alert("Future dates can only be viewed by Administrators.");
+                    return;
+                  }
+                  setSelectedDate(newDate);
+                }
+              }}
+              className="px-3 py-1 bg-slate-800 border border-slate-750 rounded-xl text-[10px] font-black text-white focus:outline-none cursor-pointer"
+            />
+          </div>
+        </div>
+      </div>
+
+      {stats.noData ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center flex flex-col items-center justify-center space-y-4 shadow-sm min-h-[400px]">
+            <div className="w-16 h-16 bg-amber-50 dark:bg-amber-955/20 text-amber-500 dark:text-amber-450 border border-amber-300/40 rounded-full flex items-center justify-center shadow-inner">
+              <Calendar className="w-8 h-8" />
+            </div>
+            <div className="space-y-1.5 max-w-sm">
+              <h3 className="text-xs font-black text-slate-850 dark:text-white uppercase tracking-wider">No dashboard data available for this date.</h3>
+              <p className="text-[11px] text-slate-450 dark:text-slate-500 font-semibold leading-relaxed">
+                No transactions, registrations, bookings, or job cards were created or updated on {formatDateLabel(selectedDate)}.
+              </p>
+            </div>
+          </div>
+          <div className="lg:col-span-4">
+            <CalendarWidget />
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Workshop ERP Billing & Profit Summary Panel */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs p-6 space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h2 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-wider">Workshop ERP Billing & Profit Summary</h2>
@@ -1135,6 +1308,9 @@ export default function Dashboard({ token, user, setActiveTab }) {
           </table>
         </div>
       </div>
+
+      </>
+      )}
 
       {/* Footer */}
       <footer className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center text-[9px] font-semibold text-slate-400 gap-1.5 select-none">
