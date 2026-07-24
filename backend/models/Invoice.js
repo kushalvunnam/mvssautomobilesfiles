@@ -228,6 +228,14 @@ const invoiceSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  advanceReceived: {
+    type: Number,
+    default: 0,
+  },
+  balanceDue: {
+    type: Number,
+    default: 0,
+  },
   isSent: {
     type: Boolean,
     default: false,

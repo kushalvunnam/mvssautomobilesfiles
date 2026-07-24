@@ -11,7 +11,9 @@ import {
   AlertTriangle,
   ChevronRight,
   FileCheck,
-  Users
+  Users,
+  Receipt,
+  Trash2
 } from 'lucide-react';
 
 const getStatusBadgeClass = (status) => {
@@ -50,6 +52,75 @@ export default function JobCardDetails({ jcId, token, user, onBack, onCreateEsti
     qcRemarks: '',
     qcStatus: ''
   });
+
+  const [advanceAmount, setAdvanceAmount] = useState('');
+  const [advanceType, setAdvanceType] = useState('Cash');
+  const [paymentMode, setPaymentMode] = useState('Cash');
+  const [transactionId, setTransactionId] = useState('');
+  const [advanceRemarks, setAdvanceRemarks] = useState('');
+  const [addingAdvance, setAddingAdvance] = useState(false);
+
+  const handleAddAdvance = async (e) => {
+    e.preventDefault();
+    if (!advanceAmount || parseFloat(advanceAmount) <= 0) {
+      alert('Please enter a valid advance amount.');
+      return;
+    }
+    setAddingAdvance(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/jobcards/${jcId}/advance-payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          amount: parseFloat(advanceAmount),
+          type: advanceType,
+          paymentMode,
+          transactionId,
+          remarks: advanceRemarks
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setJc(data);
+        setAdvanceAmount('');
+        setTransactionId('');
+        setAdvanceRemarks('');
+      } else {
+        const errObj = await res.json().catch(() => ({}));
+        alert(errObj.error || 'Failed to record advance payment.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to connect to the server.');
+    } finally {
+      setAddingAdvance(false);
+    }
+  };
+
+  const handleDeleteAdvance = async (paymentId) => {
+    if (!window.confirm('Are you sure you want to delete this advance payment record?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/jobcards/${jcId}/advance-payments/${paymentId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setJc(data);
+      } else {
+        const errObj = await res.json().catch(() => ({}));
+        alert(errObj.error || 'Failed to delete advance payment.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to connect to the server.');
+    }
+  };
 
   const handleQtyChange = (partId, val) => {
     setQtyInputs({ ...qtyInputs, [partId]: val });
@@ -817,6 +888,166 @@ export default function JobCardDetails({ jcId, token, user, onBack, onCreateEsti
                 <p className="text-slate-450 italic">No body damage marked.</p>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Advance Payments Section */}
+        <div className="border-t border-slate-150 dark:border-slate-800 pt-6 space-y-4 select-none">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h4 className="text-sm font-black text-slate-850 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Receipt className="w-4 h-4 text-indigo-500" /> Advance Payments
+              </h4>
+              <p className="text-[11px] text-slate-450 font-semibold mt-0.5">Record and track deposit payments before final invoice generation</p>
+            </div>
+            
+            {/* Summary Cards */}
+            <div className="flex gap-4">
+              <div className="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 px-3.5 py-2 rounded-xl text-right">
+                <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Advance Received</span>
+                <span className="text-sm font-black text-emerald-600 dark:text-emerald-450 font-mono">
+                  ₹{(jc.advancePayments ? jc.advancePayments.reduce((sum, p) => sum + p.amount, 0) : 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 px-3.5 py-2 rounded-xl text-right">
+                <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Estimated Balance Due</span>
+                <span className="text-sm font-black text-slate-700 dark:text-white font-mono">
+                  ₹{Math.max(0, (estimate ? estimate.totals.roundedGrandTotal : (jc.estAmt || 0)) - (jc.advancePayments ? jc.advancePayments.reduce((sum, p) => sum + p.amount, 0) : 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            {/* List of Payments */}
+            <div className="lg:col-span-2 space-y-2 max-h-60 overflow-y-auto pr-1">
+              <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wide mb-1">Payment Transaction History</span>
+              {jc.advancePayments && jc.advancePayments.length > 0 ? (
+                jc.advancePayments.map((payment, idx) => (
+                  <div key={payment._id || idx} className="flex justify-between items-center bg-white dark:bg-slate-950 border border-slate-205 dark:border-slate-850 p-3 rounded-xl shadow-xs group">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-slate-800 dark:text-white font-mono">₹{payment.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-100/50">
+                          {payment.paymentMode}
+                        </span>
+                        {payment.transactionId && (
+                          <span className="text-[10px] text-slate-450 dark:text-slate-500 font-mono">
+                            Ref: {payment.transactionId}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-2 text-[10px] font-semibold text-slate-400">
+                        <span>Date: {new Date(payment.paymentDate).toLocaleDateString('en-IN')}</span>
+                        {payment.recordedBy && (
+                          <>
+                            <span>•</span>
+                            <span>Recorded by: {payment.recordedBy}</span>
+                          </>
+                        )}
+                        {payment.remarks && (
+                          <>
+                            <span>•</span>
+                            <span className="italic text-slate-550">"{payment.remarks}"</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {['Super Admin', 'Admin', 'Billing', 'Billing Executive', 'Accounts'].includes(user?.role) && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAdvance(payment._id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-550/10 p-1.5 rounded-lg transition-colors lg:opacity-0 lg:group-hover:opacity-100"
+                        title="Delete advance record"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-450 italic py-4">No advance payment transactions recorded for this Job Card.</p>
+              )}
+            </div>
+
+            {/* Record Form */}
+            {['Super Admin', 'Admin', 'Billing', 'Billing Executive', 'Accounts'].includes(user?.role) && (
+              <form onSubmit={handleAddAdvance} className="bg-slate-50 dark:bg-slate-950/10 border border-slate-100 dark:border-slate-850 p-4 rounded-2xl space-y-3">
+                <span className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wide border-b pb-1.5">Record New Deposit</span>
+                
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Amount (₹)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Amount"
+                      value={advanceAmount}
+                      onChange={(e) => setAdvanceAmount(e.target.value)}
+                      required
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-mono font-black focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Advance Type</label>
+                    <select
+                      value={advanceType}
+                      onChange={(e) => setAdvanceType(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 dark:text-slate-200"
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="Online">Online</option>
+                      <option value="Card Swipe">Card Swipe</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Payment Mode</label>
+                    <select
+                      value={paymentMode}
+                      onChange={(e) => setPaymentMode(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 dark:text-slate-205"
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="Online">Online</option>
+                      <option value="Card Swipe">Card Swipe</option>
+                      <option value="Scanner Payment (QR)">Scanner Payment (QR)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Transaction ID</label>
+                    <input
+                      type="text"
+                      placeholder="Txn ID"
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Remarks</label>
+                  <input
+                    type="text"
+                    placeholder="Reference remarks..."
+                    value={advanceRemarks}
+                    onChange={(e) => setAdvanceRemarks(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={addingAdvance}
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50"
+                >
+                  {addingAdvance ? 'Saving...' : 'Add Advance Payment'}
+                </button>
+              </form>
+            )}
           </div>
         </div>
 

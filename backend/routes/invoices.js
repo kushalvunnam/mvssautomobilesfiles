@@ -279,6 +279,8 @@ router.post('/', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
       labour: calculations.labour,
       totals: calculations.totals,
       grandTotalWords: calculations.grandTotalWords,
+      advanceReceived: jobCard.advancePayments ? jobCard.advancePayments.reduce((sum, p) => sum + p.amount, 0) : 0,
+      balanceDue: Math.max(0, calculations.totals.roundedGrandTotal - (jobCard.advancePayments ? jobCard.advancePayments.reduce((sum, p) => sum + p.amount, 0) : 0)),
       insuranceClaimDetails: {
         claimNo: insuranceClaimDetails?.claimNo || '',
         insuranceCompany: insuranceClaimDetails?.insuranceCompany || '',
@@ -413,6 +415,8 @@ router.put('/:id', auth, restrictTo('Admin', 'Accounts'), async (req, res) => {
     if (preparedBy !== undefined) {
       invoice.preparedBy = preparedBy;
     }
+
+    invoice.balanceDue = Math.max(0, (invoice.totals.roundedGrandTotal || invoice.totals.grandTotal || 0) - (invoice.advanceReceived || 0));
 
     await invoice.save();
 

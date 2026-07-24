@@ -829,6 +829,14 @@ export default function Invoices({ token, user, setActiveTab }) {
                 <td>Grand Total:</td>
                 <td style="text-align: right;">₹${grandTotal.toFixed(2)}</td>
               </tr>
+              <tr>
+                <td>Advance Received:</td>
+                <td style="text-align: right;">- ₹${(inv.advanceReceived || 0).toFixed(2)}</td>
+              </tr>
+              <tr style="font-weight: bold; border-top: 1.5px solid #000; font-size: 13px;">
+                <td>Final Bill / Balance Due:</td>
+                <td style="text-align: right;">₹${Math.max(0, grandTotal - (inv.advanceReceived || 0)).toFixed(2)}</td>
+              </tr>
             </table>
 
             <div style="margin-top: 20px; font-size: 9px; color: #666;">
@@ -970,8 +978,18 @@ export default function Invoices({ token, user, setActiveTab }) {
                           <td className="p-4 font-medium text-slate-550 dark:text-slate-400">
                             {inv.customerId?.name || 'Unknown'}
                           </td>
-                          <td className="p-4 font-extrabold text-slate-800 dark:text-slate-200">
-                            ₹{inv.totals?.grandTotal?.toLocaleString('en-IN') || 0}
+                          <td className="p-4">
+                            <span className="block font-extrabold text-slate-800 dark:text-slate-200">₹{inv.totals?.grandTotal?.toLocaleString('en-IN') || 0}</span>
+                            {inv.advanceReceived > 0 && (
+                              <span className="block text-[9px] font-semibold text-emerald-600 dark:text-emerald-450 mt-0.5">
+                                Adv: ₹{inv.advanceReceived.toLocaleString('en-IN')}
+                              </span>
+                            )}
+                            {inv.advanceReceived > 0 && (
+                              <span className="block text-[9px] font-bold text-slate-500 dark:text-slate-400">
+                                Due: ₹{(inv.balanceDue !== undefined ? inv.balanceDue : Math.max(0, (inv.totals?.grandTotal || 0) - inv.advanceReceived)).toLocaleString('en-IN')}
+                              </span>
+                            )}
                           </td>
                           <td className="p-4 font-semibold text-[10px] text-slate-500 uppercase tracking-wider">
                             {inv.gstDetails?.isInterstate ? 'IGST Interstate' : 'CGST/SGST Intra'}
@@ -1067,6 +1085,14 @@ export default function Invoices({ token, user, setActiveTab }) {
                   <div className="flex justify-between">
                     <span className="text-slate-400 font-bold">Grand Total:</span>
                     <span className="text-slate-800 dark:text-slate-100 font-black text-sm">₹{selectedInvoice.totals?.grandTotal?.toLocaleString('en-IN') || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold">Advance Received:</span>
+                    <span className="text-emerald-600 dark:text-emerald-450 font-black text-sm">- ₹{(selectedInvoice.advanceReceived || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold">Balance Due:</span>
+                    <span className="text-indigo-750 dark:text-indigo-400 font-black text-sm">₹{(selectedInvoice.balanceDue !== undefined ? selectedInvoice.balanceDue : Math.max(0, (selectedInvoice.totals?.grandTotal || 0) - (selectedInvoice.advanceReceived || 0))).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400 font-bold">Invoice Status:</span>

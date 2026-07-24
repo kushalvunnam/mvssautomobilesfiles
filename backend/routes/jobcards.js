@@ -326,4 +326,59 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
   }
 });
 
+// Add advance payment to Job Card
+router.post('/:id/advance-payments', auth, restrictTo('Super Admin', 'Admin', 'Billing', 'Billing Executive', 'Accounts'), async (req, res) => {
+  try {
+    const { amount, type, paymentMode, transactionId, remarks, paymentDate } = req.body;
+    if (!amount || amount <= 0) {
+      return res.status(400).send({ error: 'Valid advance payment amount is required.' });
+    }
+    if (!type || !paymentMode) {
+      return res.status(400).send({ error: 'Advance type and payment mode are required.' });
+    }
+
+    const jobCard = await JobCard.findById(req.params.id);
+    if (!jobCard) return res.status(404).send({ error: 'Job Card not found.' });
+
+    jobCard.advancePayments.push({
+      amount: Number(amount),
+      type,
+      paymentMode,
+      paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+      transactionId: transactionId || '',
+      remarks: remarks || '',
+      recordedBy: req.user ? req.user.name : 'System'
+    });
+
+    await jobCard.save();
+
+    await logAction(req.user, 'JOBCARD_ADVANCE_PAYMENT_ADD', `Recorded advance payment of ₹${amount} for Job Card ${jobCard.jobCardNo}`, req);
+    res.send(jobCard);
+  } catch (error) {
+    res.status(400).send({ error: 'Failed to record advance payment: ' + error.message });
+  }
+});
+
+// Delete advance payment from Job Card
+router.delete('/:id/advance-payments/:paymentId', auth, restrictTo('Super Admin', 'Admin', 'Billing', 'Billing Executive', 'Accounts'), async (req, res) => {
+  try {
+    const jobCard = await JobCard.findById(req.params.id);
+    if (!jobCard) return res.status(404).send({ error: 'Job Card not found.' });
+
+    const paymentIndex = jobCard.advancePayments.findIndex(p => p._id.toString() === req.params.paymentId);
+    if (paymentIndex === -1) {
+      return res.status(404).send({ error: 'Advance payment entry not found.' });
+    }
+
+    const removedPayment = jobCard.advancePayments[paymentIndex];
+    jobCard.advancePayments.splice(paymentIndex, 1);
+    await jobCard.save();
+
+    await logAction(req.user, 'JOBCARD_ADVANCE_PAYMENT_REMOVE', `Deleted advance payment of ₹${removedPayment.amount} from Job Card ${jobCard.jobCardNo}`, req);
+    res.send(jobCard);
+  } catch (error) {
+    res.status(400).send({ error: 'Failed to delete advance payment: ' + error.message });
+  }
+});
+
 module.exports = router;

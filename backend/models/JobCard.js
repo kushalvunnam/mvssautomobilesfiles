@@ -231,6 +231,16 @@ const JobCardSchema = new mongoose.Schema({
     remarks: { type: String, default: '' }
   }],
 
+  advancePayments: [{
+    amount: { type: Number, required: true },
+    type: { type: String, enum: ['Cash', 'Online', 'Card Swipe'], required: true },
+    paymentMode: { type: String, enum: ['Cash', 'Online', 'Card Swipe', 'Scanner Payment (QR)'], required: true },
+    paymentDate: { type: Date, default: Date.now },
+    transactionId: { type: String, default: '' },
+    remarks: { type: String, default: '' },
+    recordedBy: { type: String, default: '' }
+  }],
+
   billingSummary: {
     totalPartsUsed: { type: Number, default: 0 },
     totalPartsSellingValue: { type: Number, default: 0 },

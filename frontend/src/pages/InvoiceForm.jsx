@@ -55,6 +55,7 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
   const [manualOverride, setManualOverride] = useState(false);
   const [overriddenGrandTotal, setOverriddenGrandTotal] = useState('');
   const [triggerRecalc, setTriggerRecalc] = useState(0);
+  const [advanceReceived, setAdvanceReceived] = useState(0);
 
   const cleanNumberInput = (val, allowDecimal = true, maxVal = null) => {
     if (val === undefined || val === null) return '';
@@ -326,6 +327,7 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
               approvedAmount: inv.insuranceClaimDetails?.approvedAmount !== undefined && inv.insuranceClaimDetails?.approvedAmount !== null ? inv.insuranceClaimDetails.approvedAmount.toString() : '',
               customerPayableAmount: inv.insuranceClaimDetails?.customerPayableAmount || 0
             });
+            setAdvanceReceived(inv.advanceReceived || 0);
           }
         }
       } catch (err) {
@@ -568,6 +570,9 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
           customerGSTIN: cust.gstNumber || '',
           isInterstate: cust.gstNumber ? !cust.gstNumber.startsWith('36') : false
         });
+
+        const totalAdvance = jc.advancePayments ? jc.advancePayments.reduce((sum, p) => sum + p.amount, 0) : 0;
+        setAdvanceReceived(totalAdvance);
 
         setInsuranceDetails(prev => ({
           ...prev,
@@ -842,6 +847,8 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
       poNumber,
       roNumber,
       preparedBy,
+      advanceReceived: Number(advanceReceived) || 0,
+      balanceDue: Math.max(0, totals.roundedGrandTotal - Number(advanceReceived)),
       status: isFinalize ? 'Finalized' : 'Draft'
     };
 
@@ -1618,6 +1625,16 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
             <div className="flex justify-between text-base font-black border-t-2 border-double border-slate-300/60 pt-3 text-indigo-700 dark:text-indigo-400">
               <span>Rounded Grand Total:</span>
               <span>₹{totals.roundedGrandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+
+            <div className="flex justify-between text-xs font-semibold text-slate-550 border-t border-slate-205 pt-2">
+              <span>Advance Received:</span>
+              <span className="text-emerald-600 dark:text-emerald-450 font-mono">- ₹{advanceReceived.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+
+            <div className="flex justify-between text-base font-black border-t border-slate-200/50 pt-2 text-indigo-750 dark:text-indigo-400">
+              <span>Final Bill / Balance Due:</span>
+              <span className="text-indigo-800 dark:text-indigo-300 font-mono">₹{Math.max(0, totals.roundedGrandTotal - advanceReceived).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
         </div>

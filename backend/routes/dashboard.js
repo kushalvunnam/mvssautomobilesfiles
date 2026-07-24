@@ -153,7 +153,7 @@ router.get('/stats', auth, async (req, res) => {
         paymentStatus: { $ne: 'Paid' }
       });
     }
-    const pendingPayments = unpaidInvoices.reduce((sum, inv) => sum + inv.totals.grandTotal, 0);
+    const pendingPayments = unpaidInvoices.reduce((sum, inv) => sum + (inv.balanceDue !== undefined ? inv.balanceDue : (inv.totals.roundedGrandTotal - (inv.advanceReceived || 0))), 0);
 
     const VendorModel = require('../models/Vendor');
     const PurchaseModel = require('../models/Purchase');
