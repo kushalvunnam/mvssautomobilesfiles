@@ -196,6 +196,10 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
     grandTotal: 0
   });
 
+  const [manualOverride, setManualOverride] = useState(false);
+  const [overriddenGrandTotal, setOverriddenGrandTotal] = useState('');
+  const [triggerRecalc, setTriggerRecalc] = useState(0);
+
   const cleanNumberInput = (val, allowDecimal = true, maxVal = null) => {
     if (val === undefined || val === null) return '';
     let cleaned = val.toString().replace(/[^0-9.]/g, '');
@@ -221,6 +225,7 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
   };
 
   const handleRowNumericChange = (e, list, setter, idx, field, allowDecimal = true, maxVal = null) => {
+    setManualOverride(false);
     const input = e.target;
     const originalValue = input.value;
     const processedValue = cleanNumberInput(originalValue, allowDecimal, maxVal);
@@ -500,26 +505,106 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
       gstTotal += pricing.gstAmount;
     });
 
+    const calculatedGrandTotal = Math.round((partsTotal + labourTotal + gstTotal) * 100) / 100;
+
     setTotals({
       partsTotal: Math.round(partsTotal * 100) / 100,
       labourTotal: Math.round(labourTotal * 100) / 100,
       gstTotal: Math.round(gstTotal * 100) / 100,
-      grandTotal: Math.round((partsTotal + labourTotal + gstTotal) * 100) / 100
+      grandTotal: manualOverride && overriddenGrandTotal !== '' ? parseFloat(overriddenGrandTotal) || 0 : calculatedGrandTotal
     });
-  }, [partsList, labourList]);
+  }, [partsList, labourList, manualOverride, overriddenGrandTotal, triggerRecalc]);
+
+  const handleGrandTotalOverride = (val) => {
+    setOverriddenGrandTotal(val);
+    if (val === '') return;
+    const newGrandTotal = parseFloat(val) || 0;
+    if (newGrandTotal < 0) return;
+
+    // Calculate Parts Total (incl. Tax)
+    let partsTotal = 0;
+    let partsGst = 0;
+    partsList.forEach(part => {
+      const pricing = calculatePricing({
+        sellingPrice: part.rate,
+        quantity: part.qty,
+        discountAmount: part.discount,
+        lastDiscountEdited: 'amount',
+        gstPercent: part.gstPercent
+      });
+      partsTotal += pricing.taxableAmount;
+      partsGst += pricing.gstAmount;
+    });
+    const P_tot = partsTotal + partsGst;
+
+    // L_tot_new = newGrandTotal - P_tot
+    const L_tot_new = Math.max(0, newGrandTotal - P_tot);
+
+    // Re-distribute/scale labour rates
+    const L_tot_old = labourList.reduce((sum, lab) => {
+      const pricing = calculatePricing({
+        sellingPrice: lab.rate,
+        quantity: lab.qty || 1,
+        discountAmount: lab.discount,
+        lastDiscountEdited: 'amount',
+        gstPercent: lab.gstPercent
+      });
+      return sum + pricing.taxableAmount + pricing.gstAmount;
+    }, 0);
+
+    if (L_tot_old > 0) {
+      const ratio = L_tot_new / L_tot_old;
+      const updatedLabour = labourList.map(lab => {
+        const rate = parseFloat(lab.rate) || 0;
+        const qty = parseFloat(lab.qty) || 1;
+        const gst = parseFloat(lab.gstPercent) || 0;
+        const disc = parseFloat(lab.discount) || 0;
+        const oldTaxable = Math.max(0, (rate * qty) - disc);
+        const oldTotal = oldTaxable * (1 + gst / 100);
+        
+        const newTotal = oldTotal * ratio;
+        const newTaxable = newTotal / (1 + gst / 100);
+        
+        // Rate * Qty = newTaxable + disc
+        const newRate = (newTaxable + disc) / qty;
+        
+        return {
+          ...lab,
+          rate: Math.max(0, Math.round(newRate * 100) / 100).toString()
+        };
+      });
+      setLabourList(updatedLabour);
+    } else if (labourList.length > 0) {
+      const newTotalPerItem = L_tot_new / labourList.length;
+      const updatedLabour = labourList.map(lab => {
+        const qty = parseFloat(lab.qty) || 1;
+        const gst = parseFloat(lab.gstPercent) || 18;
+        const newTaxable = newTotalPerItem / (1 + gst / 100);
+        const newRate = newTaxable / qty;
+        return {
+          ...lab,
+          rate: Math.max(0, Math.round(newRate * 100) / 100).toString()
+        };
+      });
+      setLabourList(updatedLabour);
+    }
+  };
 
   // Parts rows operations
   const handleAddPartRow = () => {
+    setManualOverride(false);
     setPartsList([...partsList, { partId: '', name: '', partNo: '', hsnCode: '', unit: 'Pcs', qty: '1', rate: '', discount: '0', gstPercent: '' }]);
   };
 
   const handleRemovePartRow = (idx) => {
+    setManualOverride(false);
     const list = [...partsList];
     list.splice(idx, 1);
     setPartsList(list);
   };
 
   const handlePartSelect = (idx, partId) => {
+    setManualOverride(false);
     const part = inventory.find(item => item._id === partId);
     if (!part) return;
 
@@ -538,6 +623,7 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
   };
 
   const handlePartRowValue = (idx, field, value) => {
+    setManualOverride(false);
     const list = [...partsList];
     list[idx] = { ...list[idx], [field]: value };
     setPartsList(list);
@@ -545,16 +631,19 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
 
   // Labour rows operations
   const handleAddLabourRow = () => {
+    setManualOverride(false);
     setLabourList([...labourList, { description: '', rate: '', discount: '0', gstPercent: '' }]);
   };
 
   const handleRemoveLabourRow = (idx) => {
+    setManualOverride(false);
     const list = [...labourList];
     list.splice(idx, 1);
     setLabourList(list);
   };
 
   const handleLabourRowValue = (idx, field, value) => {
+    setManualOverride(false);
     const list = [...labourList];
     list[idx] = { ...list[idx], [field]: value };
     setLabourList(list);
@@ -1141,13 +1230,64 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
               <span>Net Taxable Total:</span>
               <span>₹{(totals.partsTotal + totals.labourTotal).toLocaleString()}</span>
             </div>
-            <div className="flex justify-between text-xs font-semibold text-slate-550">
+             <div className="flex justify-between text-xs font-semibold text-slate-550">
               <span>GST Total:</span>
               <span>₹{totals.gstTotal.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between text-sm font-black border-t border-slate-200/50 pt-3 text-slate-900 dark:text-white">
+
+            {/* Grand Total Manual Override */}
+            {['Super Admin', 'Admin', 'Billing', 'Accounts', 'Branch Manager'].includes(user?.role) && (
+              <div className="flex items-center justify-between border-t border-slate-200/50 pt-2 text-xs font-bold text-slate-550 select-none">
+                <span className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={manualOverride}
+                    onChange={(e) => {
+                      if (!e.target.checked) {
+                        setManualOverride(false);
+                        setTriggerRecalc(prev => prev + 1);
+                      } else {
+                        setManualOverride(true);
+                        setOverriddenGrandTotal(totals.grandTotal.toString());
+                      }
+                    }}
+                    className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span>Manual Override Grand Total</span>
+                </span>
+                {manualOverride && (
+                  <span className="text-[10px] text-red-500 uppercase tracking-widest font-black animate-pulse">
+                    Manual Override Active
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-between items-center text-sm font-black border-t border-slate-200/50 pt-3 text-slate-900 dark:text-white">
               <span>Grand Total:</span>
-              <span>₹{totals.grandTotal.toLocaleString()}</span>
+              {manualOverride ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={overriddenGrandTotal}
+                    onChange={(e) => handleGrandTotalOverride(e.target.value)}
+                    className="w-32 px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-mono font-black focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManualOverride(false);
+                      setTriggerRecalc(prev => prev + 1);
+                    }}
+                    className="text-[10px] bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-1.5 rounded-lg transition-colors font-bold"
+                  >
+                    Reset
+                  </button>
+                </div>
+              ) : (
+                <span>₹{totals.grandTotal.toLocaleString()}</span>
+              )}
             </div>
           </div>
         </div>
