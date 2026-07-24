@@ -1648,10 +1648,11 @@ export default function JobCardForm({ token, onSaved, onCancel, editId = null })
         ) : (
           <button
             type="button"
+            disabled={isSaving}
             onClick={handleSave}
-            className="flex items-center gap-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/10"
+            className="flex items-center gap-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/10 disabled:opacity-45"
           >
-            <Save className="w-4 h-4" /> Save Job Card
+            <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Job Card'}
           </button>
         )}
       </div>

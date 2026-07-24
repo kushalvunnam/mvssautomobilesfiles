@@ -35,16 +35,34 @@ const generateJobCardNo = async () => {
   const day = String(today.getDate()).padStart(2, '0');
   const dateStr = `${year}${month}${day}`;
   
-  // Find job cards created today
-  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+  const prefix = `JC-${dateStr}-`;
   
-  const count = await JobCard.countDocuments({
-    createdAt: { $gte: startOfDay, $lte: endOfDay }
-  });
-  
-  const sequence = String(count + 1).padStart(3, '0');
-  return `JC-${dateStr}-${sequence}`;
+  // Find the job card created today with the highest sequence number
+  const lastJobCard = await JobCard.findOne({
+    jobCardNo: new RegExp('^' + prefix)
+  }).sort({ jobCardNo: -1 });
+
+  let nextSeqNum = 1;
+  if (lastJobCard && lastJobCard.jobCardNo) {
+    const parts = lastJobCard.jobCardNo.split('-');
+    if (parts.length === 3) {
+      const lastSeq = parseInt(parts[2], 10);
+      if (!isNaN(lastSeq)) {
+        nextSeqNum = lastSeq + 1;
+      }
+    }
+  }
+
+  // Double check that it does not exist (loop to prevent duplicate index collisions)
+  while (true) {
+    const sequence = String(nextSeqNum).padStart(3, '0');
+    const candidateNo = `${prefix}${sequence}`;
+    const exists = await JobCard.findOne({ jobCardNo: candidateNo });
+    if (!exists) {
+      return candidateNo;
+    }
+    nextSeqNum++;
+  }
 };
 
 
@@ -102,28 +120,44 @@ router.get('/', auth, async (req, res) => {
 
 // Create digital job card
 router.post('/', auth, restrictTo('Admin', 'Service', 'Accounts', 'Body Shop', 'Reception'), async (req, res) => {
-  try {
-    const jobCardNo = await generateJobCardNo();
-    const today = new Date();
-    const timeStr = today.toTimeString().split(' ')[0].slice(0, 5); // HH:MM
+    let jobCard;
+    let saved = false;
+    let attempts = 0;
+    let currentJobCardNo = '';
 
-    const initialStatus = req.body.status || 'Waiting for Customer Approval';
-    const jobCardData = {
-      ...req.body,
-      jobCardNo,
-      time: req.body.time || timeStr,
-      serviceAdvisorId: req.user._id,
-      status: initialStatus,
-      statusHistory: [{
-        status: initialStatus,
-        changedAt: new Date(),
-        changedBy: req.user ? req.user.name : 'System',
-        remarks: 'Initial Job Card Creation'
-      }]
-    };
+    while (!saved && attempts < 3) {
+      try {
+        currentJobCardNo = await generateJobCardNo();
+        const today = new Date();
+        const timeStr = today.toTimeString().split(' ')[0].slice(0, 5); // HH:MM
 
-    const jobCard = new JobCard(jobCardData);
-    await jobCard.save();
+        const initialStatus = req.body.status || 'Waiting for Customer Approval';
+        const jobCardData = {
+          ...req.body,
+          jobCardNo: currentJobCardNo,
+          time: req.body.time || timeStr,
+          serviceAdvisorId: req.user._id,
+          status: initialStatus,
+          statusHistory: [{
+            status: initialStatus,
+            changedAt: new Date(),
+            changedBy: req.user ? req.user.name : 'System',
+            remarks: 'Initial Job Card Creation'
+          }]
+        };
+
+        jobCard = new JobCard(jobCardData);
+        await jobCard.save();
+        saved = true;
+      } catch (saveErr) {
+        attempts++;
+        if (saveErr.code === 11000 && attempts < 3) {
+          console.warn(`[Duplicate JobCardNo] Collision detected for ${currentJobCardNo}, retrying generation (Attempt ${attempts})...`);
+          continue;
+        }
+        throw saveErr;
+      }
+    }
 
     // Automatically create a notification
     try {
@@ -149,7 +183,7 @@ router.post('/', auth, restrictTo('Admin', 'Service', 'Accounts', 'Body Shop', '
     // Update odometer reading on the Vehicle model
     await Vehicle.findByIdAndUpdate(jobCard.vehicleId, { odometerReading: jobCard.odometerReading });
 
-    await logAction(req.user, 'JOBCARD_CREATE', `Created Job Card ${jobCardNo} for vehicle ID ${jobCard.vehicleId}`, req);
+    await logAction(req.user, 'JOBCARD_CREATE', `Created Job Card ${jobCard.jobCardNo} for vehicle ID ${jobCard.vehicleId}`, req);
     res.status(201).send(jobCard);
   } catch (error) {
     res.status(400).send({ error: 'Failed to create job card: ' + error.message });
