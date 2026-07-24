@@ -1197,14 +1197,19 @@ function PartsMasterBillingModal({
 
     // 1. Profit margin / selling price below cost validation
     if (sellPrice < costPrice && !isAuthorized) {
-      alert('Selling Price cannot be below Cost Price unless authorized.');
+      alert('Selling Price cannot be below Cost Price.');
       return;
     }
 
     // 2. Selling Price above MRP validation
-    if (mrpValue > 0 && sellPrice > mrpValue && !isAuthorized && !mrpOverride) {
-      alert('Selling Price cannot exceed MRP unless authorized.');
-      return;
+    if (sellingExceedsMrp) {
+      if (!isAuthorized) {
+        alert('Selling Price cannot exceed MRP.');
+        return;
+      } else if (!mrpOverride) {
+        alert('Selling Price cannot exceed MRP unless Manual Override is confirmed.');
+        return;
+      }
     }
 
     // 3. Discount greater than Selling Price validation
