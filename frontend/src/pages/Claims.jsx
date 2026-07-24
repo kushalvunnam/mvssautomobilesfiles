@@ -831,7 +831,8 @@ export default function Claims({ token, user }) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

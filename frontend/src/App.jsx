@@ -13,6 +13,7 @@ import Estimates from './pages/Estimates';
 import Invoices from './pages/Invoices';
 import Inventory from './pages/Inventory';
 import Claims from './pages/Claims';
+import ErrorBoundary from './components/ErrorBoundary';
 import AuditLogs from './pages/AuditLogs';
 import Employees from './pages/Employees';
 import LandingPage from './pages/LandingPage';
@@ -2069,7 +2070,7 @@ function ERPShell({
                 <Route path="/inventory/expenses" element={<Expenses token={token} user={user} />} />
                 <Route path="/expenses" element={<Expenses token={token} user={user} />} />
                 <Route path="/employees" element={<Employees token={token} user={user} />} />
-                <Route path="/claims" element={<Claims token={token} user={user} />} />
+                <Route path="/claims" element={<ErrorBoundary><Claims token={token} user={user} /></ErrorBoundary>} />
                 <Route path="/reports" element={<Reports token={token} user={user} />} />
                 <Route path="/audit-logs" element={<AuditLogs token={token} />} />
                 <Route path="/gate-pass" element={<GatePasses token={token} user={user} />} />
