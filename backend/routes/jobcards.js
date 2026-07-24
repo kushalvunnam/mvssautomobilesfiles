@@ -118,8 +118,8 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Create digital job card
 router.post('/', auth, restrictTo('Admin', 'Service', 'Accounts', 'Body Shop', 'Reception'), async (req, res) => {
+  try {
     let jobCard;
     let saved = false;
     let attempts = 0;

@@ -192,7 +192,11 @@ app.get('/api/test-email', async (req, res) => {
 
 // Base status endpoint
 app.get('/', (req, res) => {
-  res.json({ status: "API Running" });
+  res.json({
+    status: "ok",
+    service: "MVSS ERP Backend",
+    version: "production"
+  });
 });
 
 // Base API route
@@ -204,8 +208,7 @@ app.get('/api', (req, res) => {
 app.all('/api/*', (req, res) => {
   res.status(404).json({
     success: false,
-    error: 'API endpoint not found.',
-    message: `Cannot ${req.method} ${req.originalUrl}`
+    message: "API endpoint not found"
   });
 });
 
@@ -226,8 +229,7 @@ app.use((err, req, res, next) => {
 app.all('*', (req, res) => {
   res.status(404).json({
     success: false,
-    error: 'Not Found',
-    message: `Cannot ${req.method} ${req.originalUrl}`
+    message: "API endpoint not found"
   });
 });
 
