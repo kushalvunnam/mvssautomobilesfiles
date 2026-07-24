@@ -122,6 +122,24 @@ export default function JobCardDetails({ jcId, token, user, onBack, onCreateEsti
     }
   };
 
+  const getEstimatedBalanceDue = () => {
+    const totalAdvance = jc?.advancePayments ? jc.advancePayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) : 0;
+    let targetTotal = 0;
+    if (estimate && estimate.totals && !isNaN(Number(estimate.totals.roundedGrandTotal))) {
+      targetTotal = Number(estimate.totals.roundedGrandTotal);
+    } else if (jc && jc.estAmt) {
+      const parsedEst = Number(jc.estAmt.toString().replace(/[^0-9.]/g, ''));
+      targetTotal = isNaN(parsedEst) ? 0 : parsedEst;
+    }
+    const balance = targetTotal - totalAdvance;
+    return isNaN(balance) ? 0 : Math.max(0, balance);
+  };
+
+  const getTotalAdvanceReceived = () => {
+    const total = jc?.advancePayments ? jc.advancePayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) : 0;
+    return isNaN(total) ? 0 : total;
+  };
+
   const handleQtyChange = (partId, val) => {
     setQtyInputs({ ...qtyInputs, [partId]: val });
   };
@@ -906,13 +924,13 @@ export default function JobCardDetails({ jcId, token, user, onBack, onCreateEsti
               <div className="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 px-3.5 py-2 rounded-xl text-right">
                 <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Advance Received</span>
                 <span className="text-sm font-black text-emerald-600 dark:text-emerald-450 font-mono">
-                  ₹{(jc.advancePayments ? jc.advancePayments.reduce((sum, p) => sum + p.amount, 0) : 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  ₹{getTotalAdvanceReceived().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 px-3.5 py-2 rounded-xl text-right">
                 <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Estimated Balance Due</span>
                 <span className="text-sm font-black text-slate-700 dark:text-white font-mono">
-                  ₹{Math.max(0, (estimate ? estimate.totals.roundedGrandTotal : (jc.estAmt || 0)) - (jc.advancePayments ? jc.advancePayments.reduce((sum, p) => sum + p.amount, 0) : 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  ₹{getEstimatedBalanceDue().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

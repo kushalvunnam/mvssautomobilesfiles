@@ -326,6 +326,17 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
   }
 });
 
+// Get all advance payments for a Job Card
+router.get('/:id/advance-payments', auth, async (req, res) => {
+  try {
+    const jobCard = await JobCard.findById(req.params.id);
+    if (!jobCard) return res.status(404).send({ error: 'Job Card not found.' });
+    res.send(jobCard.advancePayments || []);
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to fetch advance payments: ' + error.message });
+  }
+});
+
 // Add advance payment to Job Card
 router.post('/:id/advance-payments', auth, restrictTo('Super Admin', 'Admin', 'Billing', 'Billing Executive', 'Accounts'), async (req, res) => {
   try {
@@ -356,6 +367,38 @@ router.post('/:id/advance-payments', auth, restrictTo('Super Admin', 'Admin', 'B
     res.send(jobCard);
   } catch (error) {
     res.status(400).send({ error: 'Failed to record advance payment: ' + error.message });
+  }
+});
+
+// Update/edit advance payment on Job Card
+router.put('/:id/advance-payments/:paymentId', auth, restrictTo('Super Admin', 'Admin', 'Billing', 'Billing Executive', 'Accounts'), async (req, res) => {
+  try {
+    const { amount, type, paymentMode, transactionId, remarks, paymentDate } = req.body;
+    if (amount !== undefined && (isNaN(amount) || amount <= 0)) {
+      return res.status(400).send({ error: 'Valid advance payment amount is required.' });
+    }
+
+    const jobCard = await JobCard.findById(req.params.id);
+    if (!jobCard) return res.status(404).send({ error: 'Job Card not found.' });
+
+    const payment = jobCard.advancePayments.id(req.params.paymentId);
+    if (!payment) {
+      return res.status(404).send({ error: 'Advance payment record not found.' });
+    }
+
+    if (amount !== undefined) payment.amount = Number(amount);
+    if (type !== undefined) payment.type = type;
+    if (paymentMode !== undefined) payment.paymentMode = paymentMode;
+    if (paymentDate !== undefined) payment.paymentDate = new Date(paymentDate);
+    if (transactionId !== undefined) payment.transactionId = transactionId || '';
+    if (remarks !== undefined) payment.remarks = remarks || '';
+
+    await jobCard.save();
+
+    await logAction(req.user, 'JOBCARD_ADVANCE_PAYMENT_UPDATE', `Updated advance payment ID ${payment._id} on Job Card ${jobCard.jobCardNo}`, req);
+    res.send(jobCard);
+  } catch (error) {
+    res.status(400).send({ error: 'Failed to update advance payment: ' + error.message });
   }
 });
 
