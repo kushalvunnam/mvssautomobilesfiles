@@ -11,10 +11,17 @@ const cors = require('cors');
 // Disable Mongoose command buffering when database is offline to prevent hanging requests
 mongoose.set('bufferCommands', false);
 const path = require('path');
+const fs = require('fs');
 const dotenv = require('dotenv');
 
 // Load env vars
 dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/autoworkshop';
 const isLocalhostMongo = !MONGODB_URI || MONGODB_URI.includes('localhost') || MONGODB_URI.includes('127.0.0.1');
@@ -116,6 +123,14 @@ app.use((req, res, next) => {
 
 // Serve static uploaded photos with caching
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
+
+// Serve frontend static files for production
+if (process.env.NODE_ENV === 'production') {
+  const frontendDist = path.join(__dirname, '../dist');
+  if (fs.existsSync(frontendDist)) {
+    app.use(express.static(frontendDist));
+  }
+}
 
 // Database connection health check middleware to prevent 504 gateway timeouts when offline
 app.use('/api', (req, res, next) => {
@@ -227,8 +242,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Fallback JSON 404 Handler for all other unmatched routes
+// Fallback handler - serve frontend for non-API routes in production, otherwise 404
 app.all('*', (req, res) => {
+  if (process.env.NODE_ENV === 'production' && !req.path.startsWith('/api')) {
+    const frontendDist = path.join(__dirname, '../dist');
+    if (fs.existsSync(frontendDist)) {
+      res.sendFile(path.join(frontendDist, 'index.html'));
+      return;
+    }
+  }
   res.status(404).json({
     success: false,
     message: "API endpoint not found"
