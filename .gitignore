@@ -52,3 +52,5 @@ mvss zip.zip
 backend-zip.zip
 /scratch/
 /backend/check_users.js
+/android/keystore.properties
+/android/app/*.jks
