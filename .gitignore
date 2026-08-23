@@ -50,3 +50,5 @@ backend.zip.zip
 query
 mvss zip.zip
 backend-zip.zip
+/scratch/
+/backend/check_users.js
