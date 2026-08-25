@@ -62,8 +62,12 @@ export default function Dashboard({ token, user, setActiveTab }) {
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow > today && user?.role !== 'Admin';
   })();
+  const dateStr = selectedDate.toISOString().split('T')[0];
+  const statsUrl = `${API_BASE_URL}/dashboard/stats?date=${dateStr}`;
+  const chartsUrl = `${API_BASE_URL}/dashboard/charts?date=${dateStr}`;
+
   // 1. Restore the original stats cards state fields with cached fallback
-  const [stats, setStats] = useState(() => getCachedData(`${API_BASE_URL}/dashboard/stats`) || {
+  const [stats, setStats] = useState(() => getCachedData(statsUrl) || {
     totalCustomers: 0,
     totalVehicles: 0,
     activeJobCards: 0,
@@ -79,16 +83,21 @@ export default function Dashboard({ token, user, setActiveTab }) {
   });
 
   // 2. Restore the original charts state bindings with cached fallback
-  const [charts, setCharts] = useState(() => getCachedData(`${API_BASE_URL}/dashboard/charts`) || {
+  const [charts, setCharts] = useState(() => getCachedData(chartsUrl) || {
     revenueChart: [],
     serviceTypeChart: [],
     topPartsChart: [],
     billingBreakdown: { spareParts: 0, labour: 0, gst: 0 }
   });
 
-  const [loading, setLoading] = useState(() => {
-    return !getCachedData(`${API_BASE_URL}/dashboard/stats`);
-  });
+  // Split loading flags for progressive rendering
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [chartsLoading, setChartsLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [reportsLoading, setReportsLoading] = useState(true);
+
+  // Backward compatibility flag
+  const loading = statsLoading || chartsLoading || summaryLoading;
 
   const [summaryFilter, setSummaryFilter] = useState('This Month');
   const [customStartDate, setCustomStartDate] = useState('');
@@ -136,101 +145,152 @@ export default function Dashboard({ token, user, setActiveTab }) {
   const [reportType, setReportType] = useState('monthly');
   const [reportsData, setReportsData] = useState([]);
 
-  const fetchSummaryData = async () => {
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      let url = `${API_BASE_URL}/dashboard/summary?filter=${summaryFilter}&date=${dateStr}`;
-      if (summaryFilter === 'Custom' && customStartDate && customEndDate) {
-        url += `&startDate=${customStartDate}&endDate=${customEndDate}`;
-      }
-      const res = await fetch(url, { headers });
-      if (res.ok) {
-        const data = await res.json();
-        setSummaryData(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch dashboard summary:', err);
-    }
-  };
-
-  const fetchReportsData = async () => {
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      const res = await fetch(`${API_BASE_URL}/dashboard/reports?type=${reportType}&date=${dateStr}`, { headers });
-      if (res.ok) {
-        const data = await res.json();
-        setReportsData(data.reports || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch reports summary:', err);
-    }
-  };
-
-  // 3. Restore the original Promise.all backend data fetch logic with SWR caching
+  // Hook 1: Fetch stats and charts when selectedDate changes
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    let active = true;
+    const fetchStatsAndCharts = async () => {
+      const dateKey = selectedDate.toISOString().split('T')[0];
+      const statsReqUrl = `${API_BASE_URL}/dashboard/stats?date=${dateKey}`;
+      const chartsReqUrl = `${API_BASE_URL}/dashboard/charts?date=${dateKey}`;
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Pre-load from SWR cache immediately
+      const cachedStats = getCachedData(statsReqUrl);
+      const cachedCharts = getCachedData(chartsReqUrl);
+
+      if (cachedStats) {
+        setStats(cachedStats);
+        setStatsLoading(false);
+      } else {
+        setStatsLoading(true);
+      }
+
+      if (cachedCharts) {
+        setCharts(cachedCharts);
+        setChartsLoading(false);
+      } else {
+        setChartsLoading(true);
+      }
+
       try {
-        const headers = { Authorization: `Bearer ${token}` };
-        const dateStr = selectedDate.toISOString().split('T')[0];
-        const statsUrl = `${API_BASE_URL}/dashboard/stats?date=${dateStr}`;
-        const chartsUrl = `${API_BASE_URL}/dashboard/charts?date=${dateStr}`;
-        let summaryUrl = `${API_BASE_URL}/dashboard/summary?filter=${summaryFilter}&date=${dateStr}`;
-        if (summaryFilter === 'Custom' && customStartDate && customEndDate) {
-          summaryUrl += `&startDate=${customStartDate}&endDate=${customEndDate}`;
-        }
-        const reportsUrl = `${API_BASE_URL}/dashboard/reports?type=${reportType}&date=${dateStr}`;
-
-        // Pre-load from SWR cache
-        const cachedStats = getCachedData(statsUrl);
-        const cachedCharts = getCachedData(chartsUrl);
-        const cachedSummary = getCachedData(summaryUrl);
-        const cachedReports = getCachedData(reportsUrl);
-
-        if (cachedStats) setStats(cachedStats);
-        if (cachedCharts) setCharts(cachedCharts);
-        if (cachedSummary) setSummaryData(cachedSummary);
-        if (cachedReports) setReportsData(cachedReports.reports || []);
-
-        if (cachedStats && cachedCharts && cachedSummary && cachedReports) {
-          setLoading(false);
-        } else {
-          setLoading(true);
-        }
-
-        // Parallelize all 4 independent requests!
-        await Promise.all([
-          (async () => {
-            const res = await fetch(statsUrl, { headers });
-            if (res.ok) {
-              const data = await res.json();
-              setCachedData(statsUrl, data);
-              setStats(data);
-            }
-          })(),
-          (async () => {
-            const res = await fetch(chartsUrl, { headers });
-            if (res.ok) {
-              const data = await res.json();
-              setCachedData(chartsUrl, data);
-              setCharts(data);
-            }
-          })(),
-          fetchSummaryData(),
-          fetchReportsData()
+        const [statsRes, chartsRes] = await Promise.all([
+          fetch(statsReqUrl, { headers }),
+          fetch(chartsReqUrl, { headers })
         ]);
+
+        if (statsRes.ok && active) {
+          const statsData = await statsRes.json();
+          setCachedData(statsReqUrl, statsData);
+          setStats(statsData);
+          setStatsLoading(false);
+        }
+        if (chartsRes.ok && active) {
+          const chartsData = await chartsRes.json();
+          setCachedData(chartsReqUrl, chartsData);
+          setCharts(chartsData);
+          setChartsLoading(false);
+        }
       } catch (err) {
-        console.error('Failed to fetch dashboard metrics:', err);
+        console.error('Failed to fetch stats/charts:', err);
       } finally {
-        setLoading(false);
+        if (active) {
+          setStatsLoading(false);
+          setChartsLoading(false);
+        }
       }
     };
 
-    fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 60000);
-    return () => clearInterval(interval);
-  }, [token, selectedDate, summaryFilter, customStartDate, customEndDate, reportType]);
+    fetchStatsAndCharts();
+    const interval = setInterval(fetchStatsAndCharts, 60000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [token, selectedDate]);
+
+  // Hook 2: Fetch summary data when date or filter changes
+  useEffect(() => {
+    let active = true;
+    const fetchSummary = async () => {
+      const dateKey = selectedDate.toISOString().split('T')[0];
+      let summaryUrl = `${API_BASE_URL}/dashboard/summary?filter=${summaryFilter}&date=${dateKey}`;
+      if (summaryFilter === 'Custom') {
+        if (!customStartDate || !customEndDate) return;
+        summaryUrl += `&startDate=${customStartDate}&endDate=${customEndDate}`;
+      }
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const cachedSummary = getCachedData(summaryUrl);
+      if (cachedSummary) {
+        setSummaryData(cachedSummary);
+        setSummaryLoading(false);
+      } else {
+        setSummaryLoading(true);
+      }
+
+      try {
+        const res = await fetch(summaryUrl, { headers });
+        if (res.ok && active) {
+          const data = await res.json();
+          setCachedData(summaryUrl, data);
+          setSummaryData(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch dashboard summary:', err);
+      } finally {
+        if (active) {
+          setSummaryLoading(false);
+        }
+      }
+    };
+
+    fetchSummary();
+    const interval = setInterval(fetchSummary, 60000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [token, selectedDate, summaryFilter, customStartDate, customEndDate]);
+
+  // Hook 3: Fetch Period Reports when date or reportType changes
+  useEffect(() => {
+    let active = true;
+    const fetchReports = async () => {
+      const dateKey = selectedDate.toISOString().split('T')[0];
+      const reportsUrl = `${API_BASE_URL}/dashboard/reports?type=${reportType}&date=${dateKey}`;
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const cachedReports = getCachedData(reportsUrl);
+      if (cachedReports) {
+        setReportsData(cachedReports.reports || []);
+        setReportsLoading(false);
+      } else {
+        setReportsLoading(true);
+      }
+
+      try {
+        const res = await fetch(reportsUrl, { headers });
+        if (res.ok && active) {
+          const data = await res.json();
+          setCachedData(reportsUrl, data);
+          setReportsData(data.reports || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch period reports:', err);
+      } finally {
+        if (active) {
+          setReportsLoading(false);
+        }
+      }
+    };
+
+    fetchReports();
+    const interval = setInterval(fetchReports, 60000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [token, selectedDate, reportType]);
 
 
 
@@ -540,15 +600,14 @@ export default function Dashboard({ token, user, setActiveTab }) {
         )}
 
         {/* Billing & Profit KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Card 1: Revenue & Billing */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">          {/* Card 1: Revenue & Billing */}
           <div className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 p-5 rounded-2xl space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-slate-400 dark:text-slate-550 uppercase tracking-wide">Revenue & Billing</span>
               <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">{summaryFilter}</span>
             </div>            <div className="space-y-1">
               <span className="text-2xl font-black text-slate-800 dark:text-white block">
-                {loading ? <span className="inline-block h-6 w-32 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1" /> : `₹${(summaryData.periodStats?.totalBilling || 0).toLocaleString('en-IN')}`}
+                {summaryLoading ? <span className="inline-block h-6 w-32 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1" /> : `₹${(summaryData.periodStats?.totalBilling || 0).toLocaleString('en-IN')}`}
               </span>
               <span className="text-[10px] text-slate-450 font-semibold block">Total Grand Billing Amount</span>
             </div>
@@ -556,27 +615,27 @@ export default function Dashboard({ token, user, setActiveTab }) {
               <div>
                 <span className="block text-slate-400">GST Collected</span>
                 <span className="text-slate-700 dark:text-slate-300">
-                  {loading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `₹${(summaryData.periodStats?.gstCollected || 0).toLocaleString('en-IN')}`}
+                  {summaryLoading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `₹${(summaryData.periodStats?.gstCollected || 0).toLocaleString('en-IN')}`}
                 </span>
               </div>
               <div>
                 <span className="block text-slate-400">Discounts Allowed</span>
                 <span className="text-slate-700 dark:text-slate-300">
-                  {loading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `₹${(summaryData.periodStats?.discounts || 0).toLocaleString('en-IN')}`}
+                  {summaryLoading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `₹${(summaryData.periodStats?.discounts || 0).toLocaleString('en-IN')}`}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Card 2: Spare Parts Performance */}
-          <div className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 p-5 rounded-2xl space-y-4">
+          <div className="bg-slate-50 dark:bg-slate-955 border border-slate-100 dark:border-slate-900/60 p-5 rounded-2xl space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-slate-400 dark:text-slate-550 uppercase tracking-wide">Parts Performance</span>
               <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">{summaryFilter}</span>
             </div>
             <div className="space-y-1">
               <span className="text-2xl font-black text-slate-800 dark:text-white block">
-                {loading ? <span className="inline-block h-6 w-32 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1" /> : `₹${(summaryData.periodStats?.salePartsValue || 0).toLocaleString('en-IN')}`}
+                {summaryLoading ? <span className="inline-block h-6 w-32 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1" /> : `₹${(summaryData.periodStats?.salePartsValue || 0).toLocaleString('en-IN')}`}
               </span>
               <span className="text-[10px] text-slate-450 font-semibold block">Parts Selling Value</span>
             </div>
@@ -584,13 +643,13 @@ export default function Dashboard({ token, user, setActiveTab }) {
               <div>
                 <span className="block text-slate-400">Parts Purchase Value</span>
                 <span className="text-slate-700 dark:text-slate-300">
-                  {loading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `₹${(summaryData.periodStats?.purchasePartsValue || 0).toLocaleString('en-IN')}`}
+                  {summaryLoading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `₹${(summaryData.periodStats?.purchasePartsValue || 0).toLocaleString('en-IN')}`}
                 </span>
               </div>
               <div>
                 <span className="block text-slate-400">Net Parts Revenue</span>
                 <span className="text-slate-750 dark:text-slate-200">
-                  {loading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `₹${Math.max(0, (summaryData.periodStats?.salePartsValue || 0) - (summaryData.periodStats?.discounts || 0)).toLocaleString('en-IN')}`}
+                  {summaryLoading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `₹${Math.max(0, (summaryData.periodStats?.salePartsValue || 0) - (summaryData.periodStats?.discounts || 0)).toLocaleString('en-IN')}`}
                 </span>
               </div>
             </div>
@@ -604,7 +663,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
             </div>
             <div className="space-y-1">
               <span className="text-2xl font-black text-slate-800 dark:text-white block">
-                {loading ? <span className="inline-block h-6 w-32 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1" /> : `₹${(summaryData.periodStats?.labourRevenue || 0).toLocaleString('en-IN')}`}
+                {summaryLoading ? <span className="inline-block h-6 w-32 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1" /> : `₹${(summaryData.periodStats?.labourRevenue || 0).toLocaleString('en-IN')}`}
               </span>
               <span className="text-[10px] text-slate-440 font-semibold block">Total Labour Charges</span>
             </div>
@@ -612,13 +671,13 @@ export default function Dashboard({ token, user, setActiveTab }) {
               <div>
                 <span className="block text-slate-400">Closed Job Cards</span>
                 <span className="text-slate-700 dark:text-slate-300 font-extrabold text-xs">
-                  {loading ? <span className="inline-block h-3.5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `${summaryData.periodStats?.closedJobCardsCount || 0} Cards`}
+                  {summaryLoading ? <span className="inline-block h-3.5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `${summaryData.periodStats?.closedJobCardsCount || 0} Cards`}
                 </span>
               </div>
               <div>
                 <span className="block text-slate-400">Workforce Revenue</span>
                 <span className="text-slate-750 dark:text-slate-200">
-                  {loading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `₹${(summaryData.periodStats?.labourRevenue || 0).toLocaleString('en-IN')}`}
+                  {summaryLoading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-0.5" /> : `₹${(summaryData.periodStats?.labourRevenue || 0).toLocaleString('en-IN')}`}
                 </span>
               </div>
             </div>
@@ -633,7 +692,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
             </div>
             <div className="space-y-1">
               <span className="text-3xl font-black block">
-                {loading ? <span className="inline-block h-8 w-40 bg-white/20 animate-pulse rounded mt-1" /> : `₹${(summaryData.periodStats?.netProfit || 0).toLocaleString('en-IN')}`}
+                {summaryLoading ? <span className="inline-block h-8 w-40 bg-white/20 animate-pulse rounded mt-1" /> : `₹${(summaryData.periodStats?.netProfit || 0).toLocaleString('en-IN')}`}
               </span>
               <span className="text-[10px] text-emerald-100 font-semibold block">Net Profit (Gross Profit - Expenses)</span>
             </div>
@@ -641,13 +700,13 @@ export default function Dashboard({ token, user, setActiveTab }) {
               <div>
                 <span className="block text-emerald-200">Gross Profit</span>
                 <span className="text-white text-xs font-black">
-                  {loading ? <span className="inline-block h-3.5 w-16 bg-white/20 animate-pulse rounded mt-0.5" /> : `₹${(summaryData.periodStats?.grossProfit || 0).toLocaleString('en-IN')}`}
+                  {summaryLoading ? <span className="inline-block h-3.5 w-16 bg-white/20 animate-pulse rounded mt-0.5" /> : `₹${(summaryData.periodStats?.grossProfit || 0).toLocaleString('en-IN')}`}
                 </span>
               </div>
               <div>
                 <span className="block text-emerald-200">Profit Margin %</span>
                 <span className="text-white text-xs font-black">
-                  {loading ? (
+                  {summaryLoading ? (
                     <span className="inline-block h-3.5 w-12 bg-white/20 animate-pulse rounded mt-0.5" />
                   ) : summaryData.periodStats?.salePartsValue + summaryData.periodStats?.labourRevenue > 0
                     ? `${Math.round((summaryData.periodStats?.grossProfit / (summaryData.periodStats?.salePartsValue + summaryData.periodStats?.labourRevenue)) * 100)}%`
@@ -763,7 +822,21 @@ export default function Dashboard({ token, user, setActiveTab }) {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-                {reportsData.length > 0 ? (
+                {reportsLoading ? (
+                  [...Array(3)].map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="px-4 py-3.5"><div className="h-4 w-16 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                      <td className="px-4 py-3.5"><div className="h-4 w-12 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                      <td className="px-4 py-3.5"><div className="h-4 w-14 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                      <td className="px-4 py-3.5"><div className="h-4 w-14 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                      <td className="px-4 py-3.5"><div className="h-4 w-14 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                      <td className="px-4 py-3.5"><div className="h-4 w-14 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                      <td className="px-4 py-3.5"><div className="h-4 w-14 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                      <td className="px-4 py-3.5"><div className="h-4 w-14 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                      <td className="px-4 py-3.5"><div className="h-4 w-16 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                    </tr>
+                  ))
+                ) : reportsData.length > 0 ? (
                   reportsData.map(rep => (
                     <tr key={rep.periodLabel} className="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-all font-mono">
                       <td className="px-4 py-3.5 font-bold font-sans text-slate-900 dark:text-white">{rep.periodLabel}</td>
@@ -792,7 +865,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatsCard 
           title="Total Customers" 
-          value={loading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.totalCustomers || 0)} 
+          value={statsLoading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.totalCustomers || 0)} 
           icon={Users} 
           description="Registered Clients" 
           trend="+4%" 
@@ -800,7 +873,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Total Vehicles" 
-          value={loading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.totalVehicles || 0)} 
+          value={statsLoading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.totalVehicles || 0)} 
           icon={Car} 
           description="Automobile Registry" 
           trend="+5%" 
@@ -808,7 +881,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Active Job Cards" 
-          value={loading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.activeJobCards || 0)} 
+          value={statsLoading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.activeJobCards || 0)} 
           icon={FileText} 
           description="Active Shop Floor" 
           trend="In Progress" 
@@ -816,7 +889,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Completed Job Cards" 
-          value={loading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.completedJobCards || 0)} 
+          value={statsLoading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.completedJobCards || 0)} 
           icon={CheckCircle2} 
           description="Delivered Vehicles" 
           trend="Closed" 
@@ -824,7 +897,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Pending Job Cards" 
-          value={loading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.pendingJobCards || 0)} 
+          value={statsLoading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.pendingJobCards || 0)} 
           icon={Clock} 
           description="Awaiting Work" 
           trend="Queue" 
@@ -832,7 +905,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Revenue This Month" 
-          value={loading ? <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : `₹${Math.round(stats.revenueThisMonth || stats.monthlyRevenue || 0).toLocaleString('en-IN')}`} 
+          value={statsLoading ? <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : `₹${Math.round(stats.revenueThisMonth || stats.monthlyRevenue || 0).toLocaleString('en-IN')}`} 
           icon={IndianRupee} 
           description="Current Month" 
           trend="+12%" 
@@ -840,7 +913,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Revenue This Year" 
-          value={loading ? <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : `₹${Math.round(stats.revenueThisYear || 0).toLocaleString('en-IN')}`} 
+          value={statsLoading ? <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : `₹${Math.round(stats.revenueThisYear || 0).toLocaleString('en-IN')}`} 
           icon={TrendingUp} 
           description="Current Year" 
           trend="Annual" 
@@ -848,7 +921,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Pending Payments" 
-          value={loading ? <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : `₹${Math.round(stats.pendingPayments || 0).toLocaleString('en-IN')}`} 
+          value={statsLoading ? <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : `₹${Math.round(stats.pendingPayments || 0).toLocaleString('en-IN')}`} 
           icon={IndianRupee} 
           description="Unpaid Invoices" 
           trend="Due" 
@@ -856,7 +929,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Inventory Value" 
-          value={loading ? <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : `₹${Math.round(stats.inventoryValue || 0).toLocaleString('en-IN')}`} 
+          value={statsLoading ? <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : `₹${Math.round(stats.inventoryValue || 0).toLocaleString('en-IN')}`} 
           icon={ShoppingBag} 
           description="Stock Valuation" 
           trend="Asset" 
@@ -864,7 +937,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Low Stock Items" 
-          value={loading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.lowStockItems || 0)} 
+          value={statsLoading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.lowStockItems || 0)} 
           icon={AlertTriangle} 
           description="Needs Reordering" 
           trend={stats.lowStockItems > 0 ? 'Warning' : 'OK'} 
@@ -872,7 +945,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Insurance Claims" 
-          value={loading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.insuranceClaims || 0)} 
+          value={statsLoading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.insuranceClaims || 0)} 
           icon={ShieldCheck} 
           description="Insurance surveys" 
           trend="Claims" 
@@ -880,7 +953,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
         />
         <StatsCard 
           title="Body Shop Jobs" 
-          value={loading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.bodyShopJobs || 0)} 
+          value={statsLoading ? <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 animate-pulse rounded mt-1.5" /> : (stats.bodyShopJobs || 0)} 
           icon={Wrench} 
           description="Dent/Paint/Align" 
           trend="In Progress" 
@@ -994,7 +1067,7 @@ export default function Dashboard({ token, user, setActiveTab }) {
             </div>
             
             <div className="relative mt-2">
-              {loading ? (
+              {chartsLoading ? (
                 <div className="w-full h-[200px] bg-slate-55/40 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-850 rounded-2xl animate-pulse flex items-center justify-center text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                   Loading Chart...
                 </div>

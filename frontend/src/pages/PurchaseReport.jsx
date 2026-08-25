@@ -136,84 +136,94 @@ export default function PurchaseReport({ token, user }) {
 
   const invoiceNoRef = useRef(null);
 
-  const [attachment, setAttachment] = useState(null);
+  const [attachments, setAttachments] = useState([]);
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
 
+  const handleFilesUpload = async (filesList) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
-      alert('Only JPG, JPEG, PNG, WEBP, and PDF files are allowed.');
-      return;
-    }
+    const validFiles = Array.from(filesList).filter(file => {
+      if (!allowedTypes.includes(file.type)) {
+        alert(`File "${file.name}" ignored. Only JPG, JPEG, PNG, WEBP, and PDF files are allowed.`);
+        return false;
+      }
+      return true;
+    });
 
-    setAttachment({
+    if (validFiles.length === 0) return;
+
+    const newAttachments = validFiles.map(file => ({
+      id: Math.random().toString(36).substring(7),
       file,
       name: file.name,
+      size: file.size,
       type: file.type,
       status: 'uploading',
       url: ''
-    });
+    }));
 
-    try {
-      if (token === 'mock_jwt_token_for_offline_demo') {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setAttachment({
-            file,
-            name: file.name,
-            type: file.type,
-            status: 'uploaded',
-            url: reader.result
-          });
-        };
-        reader.onerror = () => {
-          setAttachment(prev => ({
-            ...prev,
-            status: 'error'
-          }));
-        };
-        reader.readAsDataURL(file);
-      } else {
-        const formData = new FormData();
-        formData.append('attachment', file);
+    setAttachments(prev => [...prev, ...newAttachments]);
 
-        const res = await fetch(`${API_BASE_URL}/purchases/upload-attachment`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`
-          },
-          body: formData
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setAttachment({
-            file,
-            name: data.attachmentName || file.name,
-            type: data.attachmentType || file.type,
-            status: 'uploaded',
-            url: data.attachmentUrl
-          });
+    for (const att of newAttachments) {
+      try {
+        if (token === 'mock_jwt_token_for_offline_demo') {
+          const reader = new FileReader();
+          reader.onload = () => {
+            setAttachments(prev => prev.map(item => 
+              item.id === att.id 
+                ? { ...item, status: 'uploaded', url: reader.result }
+                : item
+            ));
+          };
+          reader.readAsDataURL(att.file);
         } else {
-          setAttachment(prev => ({
-            ...prev,
-            status: 'error'
-          }));
+          const formData = new FormData();
+          formData.append('attachment', att.file);
+
+          const res = await fetch(`${API_BASE_URL}/purchases/upload-attachment`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setAttachments(prev => prev.map(item => 
+              item.id === att.id 
+                ? { ...item, status: 'uploaded', url: data.attachmentUrl, name: data.attachmentName || item.name, type: data.attachmentType || item.type }
+                : item
+            ));
+          } else {
+            setAttachments(prev => prev.map(item => 
+              item.id === att.id ? { ...item, status: 'error' } : item
+            ));
+          }
         }
+      } catch (err) {
+        console.error(err);
+        setAttachments(prev => prev.map(item => 
+          item.id === att.id ? { ...item, status: 'error' } : item
+        ));
       }
-    } catch (err) {
-      console.error(err);
-      setAttachment(prev => ({
-        ...prev,
-        status: 'error'
-      }));
     }
   };
 
-  const handleRemoveAttachment = () => {
-    setAttachment(null);
+  const handleFileChange = (e) => {
+    if (e.target.files) {
+      handleFilesUpload(e.target.files);
+    }
+  };
+
+  const handleRemoveAttachment = (indexToRemove) => {
+    setAttachments(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   // Auto-focus Invoice No. field on tab change or duplicate error detection
@@ -697,15 +707,22 @@ export default function PurchaseReport({ token, user }) {
 
     // 2. Prefill form state
     setEditPurchaseId(p._id);
-    if (p.attachmentUrl) {
-      setAttachment({
+    if (p.attachments && p.attachments.length > 0) {
+      setAttachments(p.attachments.map(att => ({
+        url: att.url,
+        name: att.name || 'Attached Document',
+        type: att.type || 'image/jpeg',
+        status: 'uploaded'
+      })));
+    } else if (p.attachmentUrl) {
+      setAttachments([{
         url: p.attachmentUrl,
         name: p.attachmentName || 'Attached Document',
         type: p.attachmentType || 'image/jpeg',
         status: 'uploaded'
-      });
+      }]);
     } else {
-      setAttachment(null);
+      setAttachments([]);
     }
     const hasIgst = p.totals?.igstTotal > 0 || p.items.some(item => (item.igst || 0) > 0);
     setPurchaseHeader({
@@ -938,9 +955,14 @@ export default function PurchaseReport({ token, user }) {
       updateMRP: purchaseHeader.updateMRP,
       billingType: purchaseHeader.billingType || 'Intra-State',
       reason,
-      attachmentUrl: attachment && attachment.status === 'uploaded' ? attachment.url : '',
-      attachmentName: attachment && attachment.status === 'uploaded' ? attachment.name : '',
-      attachmentType: attachment && attachment.status === 'uploaded' ? attachment.type : ''
+      attachments: attachments.filter(att => att.status === 'uploaded').map(att => ({
+        url: att.url,
+        name: att.name,
+        type: att.type
+      })),
+      attachmentUrl: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].url : '',
+      attachmentName: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].name : '',
+      attachmentType: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].type : ''
     };
 
     setPurchaseSubmitting(true);
@@ -975,7 +997,7 @@ export default function PurchaseReport({ token, user }) {
             billingType: 'Intra-State'
           });
           setPurchaseItems([createEmptyRow()]);
-          setAttachment(null);
+          setAttachments([]);
           fetchPurchases();
           fetchPurchaseReports();
           fetchInventoryList();
@@ -1890,7 +1912,82 @@ export default function PurchaseReport({ token, user }) {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-4 pt-1">
+            {/* Attach Invoice / Bill (Multiple Files Allowed) Upload Zone */}
+            <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                Attach Invoice / Bill (Multiple Files Allowed)
+              </span>
+              <div 
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.files) handleFilesUpload(e.dataTransfer.files); }}
+                className="border-2 border-dashed border-slate-350 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-2xl p-8 text-center bg-slate-50 dark:bg-slate-800/40 cursor-pointer transition-colors relative"
+              >
+                <input 
+                  type="file" 
+                  multiple 
+                  accept=".jpg,.jpeg,.png,.webp,.pdf"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-955/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                  </div>
+                  <p className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
+                    Drag & drop files here, or <span className="text-indigo-600 dark:text-indigo-400">browse</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    Supports JPEG, PNG, WEBP, and PDF files.
+                  </p>
+                </div>
+              </div>
+
+              {/* List of uploaded files / chips */}
+              {attachments.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                  {attachments.map((att, idx) => (
+                    <div 
+                      key={att.id || idx} 
+                      className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-lg shrink-0">
+                          {att.type?.includes('pdf') ? '📄' : '🖼️'}
+                        </span>
+                        <div className="flex flex-col text-left min-w-0">
+                          <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]" title={att.name}>
+                            {att.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-extrabold uppercase">
+                            {att.status === 'uploading' ? (
+                              <span className="text-indigo-500 animate-pulse">Uploading...</span>
+                            ) : att.status === 'error' ? (
+                              <span className="text-red-500">Failed</span>
+                            ) : (
+                              formatFileSize(att.size || 0)
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAttachment(idx)}
+                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-rose-600 transition-colors"
+                        title="Remove file"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
               <div className="text-left">
                 <span className="text-[10px] font-bold text-slate-400">Items: {purchaseItems.length} | Qty: {summaryTotals.totalQty} Pcs</span>
               </div>
@@ -1911,41 +2008,6 @@ export default function PurchaseReport({ token, user }) {
                 >
                   Cancel
                 </button>
-
-                {/* 📎 Attach Invoice/Bill Option Beside Save Button */}
-                <div className="flex items-center">
-                  {!attachment ? (
-                    <label className="w-full sm:w-auto px-5 py-3.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 text-slate-700 dark:text-slate-200">
-                      <span>📎 Attach Invoice/Bill</span>
-                      <input
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </label>
-                  ) : (
-                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-850 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-750">
-                      <div className="flex flex-col text-left min-w-0">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Invoice/Bill:</span>
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate max-w-[140px] flex items-center gap-1" title={attachment.name}>
-                          📎 {attachment.name}
-                        </span>
-                      </div>
-                      {attachment.status === 'uploading' ? (
-                        <span className="text-[10px] text-slate-400 font-extrabold uppercase animate-pulse shrink-0">Uploading...</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleRemoveAttachment}
-                          className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-955/20 dark:text-rose-400 dark:hover:bg-rose-955/40 rounded-lg text-[10px] font-bold transition-all shrink-0"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
 
                 <button
                   type="submit"
@@ -2614,48 +2676,39 @@ export default function PurchaseReport({ token, user }) {
               </div>
 
               {/* Document Attachment Display in Voucher */}
-              {selectedVoucher.attachmentUrl && (
+              {((selectedVoucher.attachments && selectedVoucher.attachments.length > 0) || selectedVoucher.attachmentUrl) && (
                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 print:hidden text-xs">
                   <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-2 tracking-wider">
-                    Attached Document
+                    Attached Document(s)
                   </span>
-                  <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 gap-4 mb-2">
-                    <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-xs flex-1">
-                      📎 {selectedVoucher.attachmentName || 'purchase_document'}
-                    </span>
-                    {brokenAttachments[selectedVoucher.attachmentUrl] ? (
-                      <span className="text-[10px] font-bold text-red-500">
-                        Unavailable
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const src = getAttachmentSrc(selectedVoucher.attachmentUrl);
-                          window.open(src, '_blank');
-                        }}
-                        className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-650 dark:bg-indigo-955/40 dark:text-indigo-400 text-[10px] font-bold rounded-lg transition-all"
-                      >
-                        View / Download
-                      </button>
-                    )}
+                  <div className="grid grid-cols-1 gap-4">
+                    {(selectedVoucher.attachments && selectedVoucher.attachments.length > 0
+                      ? selectedVoucher.attachments
+                      : [{ url: selectedVoucher.attachmentUrl, name: selectedVoucher.attachmentName || 'purchase_document', type: selectedVoucher.attachmentType || 'image/jpeg' }]
+                    ).map((att, idx) => (
+                      <div key={idx} className="flex flex-col gap-2 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <a href={getAttachmentSrc(att.url)} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1.5 break-all">
+                          📎 {att.name || `Attachment ${idx + 1}`}
+                        </a>
+                        {brokenAttachments[att.url] ? (
+                          <div className="text-slate-400 dark:text-slate-500 text-[10px] font-bold p-3 bg-slate-100 dark:bg-slate-850 rounded-lg text-center">
+                            No preview available for offline/missing attachment.
+                          </div>
+                        ) : (
+                          <>
+                            {!att.type?.includes('pdf') && (
+                              <img 
+                                src={getAttachmentSrc(att.url)} 
+                                alt={att.name || "Attachment"} 
+                                className="max-h-60 rounded-lg object-contain bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-750" 
+                                onError={() => setBrokenAttachments(prev => ({ ...prev, [att.url]: true }))}
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  {!selectedVoucher.attachmentType?.includes('pdf') && (
-                    <div className="mt-3 aspect-video w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
-                      {brokenAttachments[selectedVoucher.attachmentUrl] ? (
-                        <span className="text-[10px] font-bold text-red-500">
-                          Attachment is no longer available.
-                        </span>
-                      ) : (
-                        <img
-                          src={getAttachmentSrc(selectedVoucher.attachmentUrl)}
-                          alt="Voucher document"
-                          onError={() => setBrokenAttachments(prev => ({ ...prev, [selectedVoucher.attachmentUrl]: true }))}
-                          className="h-full w-full object-contain"
-                        />
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
             </div>

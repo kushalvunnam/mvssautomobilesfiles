@@ -631,12 +631,12 @@ export default function Invoices({ token, user, setActiveTab }) {
               text-transform: uppercase;
               font-size: 9px;
               padding: 8px;
-              border: 1px solid #1e3a8a;
+              border: 1.5px solid #000000;
               text-align: center;
             }
             .items-table td {
               padding: 8px;
-              border: 1px solid #111111;
+              border: 1.5px solid #000000;
               text-align: center;
               vertical-align: middle;
             }
@@ -648,7 +648,7 @@ export default function Invoices({ token, user, setActiveTab }) {
             }
             .totals-table td {
               padding: 6px;
-              border: 1px solid #111111;
+              border: 1.5px solid #000000;
             }
             .totals-table tr.grand-total td {
               background: #f3f4f6;
@@ -848,8 +848,17 @@ export default function Invoices({ token, user, setActiveTab }) {
               </tr>
             </table>
 
-            <div style="margin-top: 20px; font-size: 9px; color: #666;">
-              <strong>Declaration:</strong> We declare that this invoice shows the actual price of the goods and services described and that all particulars are true and correct.
+            <div style="margin-top: 35px; display: flex; justify-content: space-between; gap: 20px; page-break-inside: avoid;">
+              <div style="flex: 1; max-width: 340px; border: 1.5px solid #000; padding: 12px; border-radius: 8px; font-size: 8.5px; line-height: 1.5; text-align: left; box-sizing: border-box;">
+                <strong style="display: block; font-size: 9px; margin-bottom: 6px; font-weight: bold; text-transform: uppercase;">Instructions / Terms & Conditions</strong>
+                1. Goods once sold will not be taken back or exchanged.<br/>
+                2. Payment should be made within the due date mentioned above.<br/>
+                3. Please quote this invoice number for any communication.<br/>
+                4. Subject to Hyderabad Jurisdiction only.
+              </div>
+              <div style="flex: 1; font-size: 8.5px; color: #666; font-style: italic; text-align: left; align-self: center;">
+                <strong>Declaration:</strong> We declare that this invoice shows the actual price of the goods and services described and that all particulars are true and correct.
+              </div>
             </div>
 
             <div class="footer-section">
