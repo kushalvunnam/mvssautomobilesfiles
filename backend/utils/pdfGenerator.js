@@ -304,43 +304,43 @@ function generateJobCardPDF(jobCard, customer, vehicle, stream) {
 
   // Estimated Work details & QC Status info Box
   checkPageOverflow(85);
-  doc.rect(35, currentY, 520, 75).strokeColor('#cccccc').lineWidth(1).stroke();
+  doc.rect(35, currentY, 520, 75).strokeColor('#000000').lineWidth(1.5).stroke();
   
   doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#1e293b').text('Estimated Work details:', 45, currentY + 8);
   doc.font('Helvetica').fontSize(8).fillColor('#000000')
      .text(`Est. Amount: Rs. ${jobCard.estAmt || 0}`, 45, currentY + 22)
      .text(`Promised Date: ${jobCard.promDate ? new Date(jobCard.promDate).toLocaleDateString('en-IN') : 'TBD'}`, 45, currentY + 36)
      .text(`Promised Time: ${jobCard.promTime || 'TBD'}`, 45, currentY + 50);
-
+ 
   doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#1e293b').text('Workshop & QC Status details:', 300, currentY + 8);
   doc.font('Helvetica').fontSize(8).fillColor('#000000')
      .text(`Job Progress: ${jobCard.jobProgress || 0}% Completed`, 300, currentY + 22)
      .text(`QC Status: ${jobCard.qcStatus || 'Pending Inspection'}`, 300, currentY + 36)
      .text(`Est. Completion: ${jobCard.estimatedCompletionDate ? new Date(jobCard.estimatedCompletionDate).toLocaleDateString('en-IN') : 'TBD'}`, 300, currentY + 50);
-
+ 
   currentY += 95;
-
+ 
   // 6. Signatures Section
   checkPageOverflow(65);
   doc.font('Helvetica').fontSize(8.5);
   doc.text('Customer Signature', 50, currentY + 45);
   doc.text('Technician Signature', 230, currentY + 45);
   doc.text('Service Advisor Signature', 415, currentY + 45);
-
+ 
   if (jobCard.signatures && jobCard.signatures.customer) {
     try {
       doc.image(jobCard.signatures.customer, 40, currentY + 5, { width: 80, height: 35 });
     } catch(e) {}
   } else {
-    doc.strokeColor('#cccccc').dash(3, {space: 3}).moveTo(30, currentY + 38).lineTo(130, currentY + 38).stroke().undash();
+    doc.strokeColor('#000000').lineWidth(1.5).dash(3, {space: 3}).moveTo(30, currentY + 38).lineTo(130, currentY + 38).stroke().undash();
   }
-
+ 
   if (jobCard.signatures && jobCard.signatures.technician) {
     try {
       doc.image(jobCard.signatures.technician, 220, currentY + 5, { width: 80, height: 35 });
     } catch(e) {}
   } else {
-    doc.strokeColor('#cccccc').dash(3, {space: 3}).moveTo(210, currentY + 38).lineTo(310, currentY + 38).stroke().undash();
+    doc.strokeColor('#000000').lineWidth(1.5).dash(3, {space: 3}).moveTo(210, currentY + 38).lineTo(310, currentY + 38).stroke().undash();
   }
   
   if (jobCard.signatures && jobCard.signatures.advisor) {
@@ -348,7 +348,7 @@ function generateJobCardPDF(jobCard, customer, vehicle, stream) {
       doc.image(jobCard.signatures.advisor, 430, currentY + 5, { width: 80, height: 35 });
     } catch(e) {}
   } else {
-    doc.strokeColor('#cccccc').dash(3, {space: 3}).moveTo(400, currentY + 38).lineTo(500, currentY + 38).stroke().undash();
+    doc.strokeColor('#000000').lineWidth(1.5).dash(3, {space: 3}).moveTo(400, currentY + 38).lineTo(500, currentY + 38).stroke().undash();
   }
 
   addPageNumbers(doc);
@@ -1358,7 +1358,7 @@ function generateGatePassPDF(docData, customer, vehicle, stream) {
     doc.text(f.value, 215, rowY);
 
     if (idx < fields.length - 1) {
-      doc.strokeColor('#cccccc').lineWidth(0.5)
+      doc.strokeColor('#000000').lineWidth(1.5)
          .moveTo(30, y + ((idx + 1) * 25)).lineTo(565, y + ((idx + 1) * 25)).stroke();
     }
   });
@@ -1366,7 +1366,7 @@ function generateGatePassPDF(docData, customer, vehicle, stream) {
   y += 230;
 
   // Status Box
-  doc.strokeColor('#000000').lineWidth(1)
+  doc.strokeColor('#000000').lineWidth(1.5)
      .rect(30, y + 20, 535, 40).stroke();
 
   doc.fillColor('#15803d')
