@@ -842,15 +842,15 @@ function drawInvoiceFooter(doc, y, isInvoice = false, invoice = null) {
   }
        
   doc.strokeColor('#666666').dash(2, {space: 2})
-     .moveTo(350, y + 60).lineTo(520, y + 60).stroke().undash();
+     .moveTo(350, y + 85).lineTo(520, y + 85).stroke().undash();
       
   doc.font('Helvetica').fontSize(7)
-     .text('Authorized Signatory', 350, y + 65);
-      
+     .text('Authorized Signatory', 350, y + 92);
+       
   doc.strokeColor('#666666').dash(2, {space: 2})
-     .moveTo(50, y + 60).lineTo(200, y + 60).stroke().undash();
-      
-  doc.font('Helvetica').fontSize(7).text('Customer Signature', 50, y + 65);
+     .moveTo(50, y + 85).lineTo(200, y + 85).stroke().undash();
+       
+  doc.font('Helvetica').fontSize(7).text('Customer Signature', 50, y + 92);
 }
 
 // Generate Estimate PDF
