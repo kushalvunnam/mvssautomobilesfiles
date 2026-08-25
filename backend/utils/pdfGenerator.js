@@ -39,7 +39,7 @@ const checkIsInterstate = (customer) => {
 // Helper to draw horizontal lines
 function drawLine(doc, y) {
   doc.strokeColor('#000000')
-     .lineWidth(1.2)
+     .lineWidth(1.5)
      .moveTo(30, y)
      .lineTo(565, y)
      .stroke();
@@ -365,7 +365,7 @@ function drawVerticalLines(doc, yStart, yEnd, gstMode = 'cgst_sgst') {
     // none mode
     xCoords = [30, 50, 175, 210, 235, 255, 295, 340, 385, 565];
   }
-  doc.strokeColor('#000000').lineWidth(1.2);
+  doc.strokeColor('#000000').lineWidth(1.5);
   xCoords.forEach(x => {
     doc.moveTo(x, yStart).lineTo(x, yEnd).stroke();
   });
@@ -593,7 +593,7 @@ function drawTableRow(doc, y, index, desc, hsn, uom, qty, rate, partsTaxable, la
     doc.text(total, 385, y + 4, { width: 177, align: 'right' });
   }
   
-  doc.strokeColor('#000000').lineWidth(1.2)
+  doc.strokeColor('#000000').lineWidth(1.5)
      .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
   
   drawVerticalLines(doc, y, y + 16, gstMode);
@@ -616,7 +616,7 @@ function drawPartsTotalRow(doc, y, taxableSum, cgstSum, sgstSum, totalSum, gstMo
     doc.text(totalSum.toFixed(2), 385, y + 4, { width: 177, align: 'right' });
   }
 
-  doc.strokeColor('#000000').lineWidth(1.2)
+  doc.strokeColor('#000000').lineWidth(1.5)
      .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
   drawVerticalLines(doc, y, y + 16, gstMode);
 }
@@ -638,7 +638,7 @@ function drawLabourTotalRow(doc, y, taxableSum, cgstSum, sgstSum, totalSum, gstM
     doc.text(totalSum.toFixed(2), 385, y + 4, { width: 177, align: 'right' });
   }
 
-  doc.strokeColor('#000000').lineWidth(1.2)
+  doc.strokeColor('#000000').lineWidth(1.5)
      .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
   drawVerticalLines(doc, y, y + 16, gstMode);
 }
@@ -893,7 +893,7 @@ function generateEstimatePDF(estimate, customer, vehicle, stream, jobCard) {
     doc.text('PARTS', 53, y + 4);
     
     // draw horizontal line at y + 16
-    doc.strokeColor('#000000').lineWidth(1.2)
+    doc.strokeColor('#000000').lineWidth(1.5)
        .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
     drawVerticalLines(doc, y, y + 16, gstMode);
     y += 16;
@@ -969,7 +969,7 @@ function generateEstimatePDF(estimate, customer, vehicle, stream, jobCard) {
     doc.fillColor('#000000').font('Helvetica-Bold').fontSize(7.5);
     doc.text('LABOUR CHARGES', 53, y + 4);
     
-    doc.strokeColor('#000000').lineWidth(1.2)
+    doc.strokeColor('#000000').lineWidth(1.5)
        .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
     drawVerticalLines(doc, y, y + 16, gstMode);
     y += 16;
@@ -1110,7 +1110,7 @@ function generateInvoicePDF(invoice, customer, vehicle, stream) {
     doc.text('PARTS', 53, y + 4);
     
     // draw horizontal line at y + 16
-    doc.strokeColor('#000000').lineWidth(1.2)
+    doc.strokeColor('#000000').lineWidth(1.5)
        .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
     drawVerticalLines(doc, y, y + 16, gstMode);
     y += 16;
@@ -1188,7 +1188,7 @@ function generateInvoicePDF(invoice, customer, vehicle, stream) {
     doc.fillColor('#000000').font('Helvetica-Bold').fontSize(7.5);
     doc.text('LABOUR CHARGES', 53, y + 4);
     
-    doc.strokeColor('#000000').lineWidth(1.2)
+    doc.strokeColor('#000000').lineWidth(1.5)
        .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
     drawVerticalLines(doc, y, y + 16, gstMode);
     y += 16;
@@ -1408,7 +1408,7 @@ function generateGatePassPDF(docData, customer, vehicle, stream) {
 
 function drawCustomerVerticalLines(doc, yStart, yEnd) {
   const xCoords = [30, 60, 390, 420, 480, 565];
-  doc.strokeColor('#000000').lineWidth(1.2);
+  doc.strokeColor('#000000').lineWidth(1.5);
   xCoords.forEach(x => {
     doc.moveTo(x, yStart).lineTo(x, yEnd).stroke();
   });
@@ -1423,7 +1423,7 @@ function drawCustomerTableRow(doc, y, index, desc, qty, unitPrice, total) {
   doc.text(unitPrice, 420, y + 4, { width: 55, align: 'right' });
   doc.text(total, 480, y + 4, { width: 80, align: 'right' });
   
-  doc.strokeColor('#000000').lineWidth(1.2)
+  doc.strokeColor('#000000').lineWidth(1.5)
      .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
   
   drawCustomerVerticalLines(doc, y, y + 16);
@@ -1432,7 +1432,7 @@ function drawCustomerTableRow(doc, y, index, desc, qty, unitPrice, total) {
 function checkCustomerPageOverflow(doc, currentY) {
   if (currentY > 730) {
     doc.addPage();
-    doc.strokeColor('#000000').lineWidth(1)
+    doc.strokeColor('#000000').lineWidth(1.5)
        .rect(30, 30, 535, 782).stroke();
     doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8.5)
        .text('MVSS Automobiles Private Limited (Continued)', 30, 36, { width: 535, align: 'center' });
@@ -1615,7 +1615,7 @@ function generateCustomerEstimatePDF(estimate, customer, vehicle, stream) {
     doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8);
     doc.text('PARTS', 53, y + 4);
     
-    doc.strokeColor('#000000').lineWidth(1.2)
+    doc.strokeColor('#000000').lineWidth(1.5)
        .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
     drawCustomerVerticalLines(doc, y, y + 16);
     y += 16;
@@ -1652,7 +1652,7 @@ function generateCustomerEstimatePDF(estimate, customer, vehicle, stream) {
     doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8);
     doc.text('PARTS TOTAL', 53, y + 4, { width: 225 });
     doc.text(partsTotalSum.toFixed(2), 480, y + 4, { width: 80, align: 'right' });
-    doc.strokeColor('#000000').lineWidth(1.2)
+    doc.strokeColor('#000000').lineWidth(1.5)
        .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
     drawCustomerVerticalLines(doc, y, y + 16);
     y += 16;
@@ -1666,7 +1666,7 @@ function generateCustomerEstimatePDF(estimate, customer, vehicle, stream) {
     doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8);
     doc.text('LABOUR CHARGES', 53, y + 4);
     
-    doc.strokeColor('#000000').lineWidth(1.2)
+    doc.strokeColor('#000000').lineWidth(1.5)
        .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
     drawCustomerVerticalLines(doc, y, y + 16);
     y += 16;
