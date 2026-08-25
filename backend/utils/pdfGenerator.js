@@ -1546,13 +1546,13 @@ function drawCustomerMetadataGrid(doc, y, customer, vehicle, docNo, docDate, est
 function drawCustomerSummaryBlock(doc, y, totals, grandTotalWords) {
   if (y > 580) {
     doc.addPage();
-    doc.strokeColor('#000000').lineWidth(1)
+    doc.strokeColor('#000000').lineWidth(1.5)
        .rect(30, 30, 535, 782).stroke();
     y = 40;
   }
   
   // Outer border of the summary block (ends at y + 60)
-  doc.strokeColor('#000000').lineWidth(1)
+  doc.strokeColor('#000000').lineWidth(1.5)
      .rect(30, y, 535, 60).stroke();
      
   // Vertical separator line
@@ -1574,7 +1574,7 @@ function drawCustomerSummaryBlock(doc, y, totals, grandTotalWords) {
   y += 60;
   
   // Total Grand Box
-  doc.strokeColor('#000000').lineWidth(1)
+  doc.strokeColor('#000000').lineWidth(1.5)
      .rect(30, y, 535, 30).stroke();
      
   doc.fillColor('#000000').font('Helvetica-Bold').fontSize(9.5);
@@ -1592,7 +1592,7 @@ function generateCustomerEstimatePDF(estimate, customer, vehicle, stream) {
   doc.pipe(stream);
 
   // draw outer border
-  doc.strokeColor('#000000').lineWidth(1)
+  doc.strokeColor('#000000').lineWidth(1.5)
      .rect(30, 30, 535, 782).stroke();
 
   // Company and title header
@@ -1703,14 +1703,14 @@ function generateCustomerEstimatePDF(estimate, customer, vehicle, stream) {
     doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8);
     doc.text('LABOUR TOTAL', 53, y + 4, { width: 225 });
     doc.text(labourTotalSum.toFixed(2), 480, y + 4, { width: 80, align: 'right' });
-    doc.strokeColor('#000000').lineWidth(0.7)
+    doc.strokeColor('#000000').lineWidth(1.5)
        .moveTo(30, y + 16).lineTo(565, y + 16).stroke();
     drawCustomerVerticalLines(doc, y, y + 16);
     y += 16;
   }
 
   // Draw bottom border to close the table cells
-  doc.strokeColor('#000000').lineWidth(1)
+  doc.strokeColor('#000000').lineWidth(1.5)
      .moveTo(30, y).lineTo(565, y).stroke();
 
   const summaryTotals = {
