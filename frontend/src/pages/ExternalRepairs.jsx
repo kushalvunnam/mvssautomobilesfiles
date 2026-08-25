@@ -104,7 +104,7 @@ export default function ExternalRepairs({ token, user }) {
 
   const fetchJobCards = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/jobcards`, {
+      const res = await fetch(`${API_BASE_URL}/jobcards?excludeDelivered=true`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {

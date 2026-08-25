@@ -241,7 +241,7 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
     const fetchData = async () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const jcRes = await fetch(`${API_BASE_URL}/jobcards`, { headers });
+        const jcRes = await fetch(`${API_BASE_URL}/jobcards?excludeDelivered=true`, { headers });
         const estRes = await fetch(`${API_BASE_URL}/estimates`, { headers });
 
         if (jcRes.ok && estRes.ok) {

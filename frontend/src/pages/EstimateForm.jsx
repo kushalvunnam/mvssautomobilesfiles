@@ -273,7 +273,7 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
         const headers = { Authorization: `Bearer ${token}` };
         
         // Load active jobcards (excluding fully delivered ones)
-        const jcRes = await fetch(`${API_BASE_URL}/jobcards`, { headers });
+        const jcRes = await fetch(`${API_BASE_URL}/jobcards?excludeDelivered=true`, { headers });
         const invRes = await fetch(`${API_BASE_URL}/inventory`, { headers });
         
         if (jcRes.ok) {
