@@ -3,10 +3,10 @@ import { createPortal } from 'react-dom';
 import { Search, ChevronDown, X } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
-const ROW_HEIGHT = 38;
+const ROW_HEIGHT = 52;
 
 function defaultRenderLabel(item) {
-  return `${item.jobCardNo} | Reg: ${item.vehicleNo} | Cust: ${item.customerName} | Vehicle: ${item.vehicleModel} | Date: ${item.dateFormatted} | Status: ${item.status}`;
+  return `${item.customerName || 'Unknown Customer'} | ${item.jobCardNo} | Reg: ${item.vehicleNo || 'N/A'} | ${item.vehicleModel || 'No Vehicle Info'}`;
 }
 
 export default function JobCardSearchableDropdown({
@@ -348,14 +348,19 @@ export default function JobCardSearchableDropdown({
                   key={item._id}
                   onMouseDown={(e) => { e.preventDefault(); handleSelect(item); }}
                   onMouseEnter={() => setHighlightedIdx(idx)}
-                  className={`px-4 flex items-center text-xs font-semibold cursor-pointer whitespace-nowrap w-fit min-w-full ${
+                  className={`px-4 py-2 flex flex-col justify-center cursor-pointer border-b border-slate-50 dark:border-slate-800/40 w-full ${
                     idx === highlightedIdx
                       ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300'
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
                   style={{ height: ROW_HEIGHT }}
                 >
-                  {defaultRenderLabel(item)}
+                  <span className="text-xs font-bold block truncate">
+                    {item.customerName || 'Unknown Customer'}
+                  </span>
+                  <span className="text-[10px] text-slate-450 mt-0.5 block truncate">
+                    {item.jobCardNo}  •  {item.vehicleNo || 'N/A'}  •  {item.vehicleModel || 'No Vehicle Info'}
+                  </span>
                 </div>
               ))}
             </div>
