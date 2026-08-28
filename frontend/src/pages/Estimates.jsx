@@ -375,12 +375,12 @@ export default function Estimates({ token, user, setActiveTab }) {
               text-transform: uppercase;
               font-size: 9px;
               padding: 8px;
-              border: 1.5px solid #000000;
+              border: 2px solid #000000;
               text-align: center;
             }
             .items-table td {
               padding: 8px;
-              border: 1.5px solid #000000;
+              border: 2px solid #000000;
               text-align: center;
               vertical-align: middle;
             }
@@ -392,7 +392,7 @@ export default function Estimates({ token, user, setActiveTab }) {
             }
             .totals-table td {
               padding: 6px;
-              border: 1.5px solid #000000;
+              border: 2px solid #000000;
             }
             .totals-table tr.grand-total td {
               background: #f3f4f6;
@@ -410,7 +410,7 @@ export default function Estimates({ token, user, setActiveTab }) {
               font-weight: bold;
             }
             .footer-section {
-              margin-top: 40px;
+              margin-top: 50px;
               display: flex;
               justify-content: space-between;
               page-break-inside: avoid;
@@ -558,8 +558,8 @@ export default function Estimates({ token, user, setActiveTab }) {
               </tr>
             </table>
 
-            <div style="margin-top: 35px; display: flex; justify-content: space-between; gap: 20px; page-break-inside: avoid;">
-              <div style="flex: 1; max-width: 340px; border: 1.5px solid #000; padding: 12px; border-radius: 8px; font-size: 8.5px; line-height: 1.5; text-align: left; box-sizing: border-box;">
+            <div style="margin-top: 45px; display: flex; justify-content: space-between; gap: 20px; page-break-inside: avoid;">
+              <div style="flex: 1; max-width: 340px; border: 2px solid #000; padding: 12px; border-radius: 8px; font-size: 8.5px; line-height: 1.5; text-align: left; box-sizing: border-box;">
                 <strong style="display: block; font-size: 9px; margin-bottom: 6px; font-weight: bold; text-transform: uppercase;">Instructions / Terms & Conditions</strong>
                 1. Goods once sold will not be taken back or exchanged.<br/>
                 2. Payment should be made within the due date mentioned above.<br/>
@@ -571,14 +571,15 @@ export default function Estimates({ token, user, setActiveTab }) {
               </div>
             </div>
 
-            <div class="footer-section">
+            <div class="footer-section" style="margin-top: 50px;">
               <div>
-                <div style="font-weight: bold; text-decoration: underline; margin-bottom: 5px;">Customer Approval Sign</div>
-                <div style="height: 40px;"></div>
+                <div style="font-weight: bold; font-size: 9px; margin-bottom: 8px;">Customer Signature</div>
+                <div style="height: 45px; width: 180px; border-bottom: 1.5px dashed #000;"></div>
+                <div style="font-size: 8px; color: #555; margin-top: 5px; font-weight: bold;">Customer Approval Sign</div>
               </div>
               <div>
                 <div style="font-weight: bold; text-align: center;">For MVSS AUTOMOBILES PRIVATE LIMITED</div>
-                <div class="signature-box">Service Advisor</div>
+                <div class="signature-box" style="margin-top: 45px;">Authorized Signatory / Service Advisor</div>
               </div>
             </div>
           </div>

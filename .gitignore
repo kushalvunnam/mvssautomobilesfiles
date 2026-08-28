@@ -54,3 +54,4 @@ backend-zip.zip
 /backend/check_users.js
 /android/keystore.properties
 /android/app/*.jks
+.vercel
