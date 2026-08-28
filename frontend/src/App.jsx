@@ -54,7 +54,10 @@ import {
   TrendingUp,
   ShoppingBag,
   Wallet,
-  Key
+  Key,
+  X,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 import * as mockData from './utils/mockData';
@@ -268,6 +271,44 @@ export default function App() {
 
         if (urlStr.includes('/api/auth/profile')) {
           return responseJson(user || { id: 'demo_user_id', name: 'System Admin', email: 'admin@mvssautomobiles.com', role: 'Admin' });
+        }
+
+        if (urlStr.includes('/api/auth/users')) {
+          if (urlStr.includes('/change-password')) {
+            return responseJson({ success: true, message: 'User password reset successfully.' });
+          }
+          let mockUsers = JSON.parse(sessionStorage.getItem('mock_users') || '[]');
+          if (mockUsers.length === 0) {
+            mockUsers = [
+              { _id: 'u1', name: 'System Admin', email: 'admin@mvssautomobiles.com', role: 'Admin', active: true },
+              { _id: 'u2', name: 'Accounts Executive', email: 'accounts@mvssautomobiles.com', role: 'Accounts Executive', active: true },
+              { _id: 'u3', name: 'Service Advisor', email: 'service@mvssautomobiles.com', role: 'Service', active: true },
+              { _id: 'u4', name: 'Spares Manager', email: 'spares@mvssautomobiles.com', role: 'Spares', active: true }
+            ];
+            sessionStorage.setItem('mock_users', JSON.stringify(mockUsers));
+          }
+
+          let updated = false;
+          mockUsers = mockUsers.map(u => {
+            if (u.email?.toLowerCase().endsWith('@autoworkshop.com') && u.active !== false) {
+              updated = true;
+              return { ...u, active: false };
+            }
+            return u;
+          });
+          if (updated) {
+            sessionStorage.setItem('mock_users', JSON.stringify(mockUsers));
+          }
+
+          const filtered = mockUsers.filter(u => 
+            u.active !== false && 
+            u.email?.toLowerCase().endsWith('@mvssautomobiles.com')
+          );
+          return responseJson(filtered);
+        }
+
+        if (urlStr.includes('/api/auth/change-password')) {
+          return responseJson({ success: true, message: 'Password updated successfully.' });
         }
 
         if (urlStr.includes('/api/dashboard/stats')) {
@@ -1247,16 +1288,84 @@ export default function App() {
           const db = JSON.parse(sessionStorage.getItem('mock_employees') || '[]');
           
           if (method === 'GET') {
-            return responseJson(db);
+            const parsedUrl = new URL(urlStr, window.location.origin);
+            const status = parsedUrl.searchParams.get('status');
+            const search = parsedUrl.searchParams.get('search');
+            const page = parsedUrl.searchParams.get('page');
+            const limit = parsedUrl.searchParams.get('limit');
+
+            let filtered = [...db];
+
+            if (status && status.toLowerCase() !== 'all') {
+              filtered = filtered.filter(emp => (emp.status || 'Active').toLowerCase() === status.toLowerCase());
+            }
+
+            if (search) {
+              const query = search.toLowerCase();
+              filtered = filtered.filter(emp => 
+                emp.name?.toLowerCase().includes(query) ||
+                emp.email?.toLowerCase().includes(query) ||
+                emp.phone?.includes(query) ||
+                emp.employeeId?.toLowerCase().includes(query) ||
+                emp.department?.toLowerCase().includes(query) ||
+                emp.role?.toLowerCase().includes(query)
+              );
+            }
+
+            if (page || limit) {
+              const pageNum = parseInt(page, 10) || 1;
+              const limitNum = parseInt(limit, 10) || 10;
+              const totalCount = filtered.length;
+              const totalPages = Math.ceil(totalCount / limitNum);
+              const skip = (pageNum - 1) * limitNum;
+              const paginated = filtered.slice(skip, skip + limitNum);
+
+              return responseJson({
+                employees: paginated,
+                totalPages,
+                currentPage: pageNum,
+                totalCount
+              });
+            }
+
+            return responseJson(filtered);
           }
 
           if (method === 'POST') {
-            // Check if attendance request
+            // Check if bulk attendance request
+            if (urlStr.includes('/attendance/bulk')) {
+              const { date, records } = body;
+              const attendanceDate = new Date(date).toISOString().substring(0, 10);
+              const updatedEmployees = [];
+              for (const record of records) {
+                const { employeeId, status } = record;
+                const idx = db.findIndex(emp => emp._id === employeeId);
+                if (idx !== -1) {
+                  if ((db[idx].status || 'Active') !== 'Active') {
+                    return responseJson({ error: 'Attendance cannot be marked for an inactive employee.' }, 400);
+                  }
+                  if (!db[idx].attendance) db[idx].attendance = [];
+                  db[idx].attendance = db[idx].attendance.filter(a => {
+                    const d = new Date(a.date).toISOString().substring(0, 10);
+                    return d !== attendanceDate;
+                  });
+                  db[idx].attendance.push({ date: new Date(date).toISOString(), status });
+                  updatedEmployees.push(db[idx]);
+                }
+              }
+              sessionStorage.setItem('mock_employees', JSON.stringify(db));
+              return responseJson({ success: true, count: updatedEmployees.length });
+            }
+
+            // Check if individual attendance request
             if (urlStr.includes('/attendance')) {
               const parts = urlStr.split('/');
               const id = parts[parts.length - 2];
               const idx = db.findIndex(emp => emp._id === id);
               if (idx !== -1) {
+                if ((db[idx].status || 'Active') !== 'Active') {
+                  return responseJson({ error: 'Attendance cannot be marked for an inactive employee.' }, 400);
+                }
                 const { date, status } = body;
                 const attendanceDate = new Date(date).toISOString().substring(0, 10);
                 if (!db[idx].attendance) db[idx].attendance = [];
@@ -1407,6 +1516,67 @@ export default function App() {
             }
             return responseJson({ error: 'Employee not found' }, 404);
           }
+        }
+
+        if (urlStr.includes('/api/purchases/upload-attachment')) {
+          if (method === 'POST') {
+            const file = body && typeof body.get === 'function' ? body.get('attachment') : null;
+            let fileUrl = 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?q=80&w=600';
+            let fileName = 'mock_document.jpg';
+            let fileType = 'image/jpeg';
+            if (file && file instanceof File) {
+              fileUrl = await readFileAsDataURL(file);
+              fileName = file.name;
+              fileType = file.type;
+            }
+            return responseJson({ attachmentUrl: fileUrl, attachmentName: fileName, attachmentType: fileType });
+          }
+        }
+
+        if (urlStr.includes('/api/purchases/check-duplicate')) {
+          return responseJson({ available: true });
+        }
+
+        if (urlStr.includes('/api/purchases/')) {
+          if (urlStr.includes('/check-in-use')) {
+            return responseJson({ isInUse: false, warnings: [] });
+          }
+        }
+
+        if (urlStr.includes('/api/purchases')) {
+          const db = JSON.parse(sessionStorage.getItem('mock_purchases') || '[]');
+          
+          if (method === 'GET') {
+            return responseJson(db);
+          }
+          
+          if (method === 'POST') {
+            const newItem = {
+              _id: 'pur_' + Date.now(),
+              purchaseNo: 'PUR-' + Math.round(Date.now() / 1000).toString().slice(-6),
+              date: new Date().toISOString(),
+              ...body
+            };
+            db.unshift(newItem);
+            sessionStorage.setItem('mock_purchases', JSON.stringify(db));
+            return responseJson(newItem, 201);
+          }
+          
+          if (method === 'PUT') {
+            const id = urlStr.split('/').pop();
+            const idx = db.findIndex(p => p._id === id);
+            if (idx !== -1) {
+              db[idx] = { ...db[idx], ...body };
+              sessionStorage.setItem('mock_purchases', JSON.stringify(db));
+              return responseJson(db[idx]);
+            }
+            return responseJson({ error: 'Purchase not found' }, 404);
+          }
+        }
+
+        if (urlStr.includes('/api/reports/purchase-history')) {
+          const db = JSON.parse(sessionStorage.getItem('mock_purchases') || '[]');
+          return responseJson(db);
         }
 
         if (urlStr.includes('/api/customers/search')) {
@@ -1707,6 +1877,8 @@ export default function App() {
     }
   }, [token]);
 
+
+
   useEffect(() => {
     if (user && !loading) {
       const userRole = user.role || 'Guest';
@@ -1893,6 +2065,137 @@ function ERPShell({
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const [allUsers, setAllUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [selectedRole, setSelectedRole] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (showChangePasswordModal && user?.role === 'Admin') {
+      const fetchAllUsers = async () => {
+        setAdminUsersLoading(true);
+        try {
+          const res = await fetch(`${API_BASE_URL}/auth/users`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setAllUsers(data);
+            const uniqueRoles = [...new Set(data.map(u => u.role).filter(Boolean))];
+            setRoles(uniqueRoles);
+          }
+        } catch (err) {
+          console.error('Failed to fetch users:', err);
+        } finally {
+          setAdminUsersLoading(false);
+        }
+      };
+      fetchAllUsers();
+    } else {
+      setSelectedRole('');
+      setSelectedUserId('');
+      setAllUsers([]);
+      setRoles([]);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+    }
+  }, [showChangePasswordModal, user, token]);
+
+  const handlePasswordChangeSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    const isAdminReset = user?.role === 'Admin';
+
+    if (isAdminReset) {
+      if (!selectedRole) {
+        setPasswordError('Please select a role.');
+        return;
+      }
+      if (!selectedUserId) {
+        setPasswordError('Please select a user.');
+        return;
+      }
+      if (!passwordForm.newPassword || !passwordForm.confirmPassword) {
+        setPasswordError('Password and confirmation are required.');
+        return;
+      }
+      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+        setPasswordError('Passwords do not match.');
+        return;
+      }
+      if (passwordForm.newPassword.length < 6) {
+        setPasswordError('Password must be at least 6 characters long.');
+        return;
+      }
+    } else {
+      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+        setPasswordError('New passwords do not match.');
+        return;
+      }
+      if (passwordForm.newPassword.length < 6) {
+        setPasswordError('New password must be at least 6 characters long.');
+        return;
+      }
+      if (passwordForm.newPassword === passwordForm.currentPassword) {
+        setPasswordError('New password cannot be the same as the current password.');
+        return;
+      }
+    }
+
+    setPasswordLoading(true);
+    try {
+      const url = isAdminReset 
+        ? `${API_BASE_URL}/auth/users/${selectedUserId}/change-password`
+        : `${API_BASE_URL}/auth/change-password`;
+
+      const bodyData = isAdminReset
+        ? { newPassword: passwordForm.newPassword, confirmPassword: passwordForm.confirmPassword }
+        : passwordForm;
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(bodyData)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPasswordSuccess(isAdminReset ? 'User password updated successfully.' : 'Password changed successfully.');
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setSelectedRole('');
+        setSelectedUserId('');
+        setTimeout(() => {
+          setShowChangePasswordModal(false);
+          setPasswordSuccess('');
+        }, 1500);
+      } else {
+        setPasswordError(data.error || 'Failed to update password.');
+      }
+    } catch (err) {
+      setPasswordError('Network error. Failed to connect to server.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   // Sync activeTab state based on current URL path
   useEffect(() => {
     const path = location.pathname;
@@ -1997,6 +2300,7 @@ function ERPShell({
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
         isCollapsed={isCollapsed}
+        onChangePassword={() => setShowChangePasswordModal(true)}
       />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
@@ -2010,12 +2314,13 @@ function ERPShell({
                 const next = !prev;
                 localStorage.setItem('sidebar_collapsed', next.toString());
                 return next;
-              });
+                });
             } else {
               setSidebarOpen(prev => !prev);
             }
           }} 
           onLogout={handleLogout} 
+          onChangePassword={() => setShowChangePasswordModal(true)}
           onNavigate={(tab) => {
             setActiveTab(tab);
             setViewJcId(null);
@@ -2158,6 +2463,167 @@ function ERPShell({
           )}
         </div>
       </div>
+      {showChangePasswordModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[100] animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                {user?.role === 'Admin' ? 'CHANGE USER PASSWORD' : 'Change Account Password'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowChangePasswordModal(false);
+                  setPasswordError('');
+                  setPasswordSuccess('');
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {passwordError && (
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-650 dark:text-red-400 text-xs font-bold rounded-xl border border-red-200/50 dark:border-red-900/30">
+                {passwordError}
+              </div>
+            )}
+            {passwordSuccess && (
+              <div className="p-3 bg-green-50 dark:bg-green-950/30 text-green-650 dark:text-green-400 text-xs font-bold rounded-xl border border-green-200/50 dark:border-green-900/30">
+                {passwordSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handlePasswordChangeSubmit} className="space-y-4">
+              {user?.role === 'Admin' ? (
+                <>
+                  {/* Select Role */}
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase text-slate-450 mb-1">Select Role *</label>
+                    <select
+                      required
+                      value={selectedRole}
+                      onChange={e => {
+                        setSelectedRole(e.target.value);
+                        setSelectedUserId('');
+                      }}
+                      className="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 font-semibold focus:outline-none focus:border-indigo-600 dark:text-white"
+                    >
+                      <option value="">-- Select Role --</option>
+                      {roles.map(role => (
+                        <option key={role} value={role}>{role}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Select User */}
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase text-slate-450 mb-1">Select User *</label>
+                    <select
+                      required
+                      value={selectedUserId}
+                      onChange={e => setSelectedUserId(e.target.value)}
+                      className="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 font-semibold focus:outline-none focus:border-indigo-600 dark:text-white"
+                    >
+                      <option value="">-- Select User --</option>
+                      {(() => {
+                        const seen = new Set();
+                        return allUsers
+                          .filter(u => {
+                            if (!u.email) return false;
+                            const emailLower = u.email.trim().toLowerCase();
+                            if (seen.has(emailLower)) return false;
+                            seen.add(emailLower);
+                            return u.role === selectedRole && 
+                                   u.active !== false && 
+                                   emailLower.endsWith('@mvssautomobiles.com');
+                          })
+                          .map(u => (
+                            <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
+                          ));
+                      })()}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                /* Normal User flow: Current Password */
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-450 mb-1">Current Password *</label>
+                  <input 
+                    type="password"
+                    required
+                    value={passwordForm.currentPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 font-semibold focus:outline-none focus:border-indigo-600 dark:text-white"
+                  />
+                </div>
+              )}
+
+               <div>
+                <label className="block text-[10px] font-extrabold uppercase text-slate-450 mb-1">New Password *</label>
+                <div className="relative">
+                  <input 
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    value={passwordForm.newPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 pr-10 font-semibold focus:outline-none focus:border-indigo-600 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-slate-450 mb-1">Confirm New Password *</label>
+                <div className="relative">
+                  <input 
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={passwordForm.confirmPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className={`w-full text-xs bg-slate-50 dark:bg-slate-955 border ${passwordForm.newPassword && passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword ? 'border-red-500 focus:border-red-500' : 'border-slate-200 dark:border-slate-800 focus:border-indigo-600'} rounded-xl p-3 pr-10 font-semibold focus:outline-none dark:text-white`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {passwordForm.newPassword && passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
+                  <p className="text-[10px] font-bold text-red-650 dark:text-red-450 mt-1">Passwords do not match.</p>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowChangePasswordModal(false);
+                    setPasswordError('');
+                    setPasswordSuccess('');
+                  }}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/10 disabled:opacity-50"
+                >
+                  {passwordLoading ? 'Saving...' : 'Update Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

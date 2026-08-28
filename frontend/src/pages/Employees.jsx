@@ -3,12 +3,35 @@ import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import InternationalPhoneInput from '../components/InternationalPhoneInput';
 import { Search, Plus, Calendar, Receipt, Download, FileText, CheckCircle2, XCircle, AlertCircle, Save, Edit2, Trash2, Eye, X, UserPlus } from 'lucide-react';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 export default function Employees({ token, user }) {
   const [employees, setEmployees] = useState([]);
+  const [attendanceEmployees, setAttendanceEmployees] = useState([]);
   const [activeTab, setActiveTab] = useState('registry'); // 'registry', 'attendance', 'salary'
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All'); // 'All', 'Active', 'Inactive'
+  const [search, setSearch] = useState(() => {
+    return localStorage.getItem('employee_search_filter') || '';
+  });
+  const [statusFilter, setStatusFilter] = useState(() => {
+    return localStorage.getItem('employee_status_filter') || 'All';
+  });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 10;
+
+  useEffect(() => {
+    localStorage.setItem('employee_search_filter', search);
+  }, [search]);
+
+  useEffect(() => {
+    localStorage.setItem('employee_status_filter', statusFilter);
+  }, [statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -289,21 +312,58 @@ export default function Employees({ token, user }) {
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/employees`, {
+      const queryParams = new URLSearchParams();
+      queryParams.append('status', statusFilter);
+      queryParams.append('search', search);
+      queryParams.append('page', currentPage);
+      queryParams.append('limit', limit);
+
+      const res = await fetch(`${API_BASE_URL}/employees?${queryParams.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setEmployees(data);
+        if (data && data.employees) {
+          setEmployees(data.employees);
+          setTotalPages(data.totalPages || 1);
+          setTotalCount(data.totalCount || 0);
+        } else if (Array.isArray(data)) {
+          setEmployees(data);
+          setTotalPages(1);
+          setTotalCount(data.length);
+        }
       }
     } catch (err) {
       console.error(err);
     }
   };
 
+  const fetchAttendanceEmployees = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/employees?status=Active&limit=1000`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const list = data.employees || data;
+        if (Array.isArray(list)) {
+          setAttendanceEmployees(list.filter(e => e.status === 'Active'));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch attendance employees:', err);
+    }
+  };
+
   useEffect(() => {
     fetchEmployees();
-  }, [token]);
+  }, [token, statusFilter, search, currentPage]);
+
+  useEffect(() => {
+    if (activeTab === 'attendance') {
+      fetchAttendanceEmployees();
+    }
+  }, [activeTab, token, attendanceDate]);
 
   useEffect(() => {
     const globalFilter = localStorage.getItem('global_search_filter');
@@ -317,7 +377,7 @@ export default function Employees({ token, user }) {
   useEffect(() => {
     const map = {};
     const remMap = {};
-    employees.forEach(emp => {
+    attendanceEmployees.forEach(emp => {
       const record = emp.attendance?.find(a => {
         const d = new Date(a.date).toISOString().substring(0, 10);
         return d === attendanceDate;
@@ -328,7 +388,7 @@ export default function Employees({ token, user }) {
     });
     setAttendanceMap(map);
     setAttendanceRemarksMap(remMap);
-  }, [attendanceDate, employees]);
+  }, [attendanceDate, attendanceEmployees]);
 
   // Recalculate leaves and net salary when salary inputs change
   useEffect(() => {
@@ -616,6 +676,7 @@ export default function Employees({ token, user }) {
       });
       if (res.ok) {
         fetchEmployees();
+        fetchAttendanceEmployees();
       }
     } catch (err) {
       console.error(err);
@@ -636,6 +697,7 @@ export default function Employees({ token, user }) {
       });
       if (res.ok) {
         fetchEmployees();
+        fetchAttendanceEmployees();
         alert('Attendance updated successfully for employee.');
       } else {
         const err = await res.json().catch(() => ({}));
@@ -649,7 +711,7 @@ export default function Employees({ token, user }) {
 
   const handleMarkAllStatus = (status) => {
     const newMap = { ...attendanceMap };
-    employees.forEach(emp => {
+    attendanceEmployees.forEach(emp => {
       newMap[emp._id] = status;
     });
     setAttendanceMap(newMap);
@@ -680,6 +742,7 @@ export default function Employees({ token, user }) {
 
       if (res.ok) {
         fetchEmployees();
+        fetchAttendanceEmployees();
         alert(`Attendance marked for ${records.length} employees.`);
       } else {
         const err = await res.json().catch(() => ({}));
@@ -710,6 +773,7 @@ export default function Employees({ token, user }) {
       });
       if (res.ok) {
         fetchEmployees();
+        fetchAttendanceEmployees();
       } else {
         const err = await res.json().catch(() => ({}));
         alert(`Error: ${err.error || 'Failed to update attendance'}`);
@@ -747,6 +811,7 @@ export default function Employees({ token, user }) {
       });
       if (res.ok) {
         fetchEmployees();
+        fetchAttendanceEmployees();
         alert('Attendance overridden successfully.');
       } else {
         const err = await res.json().catch(() => ({}));
@@ -823,12 +888,17 @@ export default function Employees({ token, user }) {
             .info-table, .statement-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             .info-table td { padding: 6px; border: none; }
             .info-table td.label { font-weight: bold; width: 20%; }
-            .statement-table th, .statement-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            .statement-table th, .statement-table td { border: 1px solid #111111; padding: 10px; text-align: left; }
             .statement-table th { bg-color: #f5f5f5; font-weight: bold; }
             .right { text-align: right; }
             .total-row { font-weight: bold; font-size: 14px; background-color: #f9f9f9; }
-            .footer { margin-top: 60px; display: flex; justify-content: space-between; }
-            .sig-box { width: 200px; border-top: 1px solid #333; text-align: center; padding-top: 8px; font-weight: bold; }
+            .footer { margin-top: 60px; display: flex; justify-content: space-between; page-break-inside: avoid; }
+            .sig-box { width: 200px; border-top: 1px solid #111111; text-align: center; padding-top: 8px; font-weight: bold; page-break-inside: avoid; }
+            @media print {
+              tr { page-break-inside: avoid; }
+              thead { display: table-header-group; }
+              .footer, .sig-box, .statement-table { page-break-inside: avoid; }
+            }
           </style>
         </head>
         <body>
@@ -960,12 +1030,17 @@ export default function Employees({ token, user }) {
             .info-table, .statement-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             .info-table td { padding: 6px; border: none; }
             .info-table td.label { font-weight: bold; width: 20%; }
-            .statement-table th, .statement-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            .statement-table th, .statement-table td { border: 1px solid #111111; padding: 10px; text-align: left; }
             .statement-table th { bg-color: #f5f5f5; font-weight: bold; }
             .right { text-align: right; }
             .total-row { font-weight: bold; font-size: 14px; background-color: #f9f9f9; }
-            .footer { margin-top: 60px; display: flex; justify-content: space-between; }
-            .sig-box { width: 200px; border-top: 1px solid #333; text-align: center; padding-top: 8px; font-weight: bold; }
+            .footer { margin-top: 60px; display: flex; justify-content: space-between; page-break-inside: avoid; }
+            .sig-box { width: 200px; border-top: 1px solid #111111; text-align: center; padding-top: 8px; font-weight: bold; page-break-inside: avoid; }
+            @media print {
+              tr { page-break-inside: avoid; }
+              thead { display: table-header-group; }
+              .footer, .sig-box, .statement-table { page-break-inside: avoid; }
+            }
           </style>
         </head>
         <body>
@@ -1123,17 +1198,7 @@ export default function Employees({ token, user }) {
     }
   };
 
-  const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = emp.name.toLowerCase().includes(search.toLowerCase()) ||
-                          emp.email.toLowerCase().includes(search.toLowerCase()) ||
-                          emp.phone.includes(search) ||
-                          (emp.employeeId && emp.employeeId.toLowerCase().includes(search.toLowerCase())) ||
-                          (emp.department && emp.department.toLowerCase().includes(search.toLowerCase())) ||
-                          (emp.role && emp.role.toLowerCase().includes(search.toLowerCase()));
-    const empStatus = emp.status || 'Active';
-    const matchesStatus = statusFilter === 'All' || empStatus === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredEmployees = employees;
 
   const getMonthlyDetails = (emp) => {
     if (!emp) return [];
@@ -1447,6 +1512,33 @@ export default function Employees({ token, user }) {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
+            <span className="text-xs font-semibold text-slate-500">
+              {totalCount > 0 ? `Showing page ${currentPage} of ${totalPages} (${totalCount} total staff)` : 'No staff found'}
+            </span>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-xs font-bold transition-all text-slate-700 dark:text-slate-200"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-xs font-bold transition-all text-slate-700 dark:text-slate-200"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1492,20 +1584,20 @@ export default function Employees({ token, user }) {
                 </div>
               </div>
 
-              {employees.length > 0 && (
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 dark:bg-slate-950/50 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/80">
+              {attendanceEmployees.length > 0 && (
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 dark:bg-slate-955/50 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/80">
                   <div className="flex items-center gap-2.5">
                     <input
                       type="checkbox"
                       id="select-all-attendance"
-                      checked={employees.length > 0 && employees.every(emp => !!checkedEmployees[emp._id])}
+                      checked={attendanceEmployees.length > 0 && attendanceEmployees.every(emp => !!checkedEmployees[emp._id])}
                       onChange={(e) => {
                         const checked = e.target.checked;
                         const newChecked = {};
                         const newMap = { ...attendanceMap };
                         const isSunday = new Date(attendanceDate).getDay() === 0;
                         const defaultStatus = isSunday ? 'Weekly Off' : 'Present';
-                        employees.forEach(emp => {
+                        attendanceEmployees.forEach(emp => {
                           newChecked[emp._id] = checked;
                           if (checked) {
                             newMap[emp._id] = defaultStatus;
@@ -1562,8 +1654,8 @@ export default function Employees({ token, user }) {
               )}
 
               <div className="space-y-3">
-                {employees.length > 0 ? (
-                  employees.map(emp => {
+                {attendanceEmployees.length > 0 ? (
+                  attendanceEmployees.map(emp => {
                     const currentStatus = attendanceMap[emp._id] || 'Present';
                     const currentRemarks = attendanceRemarksMap[emp._id] || '';
                     const summary = getEmpCurrentMonthSummary(emp);
@@ -1647,7 +1739,7 @@ export default function Employees({ token, user }) {
                 )}
               </div>
 
-              {employees.length > 0 && (
+              {attendanceEmployees.length > 0 && (
                 <div className="flex justify-end pt-4 border-t border-slate-150 dark:border-slate-800">
                   <button
                     type="button"
@@ -1666,14 +1758,15 @@ export default function Employees({ token, user }) {
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-slate-955 rounded-2xl border border-slate-150 dark:border-slate-800/30">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider mb-1">Employee Filter</label>
-                  <select
+                  <SearchableDropdown
+                    items={attendanceEmployees}
                     value={selectedEmployeeFilter}
-                    onChange={(e) => setSelectedEmployeeFilter(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold focus:outline-none text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="">All Employees</option>
-                    {employees.map(e => <option key={e._id} value={e._id}>{e.name}</option>)}
-                  </select>
+                    onSelect={setSelectedEmployeeFilter}
+                    placeholder="Search employees..."
+                    emptyOptionLabel="All Employees"
+                    type="employees"
+                    className="w-full text-xs font-bold text-slate-800 dark:text-slate-100"
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider mb-1">Month</label>
@@ -1802,9 +1895,11 @@ export default function Employees({ token, user }) {
                           else if (day.status === 'Leave') colorClass = 'border-blue-500 bg-blue-50/25 text-blue-800 dark:text-blue-300';
                           else if (day.status === 'Weekly Off') colorClass = 'border-slate-350 bg-slate-100/60 dark:border-slate-800 dark:bg-slate-950 text-slate-500 dark:text-slate-400';
 
+                          const filterVal = (selectedStatusFilter || '').trim().toLowerCase();
+                          const dayStatusVal = (day.status || '').trim().toLowerCase();
                           const matchesStatusFilter = !selectedStatusFilter || 
-                            (selectedStatusFilter === 'Present' && (day.status === 'Present' || day.status === 'Present (Worked on Weekly Off)')) ||
-                            day.status === selectedStatusFilter;
+                            (filterVal === 'present' && (dayStatusVal === 'present' || dayStatusVal === 'present (worked on weekly off)')) ||
+                            dayStatusVal === filterVal;
                           const opacityClass = matchesStatusFilter ? 'opacity-100' : 'opacity-30';
 
                           return (
@@ -1839,18 +1934,23 @@ export default function Employees({ token, user }) {
                   <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
                     {employees.map(emp => {
                       const details = getMonthlyDetails(emp);
-                      const presentDays = details.filter(d => d.status === 'Present' || d.status === 'Present (Worked on Weekly Off)' || d.status === 'Weekly Off').length;
-                      const absentDays = details.filter(d => d.status === 'Absent').length;
-                      const halfDays = details.filter(d => d.status === 'Half Day').length;
-                      const leaveDays = details.filter(d => d.status === 'Leave').length;
-                      const weeklyOffDays = details.filter(d => d.status === 'Weekly Off').length;
+                      const presentDays = details.filter(d => {
+                        const s = (d.status || '').trim().toLowerCase();
+                        return s === 'present' || s === 'present (worked on weekly off)';
+                      }).length;
+                      const absentDays = details.filter(d => (d.status || '').trim().toLowerCase() === 'absent').length;
+                      const halfDays = details.filter(d => (d.status || '').trim().toLowerCase() === 'half day').length;
+                      const leaveDays = details.filter(d => (d.status || '').trim().toLowerCase() === 'leave').length;
+                      const weeklyOffDays = details.filter(d => (d.status || '').trim().toLowerCase() === 'weekly off').length;
 
+                      const filterVal = (selectedStatusFilter || '').trim().toLowerCase();
                       const matchesStatusFilter = !selectedStatusFilter || 
-                        (selectedStatusFilter === 'Present' && presentDays > 0) ||
-                        (selectedStatusFilter === 'Absent' && absentDays > 0) ||
-                        (selectedStatusFilter === 'Half Day' && halfDays > 0) ||
-                        (selectedStatusFilter === 'Leave' && leaveDays > 0) ||
-                        (selectedStatusFilter === 'Weekly Off' && weeklyOffDays > 0);
+                        (filterVal === 'present' && presentDays > 0) ||
+                        (filterVal === 'absent' && absentDays > 0) ||
+                        (filterVal === 'half day' && halfDays > 0) ||
+                        (filterVal === 'leave' && leaveDays > 0) ||
+                        (filterVal === 'weekly off' && weeklyOffDays > 0) ||
+                        (filterVal === 'present (worked on weekly off)' && details.some(d => (d.status || '').trim().toLowerCase() === 'present (worked on weekly off)'));
 
                       if (!matchesStatusFilter) return null;
 

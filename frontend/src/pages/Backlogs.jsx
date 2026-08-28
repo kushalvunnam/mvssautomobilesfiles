@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import StatsCard from '../components/StatsCard';
 import { API_BASE_URL } from '../config';
+import { getCachedData, setCachedData } from '../utils/apiCache';
+import SearchableDropdown from '../components/SearchableDropdown';
 import { 
   Plus, 
   Search, 
@@ -33,6 +35,19 @@ export default function Backlogs({ token, user }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const mappedJobCards = React.useMemo(() => {
+    return jobCards.map(j => ({
+      ...j,
+      jobCardNo: j.jobCardNo || '',
+      vehicleNo: j.vehicleId?.vehicleNumber || j.vehicleNo || '',
+      customerName: j.customerId?.name || j.customerName || '',
+      customerMobile: j.customerId?.mobile || j.customerId?.phone || j.customerMobile || '',
+      vehicleModel: j.vehicleId?.model || j.vehicleModel || '',
+      dateFormatted: j.date ? new Date(j.date).toLocaleDateString('en-IN') : '',
+      status: j.status || ''
+    }));
+  }, [jobCards]);
   
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,12 +75,15 @@ export default function Backlogs({ token, user }) {
   const [formData, setFormData] = useState({
     vehicleNo: '',
     customerName: '',
+    customerMobile: '',
     jobCardNo: '',
+    jobCardId: '',
     vehicleModel: '',
     partNumber: '',
     partName: '',
     brand: '',
     qty: 1,
+    vendorId: '',
     vendorName: '',
     vendorContact: '',
     poNumber: '',
@@ -115,10 +133,10 @@ export default function Backlogs({ token, user }) {
 
   // Role Permissions
   const role = user?.role || 'Guest';
-  const canCreate = ['Admin', 'Accounts', 'Service', 'Body Shop', 'Spares'].includes(role);
-  const canEdit = ['Admin', 'Accounts', 'Body Shop', 'Spares', 'Service'].includes(role);
-  const canReceive = ['Admin', 'Accounts', 'Body Shop', 'Spares'].includes(role);
-  const canDelete = role === 'Admin';
+  const canCreate = ['Admin', 'Accounts', 'Service', 'Body Shop', 'Spares', 'Accounts Executive'].includes(role);
+  const canEdit = ['Admin', 'Accounts', 'Body Shop', 'Spares', 'Service', 'Accounts Executive'].includes(role);
+  const canReceive = ['Admin', 'Accounts', 'Body Shop', 'Spares', 'Accounts Executive'].includes(role);
+  const canDelete = ['Admin', 'Accounts Executive'].includes(role);
 
   // Debounce search term
   useEffect(() => {
@@ -161,7 +179,8 @@ export default function Backlogs({ token, user }) {
         qty: parseInt(q) || 1,
         vehicleNo: vNo || '',
         vehicleModel: vModel || '',
-        customerName: cName || ''
+        customerName: cName || '',
+        customerMobile: cMobile || ''
       }));
       setShowAddModal(true);
       
@@ -329,25 +348,31 @@ export default function Backlogs({ token, user }) {
   };
 
   // Auto-fill form when selection of Job Card changes
-  const handleJobCardSelectChange = async (jcNo) => {
+  const handleJobCardSelectChange = async (jcId) => {
+    const matched = mappedJobCards.find(j => j._id === jcId);
+    const jcNo = matched ? matched.jobCardNo : '';
     setFormData(prev => {
-      const updated = { ...prev, jobCardNo: jcNo };
-      if (!jcNo) return updated;
-      
-      const matched = jobCards.find(j => j.jobCardNo === jcNo);
+      const updated = { ...prev, jobCardNo: jcNo, jobCardId: jcId || '' };
+      if (!jcId) {
+        updated.vehicleNo = '';
+        updated.vehicleModel = '';
+        updated.customerName = '';
+        updated.customerMobile = '';
+        return updated;
+      }
       if (matched) {
-        updated.vehicleNo = matched.vehicleNo || matched.vehicleId?.vehicleNumber || '';
-        updated.vehicleModel = matched.vehicleModel || matched.vehicleId?.model || '';
-        updated.customerName = matched.customerName || matched.customerId?.name || '';
+        updated.vehicleNo = matched.vehicleNo || '';
+        updated.vehicleModel = matched.vehicleModel || '';
+        updated.customerName = matched.customerName || '';
+        updated.customerMobile = matched.customerMobile || '';
       }
       return updated;
     });
 
     setEstimateParts([]);
-    if (!jcNo) return;
+    if (!jcId || !matched) return;
 
-    const matched = jobCards.find(j => j.jobCardNo === jcNo);
-    if (matched && matched._id) {
+    if (matched._id) {
       try {
         const res = await fetch(`${API_BASE_URL}/estimates?jobCardId=${matched._id}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -363,6 +388,16 @@ export default function Backlogs({ token, user }) {
         console.error('Failed to fetch estimate parts:', err);
       }
     }
+  };
+
+  const handleVendorSelectChange = (vendorId) => {
+    const matchedVendor = vendorList.find(v => v._id === vendorId);
+    setFormData(prev => ({
+      ...prev,
+      vendorId: vendorId || '',
+      vendorName: matchedVendor ? matchedVendor.name : '',
+      vendorContact: matchedVendor?.mobile || prev.vendorContact || ''
+    }));
   };
 
   const handleEstimatePartSelectChange = (indexVal) => {
@@ -400,6 +435,7 @@ export default function Backlogs({ token, user }) {
       const payload = {
         vehicleNo: formData.vehicleNo,
         customerName: formData.customerName,
+        customerMobile: formData.customerMobile,
         jobCardNo: formData.jobCardNo,
         vehicleModel: formData.vehicleModel,
         vendorName: formData.vendorName,
@@ -544,12 +580,15 @@ export default function Backlogs({ token, user }) {
     setFormData({
       vehicleNo: '',
       customerName: '',
+      customerMobile: '',
       jobCardNo: '',
+      jobCardId: '',
       vehicleModel: '',
       partNumber: '',
       partName: '',
       brand: '',
       qty: 1,
+      vendorId: '',
       vendorName: '',
       vendorContact: '',
       poNumber: '',
@@ -574,15 +613,20 @@ export default function Backlogs({ token, user }) {
     setError('');
     setSuccess('');
     setSelectedBacklog(backlog);
+    const matchedVendor = vendorList.find(v => v.name === backlog.vendorName);
+    const matchedJc = jobCards.find(j => j.jobCardNo === backlog.jobCardNo);
     setFormData({
       vehicleNo: backlog.vehicleNo || '',
       customerName: backlog.customerName || '',
+      customerMobile: backlog.customerMobile || '',
       jobCardNo: backlog.jobCardNo || '',
+      jobCardId: matchedJc ? matchedJc._id : '',
       vehicleModel: backlog.vehicleModel || '',
       partNumber: backlog.partNumber || '',
       partName: backlog.partName || '',
       brand: backlog.brand || '',
       qty: backlog.qty || 1,
+      vendorId: matchedVendor ? matchedVendor._id : '',
       vendorName: backlog.vendorName || '',
       vendorContact: backlog.vendorContact || '',
       poNumber: backlog.poNumber || '',
@@ -1165,35 +1209,29 @@ export default function Backlogs({ token, user }) {
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
                     Link Job Card (Auto-fills Vehicle/Customer)
                   </label>
-                  <select
-                    value={formData.jobCardNo}
-                    onChange={(e) => handleJobCardSelectChange(e.target.value)}
-                    className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-850 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">-- Manual Entry / No Job Card --</option>
-                    {jobCards.map(j => (
-                      <option key={j._id} value={j.jobCardNo}>
-                        {j.jobCardNo} ({j.vehicleId?.vehicleNumber || j.vehicleNo})
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableDropdown
+                    items={mappedJobCards}
+                    value={formData.jobCardId}
+                    onSelect={handleJobCardSelectChange}
+                    type="jobcards"
+                    emptyOptionLabel="-- Manual Entry / No Job Card --"
+                    placeholder="Search Job Card, Reg #, Customer..."
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1.5">
                     Select Part Master (Auto-fills Part Details)
                   </label>
-                  <select
-                    onChange={(e) => handlePartSelectChange(e.target.value)}
-                    className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold text-slate-850 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">-- Type Custom / New Part --</option>
-                    {inventoryList.map(p => (
-                      <option key={p._id} value={p._id}>
-                        {p.partName} ({p.partNumber})
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableDropdown
+                    items={inventoryList}
+                    value=""
+                    onSelect={handlePartSelectChange}
+                    placeholder="Search part name, number, OEM, HSN..."
+                    emptyOptionLabel="-- Type Custom / New Part --"
+                    type="parts"
+                    className="w-full"
+                  />
                 </div>
 
                 {estimateParts.length > 0 && (
@@ -1214,12 +1252,13 @@ export default function Backlogs({ token, user }) {
                     </select>
                   </div>
                 )}
-              </div>              {/* Vehicle Info */}
+              </div>
+              {/* Vehicle Info */}
               <div>
-                <h3 className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest border-b border-indigo-100 dark:border-indigo-950 pb-1 mb-3">Vehicle Details</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <h3 className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest border-b border-indigo-100 dark:border-indigo-955 pb-1 mb-3">Vehicle Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Vehicle Registration No *</label>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1">Vehicle Registration No *</label>
                     <input
                       type="text"
                       required
@@ -1230,7 +1269,7 @@ export default function Backlogs({ token, user }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Vehicle Model *</label>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1">Vehicle Model *</label>
                     <input
                       type="text"
                       required
@@ -1241,12 +1280,22 @@ export default function Backlogs({ token, user }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Customer Name (Optional)</label>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-350 mb-1">Customer Name (Optional)</label>
                     <input
                       type="text"
                       placeholder="e.g. Suresh Kumar"
                       value={formData.customerName}
                       onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                      className="w-full text-xs bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Customer Mobile / Contact No.</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. +91 9876543210"
+                      value={formData.customerMobile}
+                      onChange={(e) => setFormData({ ...formData, customerMobile: e.target.value })}
                       className="w-full text-xs bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
@@ -1396,27 +1445,14 @@ export default function Backlogs({ token, user }) {
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Vendor Name *</label>
-                    <select
-                      required
-                      value={formData.vendorName}
-                      onChange={(e) => {
-                        const vName = e.target.value;
-                        const matchedVendor = vendorList.find(v => v.name === vName);
-                        setFormData({
-                          ...formData,
-                          vendorName: vName,
-                          vendorContact: matchedVendor?.mobile || formData.vendorContact || ''
-                        });
-                      }}
-                      className="w-full text-xs bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
-                    >
-                      <option value="">-- Select Vendor --</option>
-                      {vendorList.map(v => (
-                        <option key={v._id} value={v.name}>
-                          {v.name} {v.city ? `(${v.city})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchableDropdown
+                      items={vendorList}
+                      value={formData.vendorId}
+                      onSelect={handleVendorSelectChange}
+                      type="vendors"
+                      emptyOptionLabel="-- Select Vendor --"
+                      placeholder="Search Vendor Name, Code, Phone..."
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Vendor Contact (Optional)</label>
@@ -1664,27 +1700,14 @@ export default function Backlogs({ token, user }) {
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Vendor Name *</label>
-                    <select
-                      required
-                      value={formData.vendorName}
-                      onChange={(e) => {
-                        const vName = e.target.value;
-                        const matchedVendor = vendorList.find(v => v.name === vName);
-                        setFormData({
-                          ...formData,
-                          vendorName: vName,
-                          vendorContact: matchedVendor?.mobile || formData.vendorContact || ''
-                        });
-                      }}
-                      className="w-full text-xs bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-semibold focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
-                    >
-                      <option value="">-- Select Vendor --</option>
-                      {vendorList.map(v => (
-                        <option key={v._id} value={v.name}>
-                          {v.name} {v.city ? `(${v.city})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchableDropdown
+                      items={vendorList}
+                      value={formData.vendorId}
+                      onSelect={handleVendorSelectChange}
+                      type="vendors"
+                      emptyOptionLabel="-- Select Vendor --"
+                      placeholder="Search Vendor Name, Code, Phone..."
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Vendor Contact (Optional)</label>
@@ -1826,15 +1849,13 @@ export default function Backlogs({ token, user }) {
                   <span className="text-[10px] font-bold text-slate-400 block mb-1">PRIORITY</span>
                   {getPriorityBadge(selectedBacklog.priority)}
                 </div>
-              </div>
-
-              {/* Grid 1: Vehicle details */}
+              </div>              {/* Grid 1: Vehicle details */}
               <div className="space-y-2">
                 <span className="text-[10px] font-extrabold uppercase text-indigo-600 dark:text-indigo-400 tracking-wider block border-b pb-1">Vehicle Information</span>
                 <div className="grid grid-cols-2 gap-3.5">
                   <div>
                     <span className="text-slate-400 block font-medium">Registration Number:</span>
-                    <span className="font-bold text-slate-850 dark:text-white flex items-center gap-1.5 mt-0.5"><Car className="w-4 h-4 text-slate-400" /> {selectedBacklog.vehicleNo}</span>
+                    <span className="font-bold text-slate-855 dark:text-white flex items-center gap-1.5 mt-0.5"><Car className="w-4 h-4 text-slate-400" /> {selectedBacklog.vehicleNo}</span>
                   </div>
                   <div>
                     <span className="text-slate-400 block font-medium">Model Compatibility:</span>
@@ -1843,6 +1864,10 @@ export default function Backlogs({ token, user }) {
                   <div>
                     <span className="text-slate-400 block font-medium">Customer Name:</span>
                     <span className="font-bold text-slate-800 dark:text-slate-200 block mt-0.5">{selectedBacklog.customerName || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-medium">Customer Mobile:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 block mt-0.5">{selectedBacklog.customerMobile || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="text-slate-400 block font-medium">Linked Job Card No:</span>

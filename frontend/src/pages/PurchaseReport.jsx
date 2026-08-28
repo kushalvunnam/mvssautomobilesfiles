@@ -43,7 +43,22 @@ export default function PurchaseReport({ token, user }) {
   const [purchaseHistory, setPurchaseHistory] = useState([]);
   const [reportsData, setReportsData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [brokenAttachments, setBrokenAttachments] = useState({});
   const [error, setError] = useState('');
+
+  const getAttachmentSrc = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) {
+      return url;
+    }
+    let path = url;
+    if (!path.startsWith('/uploads/') && !path.startsWith('uploads/')) {
+      path = `/uploads/${path}`;
+    } else if (path.startsWith('uploads/')) {
+      path = `/${path}`;
+    }
+    return `${API_BASE_URL.replace('/api', '')}${path}`;
+  };
 
   // Filtering & Search for History & Reports
   const [fromDate, setFromDate] = useState('');
@@ -120,6 +135,96 @@ export default function PurchaseReport({ token, user }) {
   const [invoiceNoDuplicate, setInvoiceNoDuplicate] = useState(false);
 
   const invoiceNoRef = useRef(null);
+
+  const [attachments, setAttachments] = useState([]);
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const handleFilesUpload = async (filesList) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+    const validFiles = Array.from(filesList).filter(file => {
+      if (!allowedTypes.includes(file.type)) {
+        alert(`File "${file.name}" ignored. Only JPG, JPEG, PNG, WEBP, and PDF files are allowed.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    const newAttachments = validFiles.map(file => ({
+      id: Math.random().toString(36).substring(7),
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      status: 'uploading',
+      url: ''
+    }));
+
+    setAttachments(prev => [...prev, ...newAttachments]);
+
+    for (const att of newAttachments) {
+      try {
+        if (token === 'mock_jwt_token_for_offline_demo') {
+          const reader = new FileReader();
+          reader.onload = () => {
+            setAttachments(prev => prev.map(item => 
+              item.id === att.id 
+                ? { ...item, status: 'uploaded', url: reader.result }
+                : item
+            ));
+          };
+          reader.readAsDataURL(att.file);
+        } else {
+          const formData = new FormData();
+          formData.append('attachment', att.file);
+
+          const res = await fetch(`${API_BASE_URL}/purchases/upload-attachment`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setAttachments(prev => prev.map(item => 
+              item.id === att.id 
+                ? { ...item, status: 'uploaded', url: data.attachmentUrl, name: data.attachmentName || item.name, type: data.attachmentType || item.type }
+                : item
+            ));
+          } else {
+            setAttachments(prev => prev.map(item => 
+              item.id === att.id ? { ...item, status: 'error' } : item
+            ));
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        setAttachments(prev => prev.map(item => 
+          item.id === att.id ? { ...item, status: 'error' } : item
+        ));
+      }
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files) {
+      handleFilesUpload(e.target.files);
+    }
+  };
+
+  const handleRemoveAttachment = (indexToRemove) => {
+    setAttachments(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
   // Auto-focus Invoice No. field on tab change or duplicate error detection
   useEffect(() => {
@@ -602,6 +707,23 @@ export default function PurchaseReport({ token, user }) {
 
     // 2. Prefill form state
     setEditPurchaseId(p._id);
+    if (p.attachments && p.attachments.length > 0) {
+      setAttachments(p.attachments.map(att => ({
+        url: att.url,
+        name: att.name || 'Attached Document',
+        type: att.type || 'image/jpeg',
+        status: 'uploaded'
+      })));
+    } else if (p.attachmentUrl) {
+      setAttachments([{
+        url: p.attachmentUrl,
+        name: p.attachmentName || 'Attached Document',
+        type: p.attachmentType || 'image/jpeg',
+        status: 'uploaded'
+      }]);
+    } else {
+      setAttachments([]);
+    }
     const hasIgst = p.totals?.igstTotal > 0 || p.items.some(item => (item.igst || 0) > 0);
     setPurchaseHeader({
       vendorId: p.vendorId?._id || p.vendorId || '',
@@ -672,6 +794,7 @@ export default function PurchaseReport({ token, user }) {
     setPurchaseItems([createEmptyRow()]);
     setPurchaseFormError('');
     setPurchaseSuccess('');
+    setAttachment(null);
     setActiveTab('history');
   };
 
@@ -691,12 +814,14 @@ export default function PurchaseReport({ token, user }) {
     setInvoiceNoDuplicate(false);
     setPurchaseFormError('');
     setPurchaseSuccess('');
+    setAttachment(null);
   };
 
   const handleCancel = () => {
     if (window.confirm("Discard this purchase entry?")) {
       handleClearForm();
       setEditPurchaseId(null);
+      setAttachment(null);
       setActiveTab('history');
     }
   };
@@ -829,7 +954,15 @@ export default function PurchaseReport({ token, user }) {
       updatePurchasePrice: purchaseHeader.updatePurchasePrice,
       updateMRP: purchaseHeader.updateMRP,
       billingType: purchaseHeader.billingType || 'Intra-State',
-      reason
+      reason,
+      attachments: attachments.filter(att => att.status === 'uploaded').map(att => ({
+        url: att.url,
+        name: att.name,
+        type: att.type
+      })),
+      attachmentUrl: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].url : '',
+      attachmentName: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].name : '',
+      attachmentType: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].type : ''
     };
 
     setPurchaseSubmitting(true);
@@ -864,6 +997,7 @@ export default function PurchaseReport({ token, user }) {
             billingType: 'Intra-State'
           });
           setPurchaseItems([createEmptyRow()]);
+          setAttachments([]);
           fetchPurchases();
           fetchPurchaseReports();
           fetchInventoryList();
@@ -1148,30 +1282,41 @@ export default function PurchaseReport({ token, user }) {
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Supplier / Vendor <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchableDropdown
+                  items={vendorsList}
                   value={purchaseHeader.vendorId}
-                  onChange={(e) => {
+                  onSelect={(vId) => {
                     setInvoiceNoDuplicate(false);
-                    const selectedV = vendorsList.find(v => v._id === e.target.value);
+                    const selectedV = vendorsList.find(v => v._id === vId);
                     const isInter = selectedV && selectedV.gstNumber 
                       ? !selectedV.gstNumber.trim().startsWith('36') 
                       : false;
                     setPurchaseHeader({
                       ...purchaseHeader,
-                      vendorId: e.target.value,
+                      vendorId: vId,
                       billingType: isInter ? 'Inter-State' : 'Intra-State'
                     });
                   }}
-                  required
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-semibold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">-- Select Vendor --</option>
-                  {vendorsList.map(v => (
-                    <option key={v._id} value={v._id}>
-                      {v.name} {v.companyName ? `(${v.companyName})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Search supplier name, code, contact..."
+                  emptyOptionLabel="-- Select Vendor --"
+                  type="vendors"
+                  className="w-full"
+                />
+                {purchaseHeader.vendorId && (() => {
+                  const vendor = vendorsList.find(v => v._id === purchaseHeader.vendorId);
+                  if (!vendor) return null;
+                  return (
+                    <div className="mt-2.5 p-3 bg-indigo-50/50 dark:bg-indigo-955/20 border border-indigo-100 dark:border-indigo-900/40 rounded-xl text-[11px] space-y-1 text-slate-655 dark:text-slate-350">
+                      <p className="font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest text-[9px] mb-1">Selected Vendor Details</p>
+                      <p><strong>Name:</strong> {vendor.name}</p>
+                      {vendor.vendorCode && <p><strong>Code:</strong> {vendor.vendorCode}</p>}
+                      {vendor.mobile && <p><strong>Phone:</strong> {vendor.mobile}</p>}
+                      {vendor.email && <p><strong>Email:</strong> {vendor.email}</p>}
+                      {vendor.gstNumber && <p><strong>GSTIN:</strong> {vendor.gstNumber}</p>}
+                      {vendor.address && <p><strong>Address:</strong> {vendor.address}</p>}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Invoice Number */}
@@ -1226,10 +1371,10 @@ export default function PurchaseReport({ token, user }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-1">
               {/* Billing Type Selection */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-355 mb-1.5">
                   Billing Type <span className="text-rose-500">*</span>
                 </label>
                 <select
@@ -1244,7 +1389,7 @@ export default function PurchaseReport({ token, user }) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-355 mb-1.5">
                   Amount Paid (₹)
                 </label>
                 <input
@@ -1258,7 +1403,7 @@ export default function PurchaseReport({ token, user }) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-355 mb-1.5">
                   Purchase Notes / Remarks
                 </label>
                 <input
@@ -1269,6 +1414,8 @@ export default function PurchaseReport({ token, user }) {
                   className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-semibold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
+
+
             </div>
 
             <div className="flex flex-wrap items-center gap-6 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -1765,7 +1912,82 @@ export default function PurchaseReport({ token, user }) {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-4 pt-1">
+            {/* Attach Invoice / Bill (Multiple Files Allowed) Upload Zone */}
+            <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                Attach Invoice / Bill (Multiple Files Allowed)
+              </span>
+              <div 
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.files) handleFilesUpload(e.dataTransfer.files); }}
+                className="border-2 border-dashed border-slate-350 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-2xl p-8 text-center bg-slate-50 dark:bg-slate-800/40 cursor-pointer transition-colors relative"
+              >
+                <input 
+                  type="file" 
+                  multiple 
+                  accept=".jpg,.jpeg,.png,.webp,.pdf"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-955/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                  </div>
+                  <p className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
+                    Drag & drop files here, or <span className="text-indigo-600 dark:text-indigo-400">browse</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    Supports JPEG, PNG, WEBP, and PDF files.
+                  </p>
+                </div>
+              </div>
+
+              {/* List of uploaded files / chips */}
+              {attachments.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                  {attachments.map((att, idx) => (
+                    <div 
+                      key={att.id || idx} 
+                      className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-lg shrink-0">
+                          {att.type?.includes('pdf') ? '📄' : '🖼️'}
+                        </span>
+                        <div className="flex flex-col text-left min-w-0">
+                          <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]" title={att.name}>
+                            {att.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-extrabold uppercase">
+                            {att.status === 'uploading' ? (
+                              <span className="text-indigo-500 animate-pulse">Uploading...</span>
+                            ) : att.status === 'error' ? (
+                              <span className="text-red-500">Failed</span>
+                            ) : (
+                              formatFileSize(att.size || 0)
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAttachment(idx)}
+                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-rose-600 transition-colors"
+                        title="Remove file"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
               <div className="text-left">
                 <span className="text-[10px] font-bold text-slate-400">Items: {purchaseItems.length} | Qty: {summaryTotals.totalQty} Pcs</span>
               </div>
@@ -1881,8 +2103,31 @@ export default function PurchaseReport({ token, user }) {
                               {p.vendorName || 'General Vendor'}
                             </td>
 
-                            <td className="py-3 px-4 font-mono text-slate-600 dark:text-slate-300">
-                              {p.invoiceNo || 'N/A'}
+                            <td className="py-3 px-4 text-slate-800 dark:text-slate-300">
+                              <div className="font-mono font-bold">{p.invoiceNo || 'N/A'}</div>
+                              {p.attachmentUrl ? (
+                                brokenAttachments[p.attachmentUrl] ? (
+                                  <div className="text-[10px] text-red-500 font-semibold mt-1">
+                                    Attachment unavailable
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const src = getAttachmentSrc(p.attachmentUrl);
+                                      window.open(src, '_blank');
+                                    }}
+                                    className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-955/20 text-indigo-650 dark:text-indigo-400 rounded-lg text-[10px] font-black transition-all"
+                                    title={`View/Download Document: ${p.attachmentName || 'Attachment'}`}
+                                  >
+                                    📎 View Invoice
+                                  </button>
+                                )
+                              ) : (
+                                <div className="text-[10px] text-slate-400 italic font-semibold mt-1">
+                                  No Invoice Attached
+                                </div>
+                              )}
                             </td>
 
                             <td className="py-3 px-4">
@@ -2079,16 +2324,15 @@ export default function PurchaseReport({ token, user }) {
               {/* Supplier / Vendor */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1">Supplier</label>
-                <select
+                <SearchableDropdown
+                  items={vendorsList}
                   value={vendorId}
-                  onChange={(e) => setVendorId(e.target.value)}
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2 font-semibold text-slate-800 dark:text-white"
-                >
-                  <option value="">All Suppliers</option>
-                  {vendorsList.map(v => (
-                    <option key={v._id} value={v._id}>{v.name}</option>
-                  ))}
-                </select>
+                  onSelect={setVendorId}
+                  placeholder="Search supplier..."
+                  emptyOptionLabel="All Suppliers"
+                  type="vendors"
+                  className="w-full"
+                />
               </div>
 
               {/* Part Name / Number */}
@@ -2305,7 +2549,20 @@ export default function PurchaseReport({ token, user }) {
                 <div>
                   <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block mb-1">SUPPLIER DETAILS</span>
                   <p className="font-bold text-sm text-slate-900 dark:text-white">{selectedVoucher.vendorName}</p>
-                  <p className="text-slate-500">Invoice Ref: {selectedVoucher.invoiceNo || 'N/A'}</p>
+                  {(() => {
+                    const vendor = vendorsList.find(v => v._id === selectedVoucher.vendorId || v.name === selectedVoucher.vendorName);
+                    if (!vendor) return null;
+                    return (
+                      <div className="text-[11px] text-slate-500 space-y-0.5 mt-1">
+                        {vendor.vendorCode && <p><strong>Code:</strong> {vendor.vendorCode}</p>}
+                        {vendor.mobile && <p><strong>Phone:</strong> {vendor.mobile}</p>}
+                        {vendor.email && <p><strong>Email:</strong> {vendor.email}</p>}
+                        {vendor.gstNumber && <p><strong>GSTIN:</strong> {vendor.gstNumber}</p>}
+                        {vendor.address && <p><strong>Address:</strong> {vendor.address}</p>}
+                      </div>
+                    );
+                  })()}
+                  <p className="text-slate-500 mt-2">Invoice Ref: {selectedVoucher.invoiceNo || 'N/A'}</p>
                 </div>
 
                 <div className="text-right">
@@ -2417,6 +2674,43 @@ export default function PurchaseReport({ token, user }) {
                   </div>
                 </div>
               </div>
+
+              {/* Document Attachment Display in Voucher */}
+              {((selectedVoucher.attachments && selectedVoucher.attachments.length > 0) || selectedVoucher.attachmentUrl) && (
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 print:hidden text-xs">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-400 block mb-2 tracking-wider">
+                    Attached Document(s)
+                  </span>
+                  <div className="grid grid-cols-1 gap-4">
+                    {(selectedVoucher.attachments && selectedVoucher.attachments.length > 0
+                      ? selectedVoucher.attachments
+                      : [{ url: selectedVoucher.attachmentUrl, name: selectedVoucher.attachmentName || 'purchase_document', type: selectedVoucher.attachmentType || 'image/jpeg' }]
+                    ).map((att, idx) => (
+                      <div key={idx} className="flex flex-col gap-2 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <a href={getAttachmentSrc(att.url)} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1.5 break-all">
+                          📎 {att.name || `Attachment ${idx + 1}`}
+                        </a>
+                        {brokenAttachments[att.url] ? (
+                          <div className="text-slate-400 dark:text-slate-500 text-[10px] font-bold p-3 bg-slate-100 dark:bg-slate-850 rounded-lg text-center">
+                            No preview available for offline/missing attachment.
+                          </div>
+                        ) : (
+                          <>
+                            {!att.type?.includes('pdf') && (
+                              <img 
+                                src={getAttachmentSrc(att.url)} 
+                                alt={att.name || "Attachment"} 
+                                className="max-h-60 rounded-lg object-contain bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-750" 
+                                onError={() => setBrokenAttachments(prev => ({ ...prev, [att.url]: true }))}
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

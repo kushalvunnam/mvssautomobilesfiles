@@ -354,7 +354,7 @@ export default function Estimates({ token, user, setActiveTab }) {
               margin-bottom: 4px;
             }
             .meta-table td {
-              border: 1px solid #e5e7eb;
+              border: 1px solid #111111;
               padding: 10px;
               width: 50%;
               vertical-align: top;
@@ -375,12 +375,12 @@ export default function Estimates({ token, user, setActiveTab }) {
               text-transform: uppercase;
               font-size: 9px;
               padding: 8px;
-              border: 1px solid #4f46e5;
+              border: 1.5px solid #000000;
               text-align: center;
             }
             .items-table td {
               padding: 8px;
-              border: 1px solid #e5e7eb;
+              border: 1.5px solid #000000;
               text-align: center;
               vertical-align: middle;
             }
@@ -392,7 +392,7 @@ export default function Estimates({ token, user, setActiveTab }) {
             }
             .totals-table td {
               padding: 6px;
-              border: 1px solid #e5e7eb;
+              border: 1.5px solid #000000;
             }
             .totals-table tr.grand-total td {
               background: #f3f4f6;
@@ -413,19 +413,24 @@ export default function Estimates({ token, user, setActiveTab }) {
               margin-top: 40px;
               display: flex;
               justify-content: space-between;
+              page-break-inside: avoid;
             }
             .signature-box {
               text-align: center;
-              border-top: 1px solid #ccc;
+              border-top: 1px solid #111111;
               width: 200px;
               padding-top: 8px;
               margin-top: 30px;
               font-weight: bold;
+              page-break-inside: avoid;
             }
             @media print {
-              body { padding: 0; }
-              .invoice-box { border: none; box-shadow: none; padding: 0; }
+              body { padding: 0; margin: 0; }
+              .invoice-box { border: none; box-shadow: none; padding: 0; max-width: 100%; }
               button { display: none; }
+              tr { page-break-inside: avoid; }
+              thead { display: table-header-group; }
+              .totals-table, .words, .footer-section, .signature-box { page-break-inside: avoid; }
             }
           </style>
         </head>
@@ -553,8 +558,17 @@ export default function Estimates({ token, user, setActiveTab }) {
               </tr>
             </table>
 
-            <div style="margin-top: 20px; font-size: 9px; color: #666; font-style: italic;">
-              <strong>Note:</strong> This is a proforma quote detailing estimated charges for parts and labour. Actual repair invoices may vary upon disassembly and discovery of additional faults. Authorized approval will be requested prior to undertaking extra repairs.
+            <div style="margin-top: 35px; display: flex; justify-content: space-between; gap: 20px; page-break-inside: avoid;">
+              <div style="flex: 1; max-width: 340px; border: 1.5px solid #000; padding: 12px; border-radius: 8px; font-size: 8.5px; line-height: 1.5; text-align: left; box-sizing: border-box;">
+                <strong style="display: block; font-size: 9px; margin-bottom: 6px; font-weight: bold; text-transform: uppercase;">Instructions / Terms & Conditions</strong>
+                1. Goods once sold will not be taken back or exchanged.<br/>
+                2. Payment should be made within the due date mentioned above.<br/>
+                3. Please quote this invoice number for any communication.<br/>
+                4. Subject to Hyderabad Jurisdiction only.
+              </div>
+              <div style="flex: 1; font-size: 8.5px; color: #666; font-style: italic; text-align: left; align-self: center;">
+                <strong>Note:</strong> This is a proforma quote detailing estimated charges for parts and labour. Actual repair invoices may vary upon disassembly and discovery of additional faults. Authorized approval will be requested prior to undertaking extra repairs.
+              </div>
             </div>
 
             <div class="footer-section">

@@ -123,6 +123,12 @@ app.use((req, res, next) => {
 
 // Serve static uploaded photos with caching
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
+
+// Friendly 404 error page if uploaded file is no longer available on disk
+app.get(['/uploads/*', '/api/uploads/*'], (req, res) => {
+  res.status(404).send('<html><head><title>Unavailable</title></head><body style="font-family:sans-serif; text-align:center; padding:50px; background:#f8fafc; color:#475569;"><div style="max-width:400px; margin:0 auto; background:white; padding:30px; border-radius:16px; box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0;"><h1 style="color:#ef4444; margin-top:0;">Attachment Unavailable</h1><p style="font-size:14px; font-weight:600;">Attachment is no longer available.</p><p style="font-size:12px; color:#94a3b8;">The uploaded file was not found on the server.</p></div></body></html>');
+});
 
 // Serve frontend static files for production
 if (process.env.NODE_ENV === 'production') {
@@ -212,13 +218,18 @@ app.get('/', (req, res) => {
   res.json({
     status: "ok",
     service: "MVSS ERP Backend",
-    version: "production"
+    version: "production-v1.0.1"
   });
 });
 
 // Base API route
 app.get('/api', (req, res) => {
-  res.json({ success: true, message: 'AutoWorkshop Pro API is running.' });
+  res.json({ 
+    success: true, 
+    message: 'AutoWorkshop Pro API is running.',
+    commit: '2f2c2c0',
+    description: 'Thicken table borders to 1.5 & increase signature spacing to 105'
+  });
 });
 
 // JSON 404 Handler for all unmatched API routes across ALL HTTP methods (GET, POST, PUT, DELETE)

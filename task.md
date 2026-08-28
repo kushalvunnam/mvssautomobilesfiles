@@ -35,8 +35,8 @@
 - [x] Format low stock warnings dynamically with part details and severity warnings
 - [x] Update dashboard stats route `/api/dashboard/stats` to return `lowStockItemsList` and `latestAuditLogs`
 - [x] Update backend purchases route (`backend/routes/purchases.js`)
-- [/] Update backend reports route (`backend/routes/reports.js`)
-- [ ] Update frontend purchase entry form (`frontend/src/pages/PurchaseReport.jsx`) to poll stats every 5s and render real-time low stock list and latest 10 logs
+- [x] Update backend reports route (`backend/routes/reports.js`)
+- [x] Update frontend purchase entry form (`frontend/src/pages/PurchaseReport.jsx`) to poll stats every 5s and render real-time low stock list and latest 10 logs
 - [x] Add user logout endpoint `/api/auth/logout` to record logout sessions
 - [x] Add CSV and PDF export options to frontend `AuditLogs.jsx`
 - [x] Add preset date quick filters (Today, Last 7 Days, Last 30 Days) to `AuditLogs.jsx`

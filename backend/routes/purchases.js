@@ -5,7 +5,28 @@ const Inventory = require('../models/Inventory');
 const Vendor = require('../models/Vendor');
 const { auth, restrictTo } = require('../middleware/auth');
 const { logAction } = require('../utils/logger');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
 const router = express.Router();
+
+// Configure storage for Purchase attachments
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'purchase-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
 
 router.use((req, res, next) => {
   console.log(`[PURCHASES] Route request received: ${req.method} ${req.baseUrl}${req.path}`);
@@ -19,6 +40,21 @@ const generatePurchaseNo = async () => {
   return await getNextSequence('PUR', 'Purchase');
 };
 router.use(auth, restrictTo('Super Admin', 'Admin', 'Spares', 'Purchase Manager', 'Accounts Manager', 'Accounts', 'Purchase Executive', 'Accounts Executive'));
+
+// Upload attachment
+router.post('/upload-attachment', upload.single('attachment'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).send({ error: 'No file uploaded.' });
+    }
+    const attachmentUrl = `/uploads/${req.file.filename}`;
+    const attachmentName = req.file.originalname;
+    const attachmentType = req.file.mimetype;
+    res.status(200).send({ attachmentUrl, attachmentName, attachmentType });
+  } catch (error) {
+    res.status(500).send({ error: 'Upload failed: ' + error.message });
+  }
+});
 
 // List all purchases with search & vendor filter
 router.get('/', async (req, res) => {
@@ -294,7 +330,11 @@ router.post('/', async (req, res) => {
       paymentStatus: rawStatus,
       amountPaid: paidAmt,
       notes: notes || '',
-      createdBy: req.user ? req.user.name : 'Staff'
+      createdBy: req.user ? req.user.name : 'Staff',
+      attachmentUrl: req.body.attachmentUrl || (req.body.attachments && req.body.attachments.length > 0 ? req.body.attachments[0].url : ''),
+      attachmentName: req.body.attachmentName || (req.body.attachments && req.body.attachments.length > 0 ? req.body.attachments[0].name : ''),
+      attachmentType: req.body.attachmentType || (req.body.attachments && req.body.attachments.length > 0 ? req.body.attachments[0].type : ''),
+      attachments: req.body.attachments || []
     });
 
     await purchase.save();
@@ -396,7 +436,7 @@ router.get('/:id/check-in-use', async (req, res) => {
 // Edit Purchase Entry
 router.put('/:id', async (req, res) => {
   try {
-    const editAuthorized = ['Super Admin', 'Admin', 'Purchase Manager', 'Accounts Manager'].includes(req.user?.role);
+    const editAuthorized = ['Super Admin', 'Admin', 'Purchase Manager', 'Accounts Manager', 'Spares', 'Accounts', 'Purchase Executive', 'Accounts Executive'].includes(req.user?.role);
     if (!editAuthorized) {
       return res.status(403).send({ error: 'You are not authorized to edit purchases.' });
     }
@@ -642,6 +682,16 @@ router.put('/:id', async (req, res) => {
     purchase.amountPaid = paidAmt;
     purchase.notes = notes || '';
     purchase.updatedBy = req.user ? req.user.name : 'Staff';
+    if (req.body.attachments !== undefined) {
+      purchase.attachments = req.body.attachments;
+      purchase.attachmentUrl = req.body.attachments.length > 0 ? req.body.attachments[0].url : '';
+      purchase.attachmentName = req.body.attachments.length > 0 ? req.body.attachments[0].name : '';
+      purchase.attachmentType = req.body.attachments.length > 0 ? req.body.attachments[0].type : '';
+    } else {
+      if (req.body.attachmentUrl !== undefined) purchase.attachmentUrl = req.body.attachmentUrl;
+      if (req.body.attachmentName !== undefined) purchase.attachmentName = req.body.attachmentName;
+      if (req.body.attachmentType !== undefined) purchase.attachmentType = req.body.attachmentType;
+    }
 
     await purchase.save();
 

@@ -136,7 +136,7 @@ export default function Invoices({ token, user, setActiveTab }) {
 
     if (shareModal.type === 'whatsapp') {
       console.log('[Invoice Action: WhatsApp Share Redirect]', inv);
-      const text = `Dear ${inv.customerId?.name || 'Customer'},\nYour vehicle ${inv.vehicleId?.vehicleNumber || 'TS09'} is ready! Invoice ${inv.invoiceNo} of amount ₹${inv.totals?.grandTotal?.toLocaleString()} generated. Download: ${API_BASE_URL}/invoices/${inv._id}/pdf\nThanks, MVSS Automobiles.`;
+      const text = `Dear ${inv.customerId?.type === 'Corporate' && inv.billingNameOption !== 'ContactPerson' && inv.customerId?.companyName ? inv.customerId.companyName : (inv.customerId?.name || 'Customer')},\nYour vehicle ${inv.vehicleId?.vehicleNumber || 'TS09'} is ready! Invoice ${inv.invoiceNo} of amount ₹${inv.totals?.grandTotal?.toLocaleString()} generated. Download: ${API_BASE_URL}/invoices/${inv._id}/pdf\nThanks, MVSS Automobiles.`;
       
       const phoneClean = sharePhone.replace(/[^0-9]/g, '');
       const formattedPhone = phoneClean.length === 10 ? `91${phoneClean}` : phoneClean;
@@ -610,7 +610,7 @@ export default function Invoices({ token, user, setActiveTab }) {
               margin-bottom: 4px;
             }
             .meta-table td {
-              border: 1px solid #e5e7eb;
+              border: 1px solid #111111;
               padding: 10px;
               width: 50%;
               vertical-align: top;
@@ -631,12 +631,12 @@ export default function Invoices({ token, user, setActiveTab }) {
               text-transform: uppercase;
               font-size: 9px;
               padding: 8px;
-              border: 1px solid #1e3a8a;
+              border: 1.5px solid #000000;
               text-align: center;
             }
             .items-table td {
               padding: 8px;
-              border: 1px solid #e5e7eb;
+              border: 1.5px solid #000000;
               text-align: center;
               vertical-align: middle;
             }
@@ -648,7 +648,7 @@ export default function Invoices({ token, user, setActiveTab }) {
             }
             .totals-table td {
               padding: 6px;
-              border: 1px solid #e5e7eb;
+              border: 1.5px solid #000000;
             }
             .totals-table tr.grand-total td {
               background: #f3f4f6;
@@ -676,19 +676,24 @@ export default function Invoices({ token, user, setActiveTab }) {
               margin-top: 40px;
               display: flex;
               justify-content: space-between;
+              page-break-inside: avoid;
             }
             .signature-box {
               text-align: center;
-              border-top: 1px solid #ccc;
+              border-top: 1px solid #111111;
               width: 200px;
               padding-top: 8px;
               margin-top: 30px;
               font-weight: bold;
+              page-break-inside: avoid;
             }
             @media print {
-              body { padding: 0; }
-              .invoice-box { border: none; box-shadow: none; padding: 0; }
+              body { padding: 0; margin: 0; }
+              .invoice-box { border: none; box-shadow: none; padding: 0; max-width: 100%; }
               button { display: none; }
+              tr { page-break-inside: avoid; }
+              thead { display: table-header-group; }
+              .totals-table, .words, .insurance-block, .footer-section, .signature-box { page-break-inside: avoid; }
             }
           </style>
         </head>
@@ -715,7 +720,7 @@ export default function Invoices({ token, user, setActiveTab }) {
                 <td>
                   <div class="section-title">Customer & Vehicle Details</div>
                   <table style="width:100%; border:none;">
-                    <tr style="border:none;"><td style="border:none; padding:2px; font-weight:bold; width:35%;">Customer Name:</td><td style="border:none; padding:2px;">${inv.customerId?.name || 'N/A'}</td></tr>
+                    <tr style="border:none;"><td style="border:none; padding:2px; font-weight:bold; width:35%;">Customer Name:</td><td style="border:none; padding:2px;">${inv.customerId?.type === 'Corporate' && inv.billingNameOption !== 'ContactPerson' && inv.customerId?.companyName ? inv.customerId.companyName : (inv.customerId?.name || 'N/A')}</td></tr>
                     <tr style="border:none;"><td style="border:none; padding:2px; font-weight:bold;">Address:</td><td style="border:none; padding:2px;">${inv.customerId?.address || 'N/A'}</td></tr>
                     <tr style="border:none;"><td style="border:none; padding:2px; font-weight:bold;">Mobile:</td><td style="border:none; padding:2px;">${inv.customerId?.mobile || 'N/A'}</td></tr>
                     <tr style="border:none;"><td style="border:none; padding:2px; font-weight:bold;">Vehicle Reg No:</td><td style="border:none; padding:2px; font-family: monospace; font-weight:bold; font-size:11px;">${inv.vehicleId?.vehicleNumber || 'N/A'}</td></tr>
@@ -843,8 +848,17 @@ export default function Invoices({ token, user, setActiveTab }) {
               </tr>
             </table>
 
-            <div style="margin-top: 20px; font-size: 9px; color: #666;">
-              <strong>Declaration:</strong> We declare that this invoice shows the actual price of the goods and services described and that all particulars are true and correct.
+            <div style="margin-top: 35px; display: flex; justify-content: space-between; gap: 20px; page-break-inside: avoid;">
+              <div style="flex: 1; max-width: 340px; border: 1.5px solid #000; padding: 12px; border-radius: 8px; font-size: 8.5px; line-height: 1.5; text-align: left; box-sizing: border-box;">
+                <strong style="display: block; font-size: 9px; margin-bottom: 6px; font-weight: bold; text-transform: uppercase;">Instructions / Terms & Conditions</strong>
+                1. Goods once sold will not be taken back or exchanged.<br/>
+                2. Payment should be made within the due date mentioned above.<br/>
+                3. Please quote this invoice number for any communication.<br/>
+                4. Subject to Hyderabad Jurisdiction only.
+              </div>
+              <div style="flex: 1; font-size: 8.5px; color: #666; font-style: italic; text-align: left; align-self: center;">
+                <strong>Declaration:</strong> We declare that this invoice shows the actual price of the goods and services described and that all particulars are true and correct.
+              </div>
             </div>
 
             <div class="footer-section">
@@ -990,7 +1004,7 @@ export default function Invoices({ token, user, setActiveTab }) {
                             {inv.vehicleId?.vehicleNumber || 'N/A'}
                           </td>
                           <td className="p-4 font-medium text-slate-550 dark:text-slate-400">
-                            {inv.customerId?.name || 'Unknown'}
+                            {inv.customerId?.type === 'Corporate' && inv.billingNameOption !== 'ContactPerson' && inv.customerId?.companyName ? inv.customerId.companyName : (inv.customerId?.name || 'Unknown')}
                           </td>
                           <td className="p-4">
                             <span className="block font-extrabold text-slate-800 dark:text-slate-200">₹{inv.totals?.grandTotal?.toLocaleString('en-IN') || 0}</span>
@@ -1086,7 +1100,7 @@ export default function Invoices({ token, user, setActiveTab }) {
                 <div className="space-y-3.5 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-850">
                   <div className="flex justify-between">
                     <span className="text-slate-400 font-bold">Customer Name:</span>
-                    <span className="text-slate-800 dark:text-slate-200 font-black">{selectedInvoice.customerId?.name || 'Unknown'}</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-black">{selectedInvoice.customerId?.type === 'Corporate' && selectedInvoice.billingNameOption !== 'ContactPerson' && selectedInvoice.customerId?.companyName ? selectedInvoice.customerId.companyName : (selectedInvoice.customerId?.name || 'Unknown')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400 font-bold">Registration Number:</span>
@@ -1291,7 +1305,7 @@ export default function Invoices({ token, user, setActiveTab }) {
                     readOnly
                     value={
                       shareModal.type === 'whatsapp' 
-                        ? `Dear ${shareModal.invoice?.customerId?.name || 'Customer'},\nYour vehicle ${shareModal.invoice?.vehicleId?.vehicleNumber || 'TS09'} is ready! Invoice ${shareModal.invoice?.invoiceNo} of amount ₹${shareModal.invoice?.totals?.grandTotal?.toLocaleString()} generated. Download: ${API_BASE_URL}/invoices/${shareModal.invoice?._id}/pdf\nThanks, MVSS Automobiles.`
+                        ? `Dear ${shareModal.invoice?.customerId?.type === 'Corporate' && shareModal.invoice?.billingNameOption !== 'ContactPerson' && shareModal.invoice?.customerId?.companyName ? shareModal.invoice.customerId.companyName : (shareModal.invoice?.customerId?.name || 'Customer')},\nYour vehicle ${shareModal.invoice?.vehicleId?.vehicleNumber || 'TS09'} is ready! Invoice ${shareModal.invoice?.invoiceNo} of amount ₹${shareModal.invoice?.totals?.grandTotal?.toLocaleString()} generated. Download: ${API_BASE_URL}/invoices/${shareModal.invoice?._id}/pdf\nThanks, MVSS Automobiles.`
                         : `Subject: Tax Invoice - MVSS Automobiles\n\nDear Customer,\nPlease find attached your tax invoice details for repairs on vehicle ${shareModal.invoice?.vehicleId?.vehicleNumber || 'TS09'}.\nInvoice No: ${shareModal.invoice?.invoiceNo}\nNet Total: ₹${shareModal.invoice?.totals?.grandTotal?.toLocaleString()}\nDownload copy: ${API_BASE_URL}/invoices/${shareModal.invoice?._id}/pdf`
                     }
                     className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-xl text-[10px] font-medium text-slate-500 resize-none focus:outline-none"

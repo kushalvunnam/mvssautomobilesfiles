@@ -42,10 +42,15 @@ pnpm-debug.log*
 
 # System generated and uploads
 .system_generated/
-/backend/uploads/
+/backend/uploads/*
+!/backend/uploads/admin_signature.png
 
 # Temporary files and archives
 backend.zip.zip
 query
 mvss zip.zip
 backend-zip.zip
+/scratch/
+/backend/check_users.js
+/android/keystore.properties
+/android/app/*.jks

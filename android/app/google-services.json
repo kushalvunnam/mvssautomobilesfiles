@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "753658135541",
+    "project_id": "mvssautomobilesfiles",
+    "storage_bucket": "mvssautomobilesfiles.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:753658135541:android:2dea52511732f2567416bc",
+        "android_client_info": {
+          "package_name": "com.mvssautomobiles.auto4m"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCDKF0IN1qrP94FN4rmJRYqsmGDuRe7lS4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
