@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../config';
 import { Plus, Trash2, Save, ShoppingCart, Activity, AlertCircle } from 'lucide-react';
 import { calculatePricing } from '../utils/pricingEngine';
 import SearchableDropdown from '../components/SearchableDropdown';
+import JobCardSearchableDropdown from '../components/JobCardSearchableDropdown';
 import { useInventoryCache } from '../hooks/useInventoryCache';
 
 const STANDARD_SERVICES = [
@@ -182,13 +183,34 @@ const INSPECTION_MAPPING_RULES = {
 };
 
 export default function EstimateForm({ token, user, onSaved, onCancel, editId = null }) {
-  const [jobCards, setJobCards] = useState([]);
+  const [selectedJobCard, setSelectedJobCard] = useState(null);
   const { data: partsInventory } = useInventoryCache(token, 'parts');
   const { data: labourInventory } = useInventoryCache(token, 'labour');
   const inventory = partsInventory;
   
   // Selection
   const [selectedJcId, setSelectedJcId] = useState('');
+
+  useEffect(() => {
+    if (!selectedJcId) {
+      setSelectedJobCard(null);
+      return;
+    }
+    const fetchJcDetails = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/jobcards/${selectedJcId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSelectedJobCard(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch job card details:', err);
+      }
+    };
+    fetchJcDetails();
+  }, [selectedJcId, token]);
   const [partsList, setPartsList] = useState([]);
   const [labourList, setLabourList] = useState([{ description: '', rate: '', gstPercent: '18' }]);
 
@@ -272,14 +294,7 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
       try {
         const headers = { Authorization: `Bearer ${token}` };
         
-        // Load active jobcards (excluding fully delivered ones)
-        const jcRes = await fetch(`${API_BASE_URL}/jobcards?excludeDelivered=true`, { headers });
-        const invRes = await fetch(`${API_BASE_URL}/inventory`, { headers });
-        
-        if (jcRes.ok) {
-          const jcData = await jcRes.json();
-          setJobCards(jcData.filter(jc => jc.status !== 'Delivered'));
-        }
+        // Note: active jobcards list is handled dynamically by JobCardSearchableDropdown
 
         // If a specific jobcard ID is passed via localStorage
         const storedJcId = localStorage.getItem('create_estimate_jc_id');
@@ -367,7 +382,7 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
   // Compile Job Card inspection audit report data for matching and UI
   const getInspectionAudit = () => {
     if (!selectedJcId) return null;
-    const jc = jobCards.find(item => item._id === selectedJcId);
+    const jc = selectedJobCard;
     if (!jc || !jc.inspectionChecklist) return null;
 
     const failed = [];
@@ -446,13 +461,13 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
   useEffect(() => {
     if (editId) return;
 
-    if (!selectedJcId || jobCards.length === 0 || inventory.length === 0) {
+    if (!selectedJcId || !selectedJobCard || inventory.length === 0) {
       setPartsList([]);
       setLabourList([{ description: '', rate: '', gstPercent: '18' }]);
       return;
     }
 
-    const jc = jobCards.find(item => item._id === selectedJcId);
+    const jc = selectedJobCard;
     if (!jc) return;
 
     const inspection = jc.inspectionChecklist || {};
@@ -560,7 +575,7 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
 
     setPartsList(suggestedParts);
     setLabourList(suggestedLabour.length > 0 ? suggestedLabour : [{ description: '', rate: '0.00', gstPercent: '18', total: '0.00', taxableAmount: '0.00' }]);
-  }, [selectedJcId, jobCards, inventory, editId]);
+  }, [selectedJcId, selectedJobCard, inventory, editId]);
 
   // Handle live recalculation
   useEffect(() => {
@@ -923,21 +938,12 @@ export default function EstimateForm({ token, user, onSaved, onCancel, editId = 
           <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
             Select Job Card Reference
           </label>
-          <SearchableDropdown
-            items={jobCards.map(jc => ({
-              ...jc,
-              vehicleNo: jc.vehicleId?.vehicleNumber || '',
-              customerName: jc.customerId?.name || '',
-              vehicleModel: jc.vehicleId ? `${jc.vehicleId.make} ${jc.vehicleId.model}` : '',
-              dateFormatted: new Date(jc.date || jc.createdAt).toLocaleDateString('en-IN'),
-            }))}
+          <JobCardSearchableDropdown
             value={selectedJcId}
             onSelect={setSelectedJcId}
             disabled={!!editId}
-            placeholder="Search job card no, vehicle plate, customer name..."
-            emptyOptionLabel="-- Choose Job Card --"
-            type="jobcards"
             className="w-full max-w-md"
+            token={token}
           />
         </div>
 

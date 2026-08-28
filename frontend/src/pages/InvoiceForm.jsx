@@ -4,6 +4,7 @@ import { Save, ShoppingBag, ShieldCheck, Scale, Receipt, Plus, Trash2, Activity,
 import { calculatePricing } from '../utils/pricingEngine';
 import { useInventoryCache } from '../hooks/useInventoryCache';
 import SearchableDropdown from '../components/SearchableDropdown';
+import JobCardSearchableDropdown from '../components/JobCardSearchableDropdown';
 
 const STANDARD_SERVICES = [
   { description: 'General Servicing', rate: 1500, gstPercent: 18 },
@@ -33,7 +34,6 @@ const checkAddressIsInterstate = (address) => {
 };
 
 export default function InvoiceForm({ token, user, onSaved, onCancel, editId = null }) {
-  const [jobCards, setJobCards] = useState([]);
   const [estimates, setEstimates] = useState([]);
   const [selectedJcId, setSelectedJcId] = useState('');
   const [selectedEstimateId, setSelectedEstimateId] = useState('');
@@ -241,14 +241,10 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
     const fetchData = async () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const jcRes = await fetch(`${API_BASE_URL}/jobcards?excludeDelivered=true`, { headers });
         const estRes = await fetch(`${API_BASE_URL}/estimates`, { headers });
 
-        if (jcRes.ok && estRes.ok) {
-          const jcData = await jcRes.json();
+        if (estRes.ok) {
           const estData = await estRes.json();
-          // Filter jobcards that are ready or work in progress
-          setJobCards(jcData.filter(jc => jc.status !== 'Delivered'));
           setEstimates(estData.filter(e => e.status === 'Approved'));
         }
 
@@ -1100,20 +1096,11 @@ export default function InvoiceForm({ token, user, onSaved, onCancel, editId = n
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
               Select Job Card
             </label>
-            <SearchableDropdown
-              items={jobCards.map(jc => ({
-                ...jc,
-                vehicleNo: jc.vehicleId?.vehicleNumber || '',
-                customerName: jc.customerId?.name || '',
-                vehicleModel: jc.vehicleId ? `${jc.vehicleId.make} ${jc.vehicleId.model}` : '',
-                dateFormatted: new Date(jc.date || jc.createdAt).toLocaleDateString('en-IN'),
-              }))}
+            <JobCardSearchableDropdown
               value={selectedJcId}
               onSelect={handleJcChange}
-              placeholder="Search job card no, vehicle plate, customer name..."
-              emptyOptionLabel="-- Choose Job Card --"
-              type="jobcards"
               className="w-full"
+              token={token}
             />
           </div>
 
