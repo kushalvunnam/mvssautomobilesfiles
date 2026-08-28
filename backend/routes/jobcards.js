@@ -398,6 +398,8 @@ router.put('/:id', auth, async (req, res) => {
   } catch (error) {
     res.status(400).send({ error: 'Failed to update job card: ' + error.message });
   }
+});
+
 // Search Job Cards for Dropdown
 router.get('/search', auth, async (req, res) => {
   try {
