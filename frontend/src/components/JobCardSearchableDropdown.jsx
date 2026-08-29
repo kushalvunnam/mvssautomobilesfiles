@@ -23,7 +23,9 @@ export default function JobCardSearchableDropdown({
   
   const [items, setItems] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [cache, setCache] = useState({});
+  
+  // Use a ref for cache to avoid callback invalidation and re-render loops
+  const cacheRef = useRef({});
 
   const [highlightedIdx, setHighlightedIdx] = useState(0);
   const containerRef = useRef(null);
@@ -85,8 +87,8 @@ export default function JobCardSearchableDropdown({
   const fetchJobCards = useCallback(async (searchQuery) => {
     const trimmed = searchQuery.trim();
     
-    if (cache[trimmed]) {
-      setItems(cache[trimmed]);
+    if (cacheRef.current[trimmed]) {
+      setItems(cacheRef.current[trimmed]);
       setSearching(false);
       return;
     }
@@ -110,7 +112,7 @@ export default function JobCardSearchableDropdown({
       if (res.ok) {
         const data = await res.json();
         setItems(data);
-        setCache(prev => ({ ...prev, [trimmed]: data }));
+        cacheRef.current[trimmed] = data;
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -122,17 +124,17 @@ export default function JobCardSearchableDropdown({
         activeRequestRef.current = null;
       }
     }
-  }, [cache, excludeDelivered, token]);
+  }, [excludeDelivered, token]);
 
   const selectedItem = useMemo(() => {
     const found = items.find(i => i._id === value);
     if (found) return found;
-    for (const key of Object.keys(cache)) {
-      const cacheFound = cache[key].find(i => i._id === value);
+    for (const key of Object.keys(cacheRef.current)) {
+      const cacheFound = cacheRef.current[key].find(i => i._id === value);
       if (cacheFound) return cacheFound;
     }
     return null;
-  }, [items, cache, value]);
+  }, [items, value]);
 
   useEffect(() => {
     if (value && !selectedItem && token) {
@@ -148,18 +150,15 @@ export default function JobCardSearchableDropdown({
               jobCardNo: jc.jobCardNo,
               status: jc.status,
               vehicleNo: jc.vehicleId?.vehicleNumber || '',
-              customerName: jc.customerId?.name || '',
-              vehicleModel: jc.vehicleId ? `${jc.vehicleId.make} ${jc.vehicleId.model}` : '',
+              customerName: jc.customerId?.name || jc.customerId?.companyName || '',
+              vehicleModel: jc.vehicleId ? `${jc.vehicleId.make || ''} ${jc.vehicleId.model || ''}`.trim() : '',
               dateFormatted: new Date(jc.date || jc.createdAt).toLocaleDateString('en-IN')
             };
             setItems(prev => {
               if (prev.find(p => p._id === formatted._id)) return prev;
               return [formatted, ...prev];
             });
-            setCache(prev => ({
-              ...prev,
-              [query.trim()]: prev[query.trim()] ? [formatted, ...prev[query.trim()]] : [formatted]
-            }));
+            cacheRef.current[''] = cacheRef.current[''] ? [formatted, ...cacheRef.current['']] : [formatted];
           }
         } catch (err) {
           console.error(err);
@@ -169,20 +168,16 @@ export default function JobCardSearchableDropdown({
     }
   }, [value, selectedItem, token]);
 
-  useEffect(() => {
-    if (open && items.length === 0 && !searching) {
-      fetchJobCards('');
-    }
-  }, [open, items.length, searching, fetchJobCards]);
-
+  // Debounce query input changes (150ms for fast feedback)
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       setDebouncedQuery(query);
-    }, 250);
+    }, 150);
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
   }, [query]);
 
+  // Trigger search when open or debouncedQuery changes
   useEffect(() => {
     if (open) {
       fetchJobCards(debouncedQuery);

@@ -48,16 +48,41 @@ export default function PurchaseReport({ token, user }) {
 
   const getAttachmentSrc = (url) => {
     if (!url) return '';
-    if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) {
+    if (url.startsWith('blob:') || url.startsWith('data:')) {
       return url;
     }
-    let path = url;
-    if (!path.startsWith('/uploads/') && !path.startsWith('uploads/')) {
-      path = `/uploads/${path}`;
-    } else if (path.startsWith('uploads/')) {
-      path = `/${path}`;
+    let src = url;
+    if (!src.startsWith('http')) {
+      let path = src;
+      if (!path.startsWith('/uploads/') && !path.startsWith('uploads/') && !path.startsWith('/api/')) {
+        path = `/uploads/${path}`;
+      } else if (path.startsWith('uploads/')) {
+        path = `/${path}`;
+      }
+      src = `${API_BASE_URL.replace('/api', '')}${path}`;
     }
-    return `${API_BASE_URL.replace('/api', '')}${path}`;
+    if (src.includes('/api/purchases/attachment/')) {
+      const separator = src.includes('?') ? '&' : '?';
+      return `${src}${separator}token=${token}`;
+    }
+    return src;
+  };
+
+  const handleViewAttachment = async (e, url) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!url) return;
+    const src = getAttachmentSrc(url);
+    try {
+      const res = await fetch(src, { method: 'HEAD' });
+      if (res.status === 404) {
+        setBrokenAttachments(prev => ({ ...prev, [url]: true }));
+        alert('This attachment is no longer available.');
+        return;
+      }
+    } catch (err) {
+      console.warn('Failed to verify attachment status:', err);
+    }
+    window.open(src, '_blank');
   };
 
   // Filtering & Search for History & Reports
@@ -2113,10 +2138,7 @@ export default function PurchaseReport({ token, user }) {
                                 ) : (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      const src = getAttachmentSrc(p.attachmentUrl);
-                                      window.open(src, '_blank');
-                                    }}
+                                    onClick={(e) => handleViewAttachment(e, p.attachmentUrl)}
                                     className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-955/20 text-indigo-650 dark:text-indigo-400 rounded-lg text-[10px] font-black transition-all"
                                     title={`View/Download Document: ${p.attachmentName || 'Attachment'}`}
                                   >
@@ -2687,7 +2709,7 @@ export default function PurchaseReport({ token, user }) {
                       : [{ url: selectedVoucher.attachmentUrl, name: selectedVoucher.attachmentName || 'purchase_document', type: selectedVoucher.attachmentType || 'image/jpeg' }]
                     ).map((att, idx) => (
                       <div key={idx} className="flex flex-col gap-2 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                        <a href={getAttachmentSrc(att.url)} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1.5 break-all">
+                        <a href={getAttachmentSrc(att.url)} onClick={(e) => handleViewAttachment(e, att.url)} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1.5 break-all">
                           📎 {att.name || `Attachment ${idx + 1}`}
                         </a>
                         {brokenAttachments[att.url] ? (
