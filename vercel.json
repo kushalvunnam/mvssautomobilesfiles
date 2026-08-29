@@ -1,36 +1,42 @@
 {
-  "headers": [
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite"
     },
-    {
-      "source": "/(.*).(png|jpg|jpeg|svg|ico|webp|avif|woff2)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
+    "backend": {
+      "root": "backend",
+      "entrypoint": "server.js"
     }
-  ],
+  },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://mvss-erp-backend.onrender.com/api/:path*"
+      "source": "/api(/.*)?",
+      "destination": {
+        "type": "service",
+        "service": "backend"
+      }
     },
     {
-      "source": "/uploads/:path*",
-      "destination": "https://mvss-erp-backend.onrender.com/uploads/:path*"
+      "source": "/uploads(/.*)?",
+      "destination": {
+        "type": "service",
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/assets/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
     }
   ]
 }
