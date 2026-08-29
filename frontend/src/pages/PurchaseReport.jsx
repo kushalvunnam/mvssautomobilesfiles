@@ -320,6 +320,19 @@ export default function PurchaseReport({ token, user }) {
     fetchPurchaseReports();
   }, [token]);
 
+  // Sync vendor ID if vendorsList loads later
+  useEffect(() => {
+    if (editPurchaseId && !purchaseHeader.vendorId && vendorsList.length > 0 && purchaseHistory.length > 0) {
+      const p = purchaseHistory.find(x => x._id === editPurchaseId);
+      if (p && p.vendorName) {
+        const match = vendorsList.find(v => v.name.trim().toLowerCase() === p.vendorName.trim().toLowerCase());
+        if (match) {
+          setPurchaseHeader(prev => ({ ...prev, vendorId: match._id }));
+        }
+      }
+    }
+  }, [vendorsList, editPurchaseId, purchaseHistory, purchaseHeader.vendorId]);
+
   const fetchVendors = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/vendors`, {
@@ -734,9 +747,9 @@ export default function PurchaseReport({ token, user }) {
     setEditPurchaseId(p._id);
     if (p.attachments && p.attachments.length > 0) {
       setAttachments(p.attachments.map(att => ({
-        url: att.url,
-        name: att.name || 'Attached Document',
-        type: att.type || 'image/jpeg',
+        url: typeof att === 'string' ? att : (att.url || ''),
+        name: typeof att === 'string' ? (att.split('/').pop() || 'Attached Document') : (att.name || 'Attached Document'),
+        type: typeof att === 'string' ? (att.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg') : (att.type || 'image/jpeg'),
         status: 'uploaded'
       })));
     } else if (p.attachmentUrl) {
@@ -751,7 +764,17 @@ export default function PurchaseReport({ token, user }) {
     }
     const hasIgst = p.totals?.igstTotal > 0 || p.items.some(item => (item.igst || 0) > 0);
     setPurchaseHeader({
-      vendorId: p.vendorId?._id || p.vendorId || '',
+      vendorId: (() => {
+        let vId = '';
+        if (p.vendorId) {
+          vId = typeof p.vendorId === 'object' ? (p.vendorId._id || '') : p.vendorId;
+        }
+        if (!vId && p.vendorName && vendorsList.length > 0) {
+          const match = vendorsList.find(v => v.name.trim().toLowerCase() === p.vendorName.trim().toLowerCase());
+          if (match) vId = match._id;
+        }
+        return vId;
+      })(),
       invoiceNo: p.invoiceNo || '',
       invoiceDate: p.invoiceDate ? p.invoiceDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
       paymentStatus: p.paymentStatus || 'Credit',
@@ -980,11 +1003,7 @@ export default function PurchaseReport({ token, user }) {
       updateMRP: purchaseHeader.updateMRP,
       billingType: purchaseHeader.billingType || 'Intra-State',
       reason,
-      attachments: attachments.filter(att => att.status === 'uploaded').map(att => ({
-        url: att.url,
-        name: att.name,
-        type: att.type
-      })),
+      attachments: attachments.filter(att => att.status === 'uploaded').map(att => att.url),
       attachmentUrl: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].url : '',
       attachmentName: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].name : '',
       attachmentType: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].type : ''
