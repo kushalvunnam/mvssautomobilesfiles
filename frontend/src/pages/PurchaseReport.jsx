@@ -1262,15 +1262,15 @@ export default function PurchaseReport({ token, user }) {
           <div class="meta">
             <strong>Generated On:</strong> ${new Date().toLocaleString('en-IN')} | 
             <strong>Total Records:</strong> ${filteredReports.length}
-            \${fromDate ? \` | <strong>From:</strong> \${fromDate}\` : ''}
-            \${toDate ? \` | <strong>To:</strong> \${toDate}\` : ''}
+            ${fromDate ? ` | <strong>From:</strong> ${fromDate}` : ''}
+            ${toDate ? ` | <strong>To:</strong> ${toDate}` : ''}
           </div>
           <table>
             <thead>
-              <tr>\${tableHeadersHtml}</tr>
+              <tr>${tableHeadersHtml}</tr>
             </thead>
             <tbody>
-              \${tableRowsHtml}
+              ${tableRowsHtml}
             </tbody>
           </table>
           <script>

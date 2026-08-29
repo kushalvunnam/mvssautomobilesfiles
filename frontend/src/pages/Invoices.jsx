@@ -687,9 +687,19 @@ export default function Invoices({ token, user, setActiveTab }) {
               font-weight: bold;
               page-break-inside: avoid;
             }
+            @page {
+              size: A4;
+              margin: 12mm 12mm 12mm 12mm;
+            }
             @media print {
-              body { padding: 0; margin: 0; }
+              body { padding: 0; margin: 0; font-size: 10px; }
               .invoice-box { border: none; box-shadow: none; padding: 0; max-width: 100%; }
+              .header-table, .meta-table, .items-table { margin-bottom: 12px; }
+              .items-table th, .items-table td { padding: 6px 6px; }
+              .totals-table { margin-top: 6px; }
+              .words { margin: 8px 0; padding: 6px; }
+              .footer-section { margin-top: 20px; }
+              .signature-box { margin-top: 15px; }
               button { display: none; }
               tr { page-break-inside: avoid; }
               thead { display: table-header-group; }
