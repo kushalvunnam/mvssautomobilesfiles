@@ -1175,19 +1175,114 @@ export default function PurchaseReport({ token, user }) {
       `"${(item.warehouse || 'Main Store').replace(/"/g, '""')}"`
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     const dateStr = new Date().toISOString().slice(0, 10);
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', url);
     link.setAttribute('download', `Purchases_Report_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handlePrint = () => {
-    window.print();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to print reports.');
+      return;
+    }
+
+    const title = 'Purchases Reports Data';
+    
+    let tableHeadersHtml = `
+      <th>Purchase Date</th>
+      <th>Invoice/Bill No</th>
+      <th>Vendor Name</th>
+      <th>Part Name</th>
+      <th>Part Number</th>
+      <th>HSN Code</th>
+      <th>Qty</th>
+      <th>Price</th>
+      <th>MRP</th>
+      <th>Discount</th>
+      <th>GST</th>
+      <th>Total</th>
+      <th>Payment Status</th>
+      <th>Warehouse</th>
+    `;
+    
+    let tableRowsHtml = '';
+    filteredReports.forEach(item => {
+      tableRowsHtml += `
+        <tr>
+          <td>${new Date(item.purchaseDate || Date.now()).toLocaleDateString('en-IN')}</td>
+          <td style="font-family: monospace; font-weight: bold;">${item.invoiceNo || 'N/A'}</td>
+          <td>${item.vendorName || ''}</td>
+          <td>${item.partName || ''}</td>
+          <td style="font-family: monospace;">${item.partNumber || ''}</td>
+          <td>${item.hsnCode || '8708'}</td>
+          <td>${item.qty || 0}</td>
+          <td>₹${(item.purchasePrice || 0).toFixed(2)}</td>
+          <td>₹${(item.mrp || 0).toFixed(2)}</td>
+          <td>₹${(item.discountAmount || 0).toFixed(2)}</td>
+          <td>₹${(item.gstAmount || 0).toFixed(2)}</td>
+          <td style="font-weight: bold; color: #1e3a8a;">₹${(item.total || 0).toFixed(2)}</td>
+          <td>${item.paymentStatus === 'Unpaid' ? 'Credit' : (item.paymentStatus || 'Credit')}</td>
+          <td>${item.warehouse || 'Main Store'}</td>
+        </tr>
+      `;
+    });
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { font-family: 'Segoe UI', sans-serif; font-size: 10px; padding: 20px; color: #333; }
+            h2 { text-align: center; color: #1e3a8a; margin-bottom: 2px; }
+            h4 { text-align: center; color: #555; margin-top: 2px; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; }
+            .meta { margin-bottom: 25px; font-size: 9px; color: #666; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th { background: #1e3a8a; color: white; padding: 6px; font-size: 9px; border: 1px solid #111111; text-transform: uppercase; }
+            td { padding: 6px; border: 1px solid #111111; text-align: center; }
+            tr:nth-child(even) { background: #f9fafb; }
+            @media print {
+              button { display: none; }
+              tr { page-break-inside: avoid; }
+              thead { display: table-header-group; }
+            }
+          </style>
+        </head>
+        <body>
+          <h2>MVSS Automobiles Private Limited</h2>
+          <h4>${title}</h4>
+          <div class="meta">
+            <strong>Generated On:</strong> ${new Date().toLocaleString('en-IN')} | 
+            <strong>Total Records:</strong> ${filteredReports.length}
+            \${fromDate ? \` | <strong>From:</strong> \${fromDate}\` : ''}
+            \${toDate ? \` | <strong>To:</strong> \${toDate}\` : ''}
+          </div>
+          <table>
+            <thead>
+              <tr>\${tableHeadersHtml}</tr>
+            </thead>
+            <tbody>
+              \${tableRowsHtml}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
