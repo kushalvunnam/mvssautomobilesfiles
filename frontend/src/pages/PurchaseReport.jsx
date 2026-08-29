@@ -46,21 +46,22 @@ export default function PurchaseReport({ token, user }) {
   const [brokenAttachments, setBrokenAttachments] = useState({});
   const [error, setError] = useState('');
 
-  const getAttachmentSrc = (url) => {
-    if (!url) return '';
-    if (url.startsWith('blob:') || url.startsWith('data:')) {
-      return url;
+  const getAttachmentSrc = (urlOrKey) => {
+    if (!urlOrKey) return '';
+    if (urlOrKey.startsWith('blob:') || urlOrKey.startsWith('data:')) {
+      return urlOrKey;
     }
-    let src = url;
-    if (!src.startsWith('http')) {
-      let path = src;
-      if (!path.startsWith('/uploads/') && !path.startsWith('uploads/') && !path.startsWith('/api/')) {
-        path = `/uploads/${path}`;
-      } else if (path.startsWith('uploads/')) {
+    let path = urlOrKey;
+    if (path.match(/^[a-f\d]{24}$/i)) {
+      path = `/api/purchases/attachment/${path}`;
+    } else if (!path.startsWith('/') && !path.startsWith('http')) {
+      if (path.startsWith('uploads/')) {
         path = `/${path}`;
+      } else if (!path.startsWith('api/')) {
+        path = `/uploads/${path}`;
       }
-      src = `${API_BASE_URL.replace('/api', '')}${path}`;
     }
+    let src = path.startsWith('http') ? path : `${API_BASE_URL.replace('/api', '')}${path}`;
     if (src.includes('/api/purchases/attachment/')) {
       const separator = src.includes('?') ? '&' : '?';
       return `${src}${separator}token=${token}`;
@@ -223,7 +224,15 @@ export default function PurchaseReport({ token, user }) {
             const data = await res.json();
             setAttachments(prev => prev.map(item => 
               item.id === att.id 
-                ? { ...item, status: 'uploaded', url: data.attachmentUrl, name: data.attachmentName || item.name, type: data.attachmentType || item.type }
+                ? { 
+                    ...item, 
+                    status: 'uploaded', 
+                    url: `/api/purchases/attachment/${data.key}`, 
+                    name: data.originalName || item.name, 
+                    type: data.mimeType || item.type,
+                    size: data.size || item.size,
+                    key: data.key
+                  }
                 : item
             ));
           } else {
@@ -743,14 +752,21 @@ export default function PurchaseReport({ token, user }) {
     // 2. Prefill form state
     setEditPurchaseId(p._id);
     if (p.attachments && p.attachments.length > 0) {
-      setAttachments(p.attachments.map(att => ({
-        id: att._id || Math.random().toString(36).substring(7),
-        url: typeof att === 'string' ? att : (att.url || ''),
-        name: typeof att === 'string' ? (att.split('/').pop() || 'Attached Document') : (att.name || 'Attached Document'),
-        type: typeof att === 'string' ? (att.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg') : (att.type || 'image/jpeg'),
-        size: typeof att === 'string' ? 0 : (att.size || 0),
-        status: 'uploaded'
-      })));
+      setAttachments(p.attachments.map(att => {
+        const fileKey = att.key || '';
+        const downloadUrl = fileKey 
+          ? (fileKey.startsWith('http') || fileKey.startsWith('/api/') || fileKey.startsWith('/uploads/') ? fileKey : `/api/purchases/attachment/${fileKey}`)
+          : (typeof att === 'string' ? att : (att.url || ''));
+        return {
+          id: att._id || Math.random().toString(36).substring(7),
+          url: downloadUrl,
+          name: att.originalName || att.name || 'Attached Document',
+          type: att.mimeType || att.type || (downloadUrl.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
+          size: att.size || 0,
+          status: 'uploaded',
+          key: fileKey
+        };
+      }));
     } else if (p.attachmentUrl) {
       setAttachments([{
         id: Math.random().toString(36).substring(7),
@@ -758,7 +774,8 @@ export default function PurchaseReport({ token, user }) {
         name: p.attachmentName || 'Attached Document',
         type: p.attachmentType || 'image/jpeg',
         size: 0,
-        status: 'uploaded'
+        status: 'uploaded',
+        key: p.attachmentUrl.split('/').pop()
       }]);
     } else {
       setAttachments([]);
@@ -1005,12 +1022,22 @@ export default function PurchaseReport({ token, user }) {
       updateMRP: purchaseHeader.updateMRP,
       billingType: purchaseHeader.billingType || 'Intra-State',
       reason,
-      attachments: attachments.filter(att => att.status === 'uploaded').map(att => ({
-        url: att.url,
-        name: att.name || 'Attached Document',
-        type: att.type || 'image/jpeg',
-        size: att.size || 0
-      })),
+      attachments: attachments.filter(att => att.status === 'uploaded').map(att => {
+        let keyVal = att.key;
+        if (!keyVal && att.url) {
+          if (att.url.includes('/api/purchases/attachment/')) {
+            keyVal = att.url.split('/api/purchases/attachment/')[1].split('?')[0];
+          } else {
+            keyVal = att.url.split('/').pop();
+          }
+        }
+        return {
+          key: keyVal || att.url,
+          originalName: att.name || 'Attached Document',
+          mimeType: att.type || 'image/jpeg',
+          size: att.size || 0
+        };
+      }),
       attachmentUrl: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].url : '',
       attachmentName: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].name : '',
       attachmentType: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].type : ''
@@ -2255,7 +2282,7 @@ export default function PurchaseReport({ token, user }) {
                               {((p.attachments && p.attachments.length > 0) || p.attachmentUrl) ? (
                                 <div className="flex flex-col items-start gap-1">
                                   {(p.attachments && p.attachments.length > 0
-                                    ? p.attachments
+                                    ? p.attachments.map(att => ({ url: att.key, name: att.originalName, type: att.mimeType }))
                                     : [{ url: p.attachmentUrl, name: p.attachmentName || 'Attachment', type: p.attachmentType || 'image/jpeg' }]
                                   ).map((att, idx) => {
                                     if (brokenAttachments[att.url]) {
@@ -2838,7 +2865,7 @@ export default function PurchaseReport({ token, user }) {
                   </span>
                   <div className="grid grid-cols-1 gap-4">
                     {(selectedVoucher.attachments && selectedVoucher.attachments.length > 0
-                      ? selectedVoucher.attachments
+                      ? selectedVoucher.attachments.map(att => ({ url: att.key, name: att.originalName, type: att.mimeType }))
                       : [{ url: selectedVoucher.attachmentUrl, name: selectedVoucher.attachmentName || 'purchase_document', type: selectedVoucher.attachmentType || 'image/jpeg' }]
                     ).map((att, idx) => (
                       <div key={idx} className="flex flex-col gap-2 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
