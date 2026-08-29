@@ -32,6 +32,10 @@
       }
     },
     {
+      "source": "/((?!api|uploads|assets|.*\\..*$).*)",
+      "destination": "/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": {
         "type": "service",
