@@ -76,7 +76,7 @@ export default function PurchaseReport({ token, user }) {
       const res = await fetch(src, { method: 'HEAD' });
       if (res.status === 404) {
         setBrokenAttachments(prev => ({ ...prev, [url]: true }));
-        alert('This attachment is no longer available.');
+        alert('Attachment unavailable — file is missing from storage.');
         return;
       }
     } catch (err) {
@@ -320,18 +320,15 @@ export default function PurchaseReport({ token, user }) {
     fetchPurchaseReports();
   }, [token]);
 
-  // Sync vendor ID if vendorsList loads later
+  // Sync vendor ID from vendorName if vendorsList loads later
   useEffect(() => {
-    if (editPurchaseId && !purchaseHeader.vendorId && vendorsList.length > 0 && purchaseHistory.length > 0) {
-      const p = purchaseHistory.find(x => x._id === editPurchaseId);
-      if (p && p.vendorName) {
-        const match = vendorsList.find(v => v.name.trim().toLowerCase() === p.vendorName.trim().toLowerCase());
-        if (match) {
-          setPurchaseHeader(prev => ({ ...prev, vendorId: match._id }));
-        }
+    if (editPurchaseId && !purchaseHeader.vendorId && purchaseHeader.vendorName && vendorsList.length > 0) {
+      const match = vendorsList.find(v => v.name.trim().toLowerCase() === purchaseHeader.vendorName.trim().toLowerCase());
+      if (match) {
+        setPurchaseHeader(prev => ({ ...prev, vendorId: match._id }));
       }
     }
-  }, [vendorsList, editPurchaseId, purchaseHistory, purchaseHeader.vendorId]);
+  }, [vendorsList, editPurchaseId, purchaseHeader.vendorName, purchaseHeader.vendorId]);
 
   const fetchVendors = async () => {
     try {
@@ -747,16 +744,20 @@ export default function PurchaseReport({ token, user }) {
     setEditPurchaseId(p._id);
     if (p.attachments && p.attachments.length > 0) {
       setAttachments(p.attachments.map(att => ({
+        id: att._id || Math.random().toString(36).substring(7),
         url: typeof att === 'string' ? att : (att.url || ''),
         name: typeof att === 'string' ? (att.split('/').pop() || 'Attached Document') : (att.name || 'Attached Document'),
         type: typeof att === 'string' ? (att.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg') : (att.type || 'image/jpeg'),
+        size: typeof att === 'string' ? 0 : (att.size || 0),
         status: 'uploaded'
       })));
     } else if (p.attachmentUrl) {
       setAttachments([{
+        id: Math.random().toString(36).substring(7),
         url: p.attachmentUrl,
         name: p.attachmentName || 'Attached Document',
         type: p.attachmentType || 'image/jpeg',
+        size: 0,
         status: 'uploaded'
       }]);
     } else {
@@ -775,6 +776,7 @@ export default function PurchaseReport({ token, user }) {
         }
         return vId;
       })(),
+      vendorName: p.vendorName || (p.vendorId && typeof p.vendorId === 'object' ? p.vendorId.name : '') || '',
       invoiceNo: p.invoiceNo || '',
       invoiceDate: p.invoiceDate ? p.invoiceDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
       paymentStatus: p.paymentStatus || 'Credit',
@@ -1003,7 +1005,12 @@ export default function PurchaseReport({ token, user }) {
       updateMRP: purchaseHeader.updateMRP,
       billingType: purchaseHeader.billingType || 'Intra-State',
       reason,
-      attachments: attachments.filter(att => att.status === 'uploaded').map(att => att.url),
+      attachments: attachments.filter(att => att.status === 'uploaded').map(att => ({
+        url: att.url,
+        name: att.name || 'Attached Document',
+        type: att.type || 'image/jpeg',
+        size: att.size || 0
+      })),
       attachmentUrl: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].url : '',
       attachmentName: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].name : '',
       attachmentType: attachments.length > 0 && attachments[0].status === 'uploaded' ? attachments[0].type : ''
@@ -1433,6 +1440,7 @@ export default function PurchaseReport({ token, user }) {
                     setPurchaseHeader({
                       ...purchaseHeader,
                       vendorId: vId,
+                      vendorName: selectedV ? selectedV.name : '',
                       billingType: isInter ? 'Inter-State' : 'Intra-State'
                     });
                   }}
@@ -2244,21 +2252,32 @@ export default function PurchaseReport({ token, user }) {
 
                             <td className="py-3 px-4 text-slate-800 dark:text-slate-300">
                               <div className="font-mono font-bold">{p.invoiceNo || 'N/A'}</div>
-                              {p.attachmentUrl ? (
-                                brokenAttachments[p.attachmentUrl] ? (
-                                  <div className="text-[10px] text-red-500 font-semibold mt-1">
-                                    Attachment unavailable
-                                  </div>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleViewAttachment(e, p.attachmentUrl)}
-                                    className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-955/20 text-indigo-650 dark:text-indigo-400 rounded-lg text-[10px] font-black transition-all"
-                                    title={`View/Download Document: ${p.attachmentName || 'Attachment'}`}
-                                  >
-                                    📎 View Invoice
-                                  </button>
-                                )
+                              {((p.attachments && p.attachments.length > 0) || p.attachmentUrl) ? (
+                                <div className="flex flex-col items-start gap-1">
+                                  {(p.attachments && p.attachments.length > 0
+                                    ? p.attachments
+                                    : [{ url: p.attachmentUrl, name: p.attachmentName || 'Attachment', type: p.attachmentType || 'image/jpeg' }]
+                                  ).map((att, idx) => {
+                                    if (brokenAttachments[att.url]) {
+                                      return (
+                                        <div key={idx} className="text-[10px] text-red-500 font-semibold mt-1">
+                                          Attachment unavailable — file is missing from storage.
+                                        </div>
+                                      );
+                                    }
+                                    return (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={(e) => handleViewAttachment(e, att.url)}
+                                        className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-955/20 text-indigo-650 dark:text-indigo-400 rounded-lg text-[10px] font-black transition-all"
+                                        title={`View/Download Document: ${att.name || 'Attachment'}`}
+                                      >
+                                        📎 View Invoice {p.attachments && p.attachments.length > 1 ? `#${idx + 1}` : ''}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               ) : (
                                 <div className="text-[10px] text-slate-400 italic font-semibold mt-1">
                                   No Invoice Attached
@@ -2828,7 +2847,7 @@ export default function PurchaseReport({ token, user }) {
                         </a>
                         {brokenAttachments[att.url] ? (
                           <div className="text-slate-400 dark:text-slate-500 text-[10px] font-bold p-3 bg-slate-100 dark:bg-slate-850 rounded-lg text-center">
-                            No preview available for offline/missing attachment.
+                            Attachment unavailable — file is missing from storage.
                           </div>
                         ) : (
                           <>
