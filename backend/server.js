@@ -161,6 +161,7 @@ app.use('/api/branches', require('./routes/branches'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/external-repairs', require('./routes/externalRepairs'));
 app.use('/api/insurance', require('./routes/insurance'));
+app.use('/api/whatsapp', require('./routes/whatsapp'));
 
 // Resend Email Diagnostic Endpoint
 app.get('/api/test-email', async (req, res) => {
