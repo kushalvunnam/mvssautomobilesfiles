@@ -29,7 +29,7 @@ const normalizePhoneNumber = (phone) => {
 const sendTemplateMessage = async ({
     to,
     templateName,
-    languageCode = 'en_US',
+    languageCode = 'en',
     components = [],
     recipientName = 'Unknown',
     relatedEntity,
