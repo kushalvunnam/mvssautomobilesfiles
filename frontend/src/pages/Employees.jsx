@@ -416,17 +416,20 @@ export default function Employees({ token, user }) {
       return;
     }
 
-    const emp = employees.find(e => e._id === salaryForm.employeeId);
+    const emp = attendanceEmployees.find(e => e._id === salaryForm.employeeId);
     setSelectedSalaryEmployee(emp);
     if (!emp) return;
 
+    const [year, month] = salaryForm.monthYear.split('-').map(Number);
+    const monthStartD = new Date(year, month - 1, 1);
+    
     let startD, endD;
     if (salaryForm.salaryStartDate && salaryForm.salaryEndDate) {
-      startD = new Date(salaryForm.salaryStartDate);
+      const providedStart = new Date(salaryForm.salaryStartDate);
+      startD = new Date(Math.max(monthStartD.getTime(), providedStart.getTime()));
       endD = new Date(salaryForm.salaryEndDate);
     } else {
-      const [year, month] = salaryForm.monthYear.split('-').map(Number);
-      startD = new Date(year, month - 1, 1);
+      startD = monthStartD;
       endD = new Date(year, month, 0);
     }
 
@@ -444,7 +447,7 @@ export default function Employees({ token, user }) {
       eligibleDays = Math.max(0, Math.floor((endDOnly - effectiveStartD) / (1000 * 60 * 60 * 24)) + 1);
     }
 
-    const daysInMonth = new Date(endDOnly.getFullYear(), endDOnly.getMonth() + 1, 0).getDate();
+    const daysInMonth = new Date(year, month, 0).getDate();
     const monthlySalary = Number(salaryForm.basicSalary) || 0;
     const dailySalary = daysInMonth ? (monthlySalary / daysInMonth) : 0;
     const payableSalary = dailySalary * eligibleDays;
@@ -868,6 +871,11 @@ export default function Employees({ token, user }) {
   const handleSaveSalarySlip = async (e) => {
     e.preventDefault();
     if (!salaryForm.employeeId) return;
+    
+    if (new Date(salaryForm.salaryStartDate) > new Date(salaryForm.salaryEndDate)) {
+      alert("Validation Error: Joining Date cannot be after Salary End Date.");
+      return;
+    }
 
     try {
       const res = await fetch(`${API_BASE_URL}/employees/${salaryForm.employeeId}/salary`, {
@@ -981,7 +989,7 @@ export default function Employees({ token, user }) {
                 <td class="right">₹${Number(salaryForm.basicSalary).toFixed(2)}</td>
               </tr>
               <tr>
-                <td>Payable Salary (${salaryForm.calculatedEligibleDays} eligible days)</td>
+                <td>Gross Salary (${salaryForm.calculatedEligibleDays} eligible days)</td>
                 <td class="right">₹${salaryForm.calculatedPayableSalary.toFixed(2)}</td>
               </tr>
               ${special > 0 ? `
@@ -1861,7 +1869,7 @@ export default function Employees({ token, user }) {
               </div>
 
               {selectedEmployeeFilter ? (() => {
-                const emp = employees.find(e => e._id === selectedEmployeeFilter);
+                const emp = attendanceEmployees.find(e => e._id === selectedEmployeeFilter);
                 if (!emp) return <p className="text-center text-slate-400 italic">Select a valid employee.</p>;
                 
                 const list = getMonthlyDetails(emp);
@@ -2069,24 +2077,51 @@ export default function Employees({ token, user }) {
                       value={salaryForm.employeeId}
                       onChange={(e) => {
                         const empId = e.target.value;
-                        const emp = employees.find(emp => emp._id === empId);
+                        const emp = attendanceEmployees.find(emp => emp._id === empId);
+                        let defaultDoj = salaryForm.salaryStartDate;
+                        if (emp && emp.dateOfJoining) {
+                          defaultDoj = emp.dateOfJoining.split('T')[0];
+                        }
                         setSalaryForm({ 
                           ...salaryForm, 
                           employeeId: empId,
-                          basicSalary: emp?.monthlySalary ? emp.monthlySalary.toString() : ''
+                          basicSalary: emp?.monthlySalary ? emp.monthlySalary.toString() : '',
+                          salaryStartDate: defaultDoj
                         });
                       }}
                       className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
                     >
                       <option value="">-- Select Staff Member --</option>
-                      {employees.map(e => (
+                      {attendanceEmployees.map(e => (
                         <option key={e._id} value={e._id}>{e.name} ({e.status || 'Active'})</option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Salary Start Date</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Salary Month</label>
+                    <input
+                      type="month"
+                      required
+                      value={salaryForm.monthYear}
+                      onChange={(e) => {
+                        const newMonthYear = e.target.value;
+                        const [year, month] = newMonthYear.split('-').map(Number);
+                        const endOfMonth = new Date(year, month, 0); // Gets the last day of the month
+                        const newEndDate = `${year}-${String(month).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
+                        
+                        setSalaryForm({ 
+                          ...salaryForm, 
+                          monthYear: newMonthYear,
+                          salaryEndDate: newEndDate
+                        });
+                      }}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Joining Date</label>
                     <input
                       type="date"
                       required
@@ -2095,6 +2130,7 @@ export default function Employees({ token, user }) {
                       className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold focus:outline-none"
                     />
                   </div>
+                  
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Salary End Date</label>
                     <input
@@ -2272,7 +2308,7 @@ export default function Employees({ token, user }) {
                 <div className="text-right">
                   <span className="font-semibold text-slate-500 block">Auto Leave Deduction:</span>
                   <span className="font-bold text-red-500 block mt-1">
-                    - ₹{Math.round((salaryForm.basicSalary / 30) * Math.max(0, salaryForm.leavesCount - salaryForm.exemptedLeaves)).toLocaleString()}
+                    - ₹{Math.round(salaryForm.calculatedDailySalary * Math.max(0, salaryForm.leavesCount - salaryForm.exemptedLeaves)).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -2322,7 +2358,7 @@ export default function Employees({ token, user }) {
                         <span className="text-xs font-mono text-slate-300">{salaryForm.calculatedEffectiveStartDate ? new Date(salaryForm.calculatedEffectiveStartDate).toLocaleDateString('en-GB') : '-'}</span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-slate-400 block font-black uppercase tracking-wider">Eligible Days</span>
+                        <span className="text-[9px] text-slate-400 block font-black uppercase tracking-wider">Payable Days / Month</span>
                         <span className="text-xs font-mono text-slate-300">{salaryForm.calculatedEligibleDays} / {salaryForm.calculatedDaysInMonth}</span>
                       </div>
                       <div className="text-right">
@@ -2342,7 +2378,7 @@ export default function Employees({ token, user }) {
                     </div>
 
                     <div className="flex justify-between text-xs font-bold text-white">
-                      <span>Payable Salary:</span>
+                      <span>Gross Salary:</span>
                       <span className="font-mono text-white">₹{Math.round(salaryForm.calculatedPayableSalary).toLocaleString()}</span>
                     </div>
 

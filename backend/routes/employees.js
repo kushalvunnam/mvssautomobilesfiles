@@ -368,12 +368,18 @@ router.post('/:id/salary', async (req, res) => {
 
     const [year, month] = monthYear.split('-').map(Number);
     let startD, endD;
+    const monthStartD = new Date(year, month - 1, 1);
+    const defaultEndD = new Date(year, month, 0); // last day of month
+
     if (salaryStartDate && salaryEndDate) {
-      startD = new Date(salaryStartDate);
+      // The frontend sends the Joining Date in salaryStartDate. 
+      // We must cap it so it does not pull in previous months if they select a later month.
+      const providedStart = new Date(salaryStartDate);
+      startD = new Date(Math.max(monthStartD.getTime(), providedStart.getTime()));
       endD = new Date(salaryEndDate);
     } else {
-      startD = new Date(year, month - 1, 1);
-      endD = new Date(year, month, 0); // last day of month
+      startD = monthStartD;
+      endD = defaultEndD;
     }
     
     startD.setHours(0, 0, 0, 0);
@@ -383,7 +389,7 @@ router.post('/:id/salary', async (req, res) => {
     doj.setHours(0, 0, 0, 0);
     const effectiveStartD = new Date(Math.max(doj.getTime(), startD.getTime()));
 
-    const daysInMonth = new Date(endD.getFullYear(), endD.getMonth() + 1, 0).getDate();
+    const daysInMonth = new Date(year, month, 0).getDate();
 
     let eligibleDays = 0;
     if (endD >= effectiveStartD) {
