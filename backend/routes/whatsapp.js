@@ -7,6 +7,20 @@ const { sendTemplateMessage } = require('../services/whatsappService');
 // =========================================================================
 // PHASE 10: WEBHOOK VERIFICATION (GET)
 // =========================================================================
+router.get('/debug-templates', async (req, res) => {
+    if (req.query.secret !== 'debug_meta_123') return res.status(403).send('Forbidden');
+    try {
+        const axios = require('axios');
+        const token = process.env.META_WA_ACCESS_TOKEN;
+        const wabaId = process.env.META_WA_BUSINESS_ACCOUNT_ID;
+        const url = `https://graph.facebook.com/v17.0/${wabaId}/message_templates`;
+        const response = await axios.get(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        res.json(response.data);
+    } catch (e) {
+        res.status(500).json({ error: e.response?.data || e.message });
+    }
+});
+
 router.get('/webhook', (req, res) => {
     const VERIFY_TOKEN = process.env.META_WA_VERIFY_TOKEN;
 
