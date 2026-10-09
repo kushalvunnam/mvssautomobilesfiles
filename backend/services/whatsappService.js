@@ -24,14 +24,15 @@ const normalizePhoneNumber = (phone) => {
 };
 
 const TEMPLATE_CONFIG = {
-    'mvss_welcome_customer': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 2 },
-    'mvss_job_card_created': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 4 },
-    'mvss_estimate_created': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 5 },
-    'mvss_estimate_approved': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 5 },
-    'mvss_invoice_generated': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 5 },
-    'mvss_payment_received': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 5 },
-    'mvss_gate_pass_generated': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 4 },
-    'mvss_insurance_claim_update': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 4 }
+    // English mapping based on WhatsApp Manager visibility
+    'mvss_welcome_customer': { lang: 'en', paramCount: 2 },
+    'mvss_job_card_created': { lang: 'en', paramCount: 4 },
+    'mvss_estimate_created': { lang: 'en', paramCount: 5 },
+    'mvss_estimate_approved': { lang: 'en', paramCount: 5 },
+    'mvss_invoice_generated': { lang: 'en', paramCount: 5 },
+    'mvss_payment_received': { lang: 'en', paramCount: 5 },
+    'mvss_gate_pass_generated': { lang: 'en', paramCount: 4 },
+    'mvss_insurance_claim_update': { lang: 'en', paramCount: 4 }
 };
 
 /**
@@ -74,10 +75,8 @@ const sendTemplateMessage = async ({
             console.warn(`[WhatsApp] Template '${templateName}' is not defined in internal mapping.`);
         }
 
+        // Use specifically mapped template language, or the one passed in, or default fallback
         let finalLanguageCode = languageCode || (templateSpec ? templateSpec.lang : 'en');
-        if (!languageCode && process.env.META_WA_TEMPLATE_LANG) {
-            finalLanguageCode = process.env.META_WA_TEMPLATE_LANG;
-        }
 
         // Validate Components
         if (components && components.length > 0) {
