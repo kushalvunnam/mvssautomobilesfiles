@@ -62,6 +62,10 @@ router.post('/webhook', async (req, res) => {
                             const messageId = message.id;
                             const messageType = message.type;
                             
+                            // Check for duplicates
+                            const existingInbound = await WhatsAppLog.findOne({ messageId });
+                            if (existingInbound) continue;
+                            
                             console.log(`[WhatsApp] Inbound message received from ${fromPhone}`);
 
                             // Store inbound message in WhatsAppLog
@@ -69,6 +73,7 @@ router.post('/webhook', async (req, res) => {
                                 recipientName: 'Inbound Customer',
                                 recipientPhone: fromPhone,
                                 messageType: 'text',
+                                direction: 'inbound',
                                 status: 'delivered',
                                 messageId: messageId,
                                 errorMessage: messageType === 'text' ? message.text.body : `Received non-text message: ${messageType}`

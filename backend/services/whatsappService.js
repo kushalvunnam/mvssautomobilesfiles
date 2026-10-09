@@ -23,32 +23,82 @@ const normalizePhoneNumber = (phone) => {
     return cleaned; // Fallback
 };
 
+const TEMPLATE_CONFIG = {
+    'mvss_welcome_customer': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 2 },
+    'mvss_job_card_created': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 4 },
+    'mvss_estimate_created': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 5 },
+    'mvss_estimate_approved': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 5 },
+    'mvss_invoice_generated': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 5 },
+    'mvss_payment_received': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 5 },
+    'mvss_gate_pass_generated': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 4 },
+    'mvss_insurance_claim_update': { lang: process.env.META_WA_TEMPLATE_LANG || 'en', paramCount: 4 }
+};
+
 /**
  * Send a template message via Meta WhatsApp Cloud API
  */
 const sendTemplateMessage = async ({
     to,
     templateName,
-    languageCode = 'en',
+    languageCode,
     components = [],
     recipientName = 'Unknown',
     relatedEntity,
     onModel,
     idempotencyKey
 }) => {
+    // Basic masked phone for logging safely
+    const maskedTo = to ? to.substring(0, 3) + '****' + to.slice(-3) : 'unknown';
+    console.log(`[WhatsApp] Attempting send -> Event: ${onModel}, Template: ${templateName}, To: ${maskedTo}`);
+
     try {
         const token = process.env.META_WA_ACCESS_TOKEN;
         const phoneNumberId = process.env.META_WA_PHONE_NUMBER_ID;
 
         if (!token || !phoneNumberId) {
-            console.warn('[WhatsApp] API credentials missing, skipping message.');
-            return { success: false, error: 'Missing Credentials' };
+            const err = 'API credentials missing, skipping message.';
+            console.warn(`[WhatsApp] ${err}`);
+            throw new Error(err);
         }
 
         const normalizedPhone = normalizePhoneNumber(to);
         if (!normalizedPhone || normalizedPhone.length < 10) {
-            console.warn(`[WhatsApp] Invalid phone number: ${to}`);
-            return { success: false, error: 'Invalid Phone Number' };
+            const err = `Invalid phone number: ${to}`;
+            console.warn(`[WhatsApp] ${err}`);
+            throw new Error(err);
+        }
+
+        // Validate Template Name and Parameters
+        const templateSpec = TEMPLATE_CONFIG[templateName];
+        if (!templateSpec) {
+            console.warn(`[WhatsApp] Template '${templateName}' is not defined in internal mapping.`);
+        }
+
+        let finalLanguageCode = languageCode || (templateSpec ? templateSpec.lang : 'en');
+        if (!languageCode && process.env.META_WA_TEMPLATE_LANG) {
+            finalLanguageCode = process.env.META_WA_TEMPLATE_LANG;
+        }
+
+        // Validate Components
+        if (components && components.length > 0) {
+            for (let c of components) {
+                if (c.type === 'body' && c.parameters) {
+                    if (templateSpec && c.parameters.length !== templateSpec.paramCount) {
+                        const err = `Invalid parameter count for ${templateName}. Expected ${templateSpec.paramCount}, got ${c.parameters.length}.`;
+                        console.error(`[WhatsApp] ${err}`);
+                        throw new Error(err);
+                    }
+                    for (let i = 0; i < c.parameters.length; i++) {
+                        let param = c.parameters[i];
+                        if (param.text === null || param.text === undefined) {
+                            const err = `Parameter at index ${i} is null/undefined.`;
+                            console.error(`[WhatsApp] ${err}`);
+                            throw new Error(err);
+                        }
+                        c.parameters[i].text = String(param.text);
+                    }
+                }
+            }
         }
 
         // Idempotency Check: Prevent duplicate messages for the same event
@@ -67,6 +117,7 @@ const sendTemplateMessage = async ({
             templateName,
             messageType: 'template',
             status: 'pending',
+            direction: 'outbound',
             relatedEntity,
             onModel,
             idempotencyKey
@@ -82,7 +133,7 @@ const sendTemplateMessage = async ({
             template: {
                 name: templateName,
                 language: {
-                    code: languageCode
+                    code: finalLanguageCode
                 },
                 components: components
             }
@@ -98,31 +149,62 @@ const sendTemplateMessage = async ({
         });
 
         const messageId = response.data.messages?.[0]?.id;
+        const httpStatus = response.status;
         
         // Update Log entry with sent status and message ID
         logEntry.messageId = messageId;
         logEntry.status = 'sent';
         await logEntry.save();
 
-        console.log(`[WhatsApp] Successfully sent template '${templateName}' to ${normalizedPhone}`);
+        console.log(`[WhatsApp] Successfully sent template '${templateName}' to ${maskedTo} | HTTP: ${httpStatus} | wamid: ${messageId}`);
         return { success: true, messageId, data: response.data };
 
     } catch (error) {
-        console.error('[WhatsApp] API Error:', error.response?.data || error.message);
+        let errorMsg = error.message;
+        let metaErrorCode = null;
+
+        if (error.response?.data) {
+            errorMsg = error.response.data?.error?.message || JSON.stringify(error.response.data);
+            metaErrorCode = error.response.data?.error?.code;
+            console.error(`[WhatsApp] Meta API Error: HTTP ${error.response.status} | Code: ${metaErrorCode} | Msg: ${errorMsg}`);
+        } else {
+            console.error(`[WhatsApp] Internal/Network Error: ${errorMsg}`);
+        }
         
         // Mark log as failed if we can
         if (idempotencyKey) {
-            await WhatsAppLog.findOneAndUpdate(
-                { idempotencyKey }, 
-                { status: 'failed', errorMessage: error.response?.data?.error?.message || error.message }
-            );
+            try {
+                // If logEntry was created, it can be updated. If not, create a failed log
+                const existing = await WhatsAppLog.findOne({ idempotencyKey });
+                if (existing) {
+                    existing.status = 'failed';
+                    existing.errorMessage = errorMsg;
+                    await existing.save();
+                } else {
+                    await WhatsAppLog.create({
+                        recipientName,
+                        recipientPhone: to ? normalizePhoneNumber(to) || to : 'Unknown',
+                        templateName,
+                        messageType: 'template',
+                        status: 'failed',
+                        direction: 'outbound',
+                        relatedEntity,
+                        onModel,
+                        idempotencyKey,
+                        errorMessage: errorMsg
+                    });
+                }
+            } catch (logErr) {
+                console.error('[WhatsApp] Failed to save error log:', logErr.message);
+            }
         }
         
-        return { success: false, error: error.response?.data || error.message };
+        throw error;
     }
 };
 
 module.exports = {
     sendTemplateMessage,
-    normalizePhoneNumber
+    normalizePhoneNumber,
+    TEMPLATE_CONFIG
 };
