@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { API_BASE_URL, OWNER_SUPPORT_NUMBER } from '../config';
 import { 
   FileText, 
@@ -18,7 +18,12 @@ import {
   CreditCard,
   Wrench,
   PenTool,
-  X
+  X,
+  Camera,
+  Upload,
+  Loader2,
+  Edit2,
+  Image as ImageIcon
 } from 'lucide-react';
 import BodyShopStatusModal, { BODY_SHOP_STAGES } from '../components/BodyShopStatusModal';
 import SignaturePad from '../components/SignaturePad';
@@ -79,9 +84,139 @@ const getStatusBadgeClass = (status) => {
   }
 };
 
-export default function JobCardDetails({ jcId, token, user, onBack, onCreateEstimate, onViewEstimate, onConvertInvoice }) {
+export default function JobCardDetails({ jcId, token, user, onBack, onCreateEstimate, onViewEstimate, onConvertInvoice, onEdit }) {
   const [jc, setJc] = useState(null);
   const [brokenImages, setBrokenImages] = useState({});
+  const galleryFileInputRef = useRef(null);
+  const [photoCategory, setPhotoCategory] = useState('Vehicle');
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [deletingPhotoId, setDeletingPhotoId] = useState(null);
+
+  const getPhotoSrc = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
+      return url;
+    }
+    const cleanUrl = url.startsWith('/') ? url : '/' + url;
+    if (cleanUrl.startsWith('/api/')) {
+      return `${API_BASE_URL.replace(/\/api$/, '')}${cleanUrl}`;
+    }
+    if (!cleanUrl.startsWith('/uploads/')) {
+      return `${API_BASE_URL.replace(/\/api$/, '')}/uploads${cleanUrl}`;
+    }
+    return `${API_BASE_URL.replace(/\/api$/, '')}${cleanUrl}`;
+  };
+
+  const handleUploadPhotoFile = async (file, category = photoCategory) => {
+    if (!file || !jc?._id) return;
+    setIsUploadingPhoto(true);
+    setUploadError(null);
+    try {
+      if (token === 'mock_jwt_token_for_offline_demo') {
+        const previewUrl = URL.createObjectURL(file);
+        const newPhoto = {
+          _id: `mock_photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          url: previewUrl,
+          photoType: category || 'Vehicle',
+          originalName: file.name || 'photo.jpg',
+          uploadedAt: new Date().toISOString()
+        };
+        const updatedPhotos = [...(jc.photos || []), newPhoto];
+        setJc(prev => ({ ...prev, photos: updatedPhotos }));
+        const db = JSON.parse(sessionStorage.getItem('mock_jobcards') || '[]');
+        const idx = db.findIndex(j => j._id === jc._id);
+        if (idx !== -1) {
+          db[idx].photos = updatedPhotos;
+          sessionStorage.setItem('mock_jobcards', JSON.stringify(db));
+        }
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('photoType', category || 'Vehicle');
+
+      const res = await fetch(`${API_BASE_URL}/jobcards/${jc._id}/photo`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.photos) {
+          setJc(prev => ({ ...prev, photos: data.photos }));
+        } else if (data.photo) {
+          setJc(prev => ({ ...prev, photos: [...(prev.photos || []), data.photo] }));
+        }
+        await fetchDetails();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setUploadError(errData.error || 'Failed to upload photo.');
+      }
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      setUploadError('Network error uploading photo.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleDeletePhoto = async (photo) => {
+    if (!photo || !jc?._id) return;
+    const photoId = photo._id || photo.publicId;
+    if (!photoId) {
+      alert('Cannot delete this photo without an identifier.');
+      return;
+    }
+    if (!window.confirm('Are you sure you want to delete this photo permanently?')) {
+      return;
+    }
+    setDeletingPhotoId(photoId);
+    try {
+      if (token === 'mock_jwt_token_for_offline_demo') {
+        const updatedPhotos = (jc.photos || []).filter(p => (p._id || p.publicId) !== photoId && p.url !== photo.url);
+        setJc(prev => ({ ...prev, photos: updatedPhotos }));
+        const db = JSON.parse(sessionStorage.getItem('mock_jobcards') || '[]');
+        const idx = db.findIndex(j => j._id === jc._id);
+        if (idx !== -1) {
+          db[idx].photos = updatedPhotos;
+          sessionStorage.setItem('mock_jobcards', JSON.stringify(db));
+        }
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/jobcards/${jc._id}/photo/${encodeURIComponent(photoId)}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.photos) {
+          setJc(prev => ({ ...prev, photos: data.photos }));
+        } else {
+          setJc(prev => ({
+            ...prev,
+            photos: (prev.photos || []).filter(p => (p._id || p.publicId) !== photoId)
+          }));
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || 'Failed to delete photo.');
+      }
+    } catch (err) {
+      console.error('Failed to delete photo:', err);
+      alert('Network error deleting photo.');
+    } finally {
+      setDeletingPhotoId(null);
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [estimate, setEstimate] = useState(null);
@@ -1300,6 +1435,14 @@ export default function JobCardDetails({ jcId, token, user, onBack, onCreateEsti
           >
             <Download className="w-4 h-4" /> Download PDF
           </button>
+          {onEdit && ['Super Admin', 'Admin', 'Service', 'Body Shop'].includes(user?.role) && jc.status !== 'Delivered' && (
+            <button
+              onClick={() => onEdit(jc._id)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-xl text-xs font-bold transition-all border border-indigo-200 dark:border-indigo-800"
+            >
+              <Edit2 className="w-4 h-4" /> Edit Job Card
+            </button>
+          )}
           {['Work In Progress', 'Work in Progress', 'Body Shop', 'Allotted'].includes(jc.status) && (
             <button
               onClick={() => setShowUpdateModal(true)}

@@ -120,10 +120,11 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
     }
   };
 
-  const handleSaved = () => {
+    const handleSaved = () => {
     setViewMode('list');
     setSelectedJcId(null);
     if (setViewJcId) setViewJcId(null);
+    fetchJobCards();
   };
 
   const handleCancel = () => {
@@ -162,6 +163,7 @@ export default function JobCards({ token, user, setActiveTab, viewJcId = null, s
         onBack={handleCancel}
         onCreateEstimate={handleCreateEstimate}
         onConvertInvoice={handleConvertInvoice}
+        onEdit={(id) => handleOpenEdit(id || selectedJcId)}
       />
     );
   }
